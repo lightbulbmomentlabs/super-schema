@@ -207,7 +207,20 @@ export default function DashboardPage() {
             <h2 className="text-xl font-semibold">URLs Needing Schema</h2>
             <span className="text-sm text-muted-foreground">{urlsWithoutSchema} total</span>
           </div>
-          {urlsWithoutSchema === 0 ? (
+          {totalUrls === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Database className="h-12 w-12 text-primary mb-3" />
+              <p className="font-medium mb-1">Get started with your first URL</p>
+              <p className="text-sm text-muted-foreground mb-4">Discover URLs or generate schema for any page</p>
+              <button
+                onClick={() => navigate('/generate')}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Start Generating
+              </button>
+            </div>
+          ) : urlsWithoutSchema === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <LightningBoltIcon className="h-12 w-12 text-green-600 mb-3" />
               <p className="text-muted-foreground">All URLs have schema!</p>
