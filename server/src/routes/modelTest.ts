@@ -4,7 +4,7 @@ import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import {
   schemaGenerationRequestSchema
-} from '@shared/schemas/index.js'
+} from 'aeo-schema-generator-shared/schemas'
 
 export const modelTestRouter = Router()
 

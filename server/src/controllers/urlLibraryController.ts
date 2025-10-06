@@ -3,7 +3,7 @@ import { db } from '../services/database.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { z } from 'zod'
-import { normalizeUrl } from '@shared/utils'
+import { normalizeUrl } from 'aeo-schema-generator-shared/utils'
 
 // Validation schemas
 const saveUrlsSchema = z.object({

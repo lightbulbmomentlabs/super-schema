@@ -2,7 +2,7 @@ import { scraperService } from './scraper.js'
 import { openaiService, type SchemaGenerationOptions } from './openai.js'
 import { validatorService } from './validator.js'
 import { db } from './database.js'
-import type { JsonLdSchema } from '@shared/types/index.js'
+import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 
 export interface SchemaGenerationResult {
   success: boolean

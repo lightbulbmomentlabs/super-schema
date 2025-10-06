@@ -1,4 +1,4 @@
-import type { JsonLdSchema } from '@shared/types/index.js'
+import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 
 export interface ValidationResult {
   isValid: boolean

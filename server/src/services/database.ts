@@ -14,7 +14,7 @@ import type {
   DiscoveredUrl,
   UrlLibraryFilters,
   SupportTicket
-} from '@shared/types/index.js'
+} from 'aeo-schema-generator-shared/types'
 
 // Database types for Supabase
 export interface Database {

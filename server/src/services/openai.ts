@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import type { JsonLdSchema } from '@shared/types/index.js'
+import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 
 // Enhanced interfaces for comprehensive AEO metadata
 export interface AuthorInfo {

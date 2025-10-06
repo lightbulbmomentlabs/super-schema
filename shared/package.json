@@ -4,6 +4,28 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schemas": {
+      "import": "./dist/schemas/index.js",
+      "types": "./dist/schemas/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "types": "./dist/utils/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/refinement.js",
+      "types": "./dist/config/refinement.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "type-check": "tsc --noEmit",

@@ -7,10 +7,10 @@ import {
   schemaGenerationRequestSchema,
   schemaValidationRequestSchema,
   paginationSchema
-} from '@shared/schemas/index.js'
+} from 'aeo-schema-generator-shared/schemas'
 import { extractPath, calculatePathDepth, extractBaseDomain } from '../utils/urlHelpers.js'
 import { db } from '../services/database.js'
-import { MAX_REFINEMENTS } from '@shared/config/refinement.js'
+import { MAX_REFINEMENTS } from 'aeo-schema-generator-shared/config'
 
 export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.auth!.userId

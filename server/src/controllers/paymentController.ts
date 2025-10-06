@@ -2,7 +2,7 @@ import { Response } from 'express'
 import { stripeService } from '../services/stripe.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
-import { creditPurchaseSchema, paginationSchema } from '@shared/schemas/index.js'
+import { creditPurchaseSchema, paginationSchema } from 'aeo-schema-generator-shared/schemas'
 
 export const getCreditPacks = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   try {

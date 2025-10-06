@@ -2,7 +2,7 @@ import { Response } from 'express'
 import { db } from '../services/database.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
-import { userProfileUpdateSchema, paginationSchema } from '@shared/schemas/index.js'
+import { userProfileUpdateSchema, paginationSchema } from 'aeo-schema-generator-shared/schemas'
 import { z } from 'zod'
 
 const userInitSchema = z.object({
