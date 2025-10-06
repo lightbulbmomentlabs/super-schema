@@ -93,9 +93,9 @@ COPY --from=base /app/client/package*.json ./client/
 RUN npm ci --omit=dev --workspaces
 
 # Copy built application from base stage
+# Note: server/dist already contains client/dist from the copy-client build step
 COPY --from=base /app/server/dist ./server/dist
 COPY --from=base /app/shared/dist ./shared/dist
-COPY --from=base /app/client/dist ./client/dist
 
 # Set environment variables
 ENV NODE_ENV=production
