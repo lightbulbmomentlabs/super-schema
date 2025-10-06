@@ -22,28 +22,6 @@ export default function DashboardPage() {
   // Onboarding state
   const onboarding = useOnboarding()
 
-  // Initialize user mutation
-  const initializeUserMutation = useMutation({
-    mutationFn: (userData: { email: string; firstName?: string; lastName?: string }) =>
-      apiService.initializeUser(userData),
-    onSuccess: () => {
-      // Refetch user data after initialization
-      creditsQuery.refetch()
-      statsQuery.refetch()
-    }
-  })
-
-  // Initialize user when they first visit the dashboard
-  useEffect(() => {
-    if (user?.emailAddresses?.[0]?.emailAddress) {
-      initializeUserMutation.mutate({
-        email: user.emailAddresses[0].emailAddress,
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined
-      })
-    }
-  }, [user?.id]) // Only run when user ID changes (i.e., when user logs in)
-
   // Get user stats
   const statsQuery = useQuery({
     queryKey: ['user-stats'],
