@@ -12,7 +12,44 @@ services:
   routes:
   - path: /
   envs:
+  # Runtime environment variables
   - key: NODE_ENV
     value: production
+    scope: RUN_AND_BUILD_TIME
   - key: PORT
     value: "8080"
+    scope: RUN_AND_BUILD_TIME
+
+  # Build-time environment variables for Vite frontend
+  # These are embedded into the client bundle during build
+  # Set these in Digital Ocean App Platform UI under "Environment Variables"
+  - key: VITE_CLERK_PUBLISHABLE_KEY
+    scope: BUILD_TIME
+    type: SECRET
+  - key: VITE_STRIPE_PUBLISHABLE_KEY
+    scope: BUILD_TIME
+    type: SECRET
+
+  # Server runtime secrets
+  # Set these in Digital Ocean App Platform UI under "Environment Variables"
+  - key: CLERK_SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: CLERK_WEBHOOK_SECRET
+    scope: RUN_TIME
+    type: SECRET
+  - key: OPENAI_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: SUPABASE_URL
+    scope: RUN_TIME
+    type: SECRET
+  - key: SUPABASE_SERVICE_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: STRIPE_SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: STRIPE_WEBHOOK_SECRET
+    scope: RUN_TIME
+    type: SECRET
