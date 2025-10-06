@@ -87,7 +87,11 @@ app.use('/api/library', authMiddleware, urlLibraryRoutes)
 app.use('/api/support', supportRoutes) // Support routes include their own auth middleware
 
 // Serve static files from client build
-const clientDistPath = path.join(__dirname, '../../client/dist')
+// In production, client/dist is copied to server/dist/client during build
+const clientDistPath = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../client')
+  : path.join(__dirname, '../../client/dist')
+
 app.use(express.static(clientDistPath))
 
 // Serve index.html for all non-API routes (SPA fallback)
