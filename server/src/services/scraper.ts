@@ -33,8 +33,12 @@ class ScraperService {
     if (this.browser) return
 
     console.log('Initializing browser...')
+    console.log('Environment:', process.env.NODE_ENV)
+    console.log('Platform:', process.platform)
+
     try {
-      this.browser = await puppeteer.launch({
+      // Production-optimized Puppeteer configuration
+      const launchOptions: any = {
         headless: true,
         args: [
           '--no-sandbox',
@@ -43,12 +47,27 @@ class ScraperService {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-software-rasterizer',
+          '--disable-extensions'
         ]
-      })
+      }
+
+      // In production, explicitly set cache path for Puppeteer
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Production environment detected - using Puppeteer cache')
+        // Set PUPPETEER_CACHE_DIR if not already set
+        if (!process.env.PUPPETEER_CACHE_DIR) {
+          process.env.PUPPETEER_CACHE_DIR = '/workspace/.cache/puppeteer'
+        }
+        console.log('Puppeteer cache directory:', process.env.PUPPETEER_CACHE_DIR)
+      }
+
+      this.browser = await puppeteer.launch(launchOptions)
       console.log('Browser initialized successfully')
     } catch (error) {
       console.error('Failed to initialize browser:', error)
+      console.error('Error details:', error instanceof Error ? error.stack : error)
       throw new Error('Failed to initialize web scraper')
     }
   }
