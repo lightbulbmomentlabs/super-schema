@@ -79,10 +79,17 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Copy package files first
+COPY --from=base /app/package*.json ./
+COPY --from=base /app/server/package*.json ./server/
+COPY --from=base /app/shared/package*.json ./shared/
+
+# Install production dependencies only
+RUN npm install --workspace=shared --omit=dev
+RUN npm install --workspace=server --omit=dev
+
 # Copy built application from base stage
 COPY --from=base /app/server/dist ./server/dist
-COPY --from=base /app/server/node_modules ./server/node_modules
-COPY --from=base /app/server/package*.json ./server/
 COPY --from=base /app/shared ./shared
 COPY --from=base /app/client/dist ./client/dist
 
