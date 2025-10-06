@@ -15,7 +15,10 @@ import type {
   CreateSupportTicketRequest
 } from '@shared/types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// In production, API is served from same origin as the client
+// In development, use VITE_API_URL from .env or default to localhost:3001
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === 'production' ? window.location.origin : 'http://localhost:3001')
 
 // Create axios instance
 export const api = axios.create({
