@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc || true && npm run copy-client",
     "copy-client": "mkdir -p dist/client && cp -r ../client/dist/* dist/client/",
+    "postinstall": "npx puppeteer browsers install chrome || true",
     "start": "node dist/src/index.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
