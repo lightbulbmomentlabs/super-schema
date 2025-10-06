@@ -103,7 +103,7 @@ export const paginatedResponseSchema = z.object({
 })
 
 // Export types inferred from schemas
-export type SchemaGenerationRequest = z.infer<typeof schemaGenerationRequestSchema>
+// Note: SchemaGenerationRequest is defined in types/index.ts to avoid circular dependencies
 export type SchemaValidationRequest = z.infer<typeof schemaValidationRequestSchema>
 export type CreditPurchaseRequest = z.infer<typeof creditPurchaseSchema>
 export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>
