@@ -1,0 +1,884 @@
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles } from 'lucide-react'
+import { apiService } from '@/services/api'
+import type { DiscoveredUrl } from '@shared/types'
+import { cn } from '@/utils/cn'
+import SchemaEditor from '@/components/SchemaEditor'
+import SchemaScoreCompact from '@/components/SchemaScoreCompact'
+import RichResultsPreview from '@/components/RichResultsPreview'
+import ConfirmModal from '@/components/ConfirmModal'
+import { toast } from 'react-hot-toast'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import LightningBoltIcon from '@/components/icons/LightningBoltIcon'
+import SuperSchemaBoltSolid from '@/components/icons/SuperSchemaBoltSolid'
+import { calculateSchemaScore } from '@/utils/calculateSchemaScore'
+import { MAX_REFINEMENTS } from '@shared/config/refinement'
+
+export default function LibraryPage() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
+  const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
+  const [showHidden, setShowHidden] = useState(false)
+  const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isRefining, setIsRefining] = useState(false)
+  const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
+  const [showChangesBanner, setShowChangesBanner] = useState(false)
+  const queryClient = useQueryClient()
+
+  // Set page title
+  useEffect(() => {
+    document.title = 'Super Schema | Library'
+  }, [])
+
+  // Fetch domains
+  const { data: domainsResponse, isLoading: domainsLoading } = useQuery({
+    queryKey: ['domains'],
+    queryFn: () => apiService.getUserDomains(),
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when window regains focus
+  })
+
+  // Fetch all URLs for counts (unfiltered by schema status)
+  const { data: allUrlsResponse, refetch: refetchAllUrls } = useQuery({
+    queryKey: ['urls-all', selectedDomainId, showHidden, searchQuery],
+    queryFn: () => apiService.getUserUrls({
+      domainId: selectedDomainId,
+      hasSchema: undefined, // Don't filter by schema status for counts
+      isHidden: showHidden ? undefined : false,
+      search: searchQuery || undefined
+    }),
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true
+  })
+
+  // Fetch URLs with filters (for display)
+  const { data: urlsResponse, isLoading: urlsLoading, refetch: refetchUrls } = useQuery({
+    queryKey: ['urls', selectedDomainId, schemaFilter, showHidden, searchQuery],
+    queryFn: () => apiService.getUserUrls({
+      domainId: selectedDomainId,
+      hasSchema: schemaFilter === 'all' ? undefined : schemaFilter === 'with',
+      isHidden: showHidden ? undefined : false,
+      search: searchQuery || undefined
+    }),
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when window regains focus
+  })
+
+  // Fetch schema for selected URL
+  const { data: schemaResponse, isLoading: schemaLoading, error: schemaError } = useQuery({
+    queryKey: ['urlSchema', selectedUrlId],
+    queryFn: () => selectedUrlId ? apiService.getUrlSchema(selectedUrlId) : null,
+    enabled: !!selectedUrlId
+  })
+
+  // Log schema response for debugging
+  console.log('📊 Schema query state:', {
+    selectedUrlId,
+    isLoading: schemaLoading,
+    hasData: !!schemaResponse,
+    data: schemaResponse,
+    error: schemaError
+  })
+
+  const domains = domainsResponse?.data || []
+  const urls = urlsResponse?.data || []
+  const allUrls = allUrlsResponse?.data || [] // Unfiltered URLs for counts
+
+  // Extract schemas - handle both array and object formats
+  const schemas = schemaResponse?.data?.schemas
+  let schemasArray: any[] = []
+
+  if (Array.isArray(schemas)) {
+    // If it's already an array, check if items are wrapped schema objects or actual schemas
+    schemasArray = schemas.map(item => {
+      // If item has a 'schemas' property, unwrap it
+      if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
+        return item.schemas
+      }
+      // If item has a 'schemas' property that's an object, unwrap it
+      if (item && typeof item === 'object' && 'schemas' in item && !Array.isArray(item.schemas)) {
+        return [item.schemas]
+      }
+      // Otherwise it's already a schema object
+      return item
+    }).flat()
+  } else if (schemas && typeof schemas === 'object') {
+    // If it's a single object, check if it has @type (is a schema) or needs unwrapping
+    if (schemas['@type']) {
+      // It's a direct schema object
+      schemasArray = [schemas]
+    } else if ('schemas' in schemas) {
+      // It's wrapped, unwrap it
+      schemasArray = Array.isArray(schemas.schemas) ? schemas.schemas : [schemas.schemas]
+    } else {
+      schemasArray = [schemas]
+    }
+  }
+
+  console.log('📋 Extracted schemas:', { schemas, schemasArray })
+
+  // Calculate schema score if not stored in database (for old schemas)
+  const displayScore = useMemo(() => {
+    if (schemaResponse?.data?.schemaScore) {
+      return schemaResponse.data.schemaScore
+    }
+    // Fallback: calculate score client-side for old schemas
+    if (schemasArray && schemasArray.length > 0) {
+      return calculateSchemaScore(schemasArray)
+    }
+    return null
+  }, [schemaResponse?.data?.schemaScore, schemasArray])
+
+  // Auto-select URL from query parameter (e.g., from dashboard navigation or duplicate warning modal)
+  useEffect(() => {
+    const urlParam = searchParams.get('url')
+    const urlIdParam = searchParams.get('urlId')
+
+    if (!selectedUrlId && urls.length > 0) {
+      // Check for urlId parameter first (direct ID reference)
+      if (urlIdParam) {
+        const matchingUrl = urls.find(u => u.id === urlIdParam)
+        if (matchingUrl) {
+          setSelectedUrlId(matchingUrl.id)
+          setSearchParams({}) // Clear the URL parameter
+          return
+        }
+      }
+
+      // Fallback to url parameter (URL string match)
+      if (urlParam) {
+        const matchingUrl = urls.find(u => u.url === urlParam)
+        if (matchingUrl) {
+          setSelectedUrlId(matchingUrl.id)
+          setSearchParams({}) // Clear the URL parameter
+        }
+      }
+    }
+  }, [searchParams, urls, selectedUrlId, setSearchParams])
+
+  const handleHideUrl = async (urlId: string) => {
+    try {
+      await apiService.hideUrl(urlId)
+      refetchUrls()
+      refetchAllUrls()
+    } catch (error) {
+      console.error('Failed to hide URL:', error)
+    }
+  }
+
+  const handleUnhideUrl = async (urlId: string) => {
+    try {
+      await apiService.unhideUrl(urlId)
+      refetchUrls()
+      refetchAllUrls()
+    } catch (error) {
+      console.error('Failed to unhide URL:', error)
+    }
+  }
+
+  const handleDeleteDomain = async (domainId: string) => {
+    if (!confirm('Are you sure you want to delete this domain and all its URLs?')) {
+      return
+    }
+
+    try {
+      await apiService.deleteDomain(domainId)
+      refetchUrls()
+      refetchAllUrls()
+    } catch (error) {
+      console.error('Failed to delete domain:', error)
+    }
+  }
+
+  // Mutation for updating schema
+  const updateSchemaMutation = useMutation({
+    mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[] }) =>
+      apiService.updateUrlSchema(urlId, schemas),
+    onSuccess: (_, variables) => {
+      // Update the cache optimistically to reflect the saved changes
+      // This prevents the editor from reverting to old data
+      queryClient.setQueryData(['urlSchema', variables.urlId], (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            schemas: variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
+          }
+        }
+      })
+    },
+    onError: () => {
+      toast.error('Failed to update schema')
+    }
+  })
+
+  const handleSchemaChange = useCallback(
+    (schemas: any[]) => {
+      if (!selectedUrlId) return
+      updateSchemaMutation.mutate({ urlId: selectedUrlId, schemas })
+    },
+    [selectedUrlId, updateSchemaMutation]
+  )
+
+  const handleUrlClick = (urlId: string) => {
+    console.log('🖱️ URL clicked:', urlId)
+    setSelectedUrlId(urlId)
+  }
+
+  // Delete URL mutation
+  const deleteUrlMutation = useMutation({
+    mutationFn: (urlId: string) => apiService.deleteUrl(urlId),
+    onSuccess: () => {
+      refetchUrls()
+      refetchAllUrls()
+      toast.success('URL deleted successfully')
+    },
+    onError: () => {
+      toast.error('Failed to delete URL')
+    }
+  })
+
+  const handleDeleteUrl = async (urlId: string) => {
+    if (!confirm('Are you sure you want to delete this URL?')) {
+      return
+    }
+    deleteUrlMutation.mutate(urlId)
+  }
+
+  const handleGenerateSchema = (url: string) => {
+    // Navigate to generate page with URL pre-populated and auto-generate enabled
+    navigate(`/generate?url=${encodeURIComponent(url)}&auto=true`)
+  }
+
+  const toggleUrlSelection = (urlId: string) => {
+    const newSelected = new Set(selectedUrls)
+    if (newSelected.has(urlId)) {
+      newSelected.delete(urlId)
+    } else {
+      newSelected.add(urlId)
+    }
+    setSelectedUrls(newSelected)
+  }
+
+  const confirmBatchDelete = async () => {
+    try {
+      // Delete all selected URLs
+      await Promise.all(
+        Array.from(selectedUrls).map(urlId => apiService.deleteUrl(urlId))
+      )
+      toast.success(`${selectedUrls.size} URL${selectedUrls.size !== 1 ? 's' : ''} deleted successfully`)
+      setSelectedUrls(new Set())
+      setSelectionMode(false)
+      refetchUrls()
+      refetchAllUrls()
+    } catch (error) {
+      toast.error('Failed to delete some URLs')
+    }
+  }
+
+  const handleRefineSchema = async () => {
+    if (!selectedUrlId || !schemasArray || schemasArray.length === 0) {
+      toast.error('No schema to refine')
+      return
+    }
+
+    const currentUrl = urls.find(u => u.id === selectedUrlId)?.url
+    if (!currentUrl) {
+      toast.error('URL not found')
+      return
+    }
+
+    setIsRefining(true)
+    setShowChangesBanner(false)
+
+    try {
+      const result = await apiService.refineLibrarySchema(
+        selectedUrlId,
+        schemasArray,
+        currentUrl
+      )
+
+      if (result.success && result.data) {
+        // Update the schemas and refinement count in the UI
+        queryClient.setQueryData(['urlSchema', selectedUrlId], (old: any) => ({
+          ...old,
+          data: {
+            ...old?.data,
+            schemas: result.data.schemas,
+            schemaScore: result.data.schemaScore,
+            refinementCount: result.data.refinementCount
+          }
+        }))
+
+        // Show changes banner
+        setHighlightedChanges(result.data.highlightedChanges || [])
+        setShowChangesBanner(true)
+
+        const refinementsLeft = result.data.remainingRefinements
+        toast.success(
+          `Schema refined successfully! ${refinementsLeft} refinement${refinementsLeft !== 1 ? 's' : ''} remaining.`
+        )
+      } else {
+        toast.error('Failed to refine schema')
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || 'Failed to refine schema'
+      toast.error(errorMessage)
+    } finally {
+      setIsRefining(false)
+    }
+  }
+
+  // Calculate counts for tabs from unfiltered URLs
+  const allUrlsCount = allUrls.length
+  const urlsWithSchemaCount = allUrls.filter(url => url.hasSchema).length
+  const urlsWithoutSchemaCount = allUrls.filter(url => !url.hasSchema).length
+
+  // Separate URLs by domain vs. standalone
+  const urlsWithDomain = urls.filter(url => url.domainId !== null)
+  const urlsWithoutDomain = urls.filter(url => url.domainId === null)
+
+  // Group domain URLs by domain
+  const urlsByDomain = urlsWithDomain.reduce((acc, url) => {
+    const domainId = url.domainId!
+    if (!acc[domainId]) {
+      acc[domainId] = []
+    }
+    acc[domainId].push(url)
+    return acc
+  }, {} as Record<string, DiscoveredUrl[]>)
+
+  return (
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <div className="border-b border-input bg-background px-6 py-4">
+        <div className="flex items-center gap-3 mb-2">
+          <Library className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold">URL Library</h1>
+        </div>
+        <p className="text-muted-foreground">
+          Browse and manage your discovered URLs across all domains
+        </p>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden max-w-[2000px]">
+          {/* Left column - URL list (50%) */}
+          <div className="w-[50%] border-r border-input flex flex-col overflow-hidden">
+          {/* Filters */}
+          <div className="p-4 space-y-4 border-b border-input">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search URLs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {/* Schema filter tabs */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              <button
+                onClick={() => setSchemaFilter('all')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-md transition-all',
+                  schemaFilter === 'all'
+                    ? 'bg-background shadow-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Library className="h-4 w-4" />
+                <span>All</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 text-xs rounded-full',
+                  schemaFilter === 'all' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                )}>
+                  {allUrlsCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setSchemaFilter('with')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-md transition-all',
+                  schemaFilter === 'with'
+                    ? 'bg-background shadow-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <SuperSchemaBoltSolid className="h-4 w-4" />
+                <span>Has Schema</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 text-xs rounded-full',
+                  schemaFilter === 'with' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                )}>
+                  {urlsWithSchemaCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setSchemaFilter('without')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-md transition-all',
+                  schemaFilter === 'without'
+                    ? 'bg-background shadow-sm font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <LightningBoltIcon className="h-4 w-4 text-gray-400" />
+                <span>Needs Schema</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 text-xs rounded-full',
+                  schemaFilter === 'without' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                )}>
+                  {urlsWithoutSchemaCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Other filter buttons */}
+            <div className="flex flex-wrap gap-2">
+              {/* Domain filter */}
+              <select
+                value={selectedDomainId || 'all'}
+                onChange={(e) => setSelectedDomainId(e.target.value === 'all' ? undefined : e.target.value)}
+                className="px-3 py-1.5 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All Domains</option>
+                {domains.map((domain) => (
+                  <option key={domain.id} value={domain.id}>
+                    {domain.domain}
+                  </option>
+                ))}
+              </select>
+
+              {/* Show hidden toggle */}
+              <button
+                onClick={() => setShowHidden(!showHidden)}
+                className={cn(
+                  'px-3 py-1.5 text-sm rounded-md border transition-colors flex items-center gap-1',
+                  showHidden
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-muted'
+                )}
+              >
+                {showHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {showHidden ? 'Show All' : 'Hidden'}
+              </button>
+
+              {/* Selection mode toggle */}
+              <button
+                onClick={() => {
+                  setSelectionMode(!selectionMode)
+                  setSelectedUrls(new Set())
+                }}
+                className={cn(
+                  'px-3 py-1.5 text-sm rounded-md border transition-colors',
+                  selectionMode
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-muted'
+                )}
+              >
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
+            </div>
+          </div>
+
+          {/* Batch action bar */}
+          {selectionMode && selectedUrls.size > 0 && (
+            <div className="px-4 py-2 bg-primary/10 border-b border-primary flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {selectedUrls.size} URL{selectedUrls.size !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-3 py-1 text-sm bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors flex items-center gap-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete Selected
+              </button>
+            </div>
+          )}
+
+          {/* URL list */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Loading state */}
+            {(domainsLoading || urlsLoading) && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!domainsLoading && !urlsLoading && urls.length === 0 && (
+              <div className="text-center py-12 px-4">
+                <Library className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No URLs in your library yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Generate schemas or use URL Discovery to start building your library
+                </p>
+              </div>
+            )}
+
+            {/* Domain-based URLs */}
+            {!domainsLoading && !urlsLoading && domains.length > 0 && (
+              <div>
+                {domains
+                  .filter((domain) => !selectedDomainId || domain.id === selectedDomainId)
+                  .map((domain) => {
+                    const domainUrls = urlsByDomain[domain.id] || []
+                    // Get the count from allUrls to show total unfiltered count
+                    const totalDomainUrls = allUrls.filter(url => url.domainId === domain.id).length
+
+                    if (domainUrls.length === 0 && selectedDomainId) {
+                      return null
+                    }
+
+                    return (
+                      <div key={domain.id} className="border-b border-input">
+                        {/* Domain header */}
+                        <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-sm">{domain.domain}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {totalDomainUrls} URL{totalDomainUrls !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteDomain(domain.id)}
+                            className="text-destructive hover:text-destructive/80 transition-colors"
+                            title="Delete domain"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+
+                        {/* URLs */}
+                        {domainUrls.map((url) => (
+                          <div
+                            key={url.id}
+                            onClick={() => !selectionMode && handleUrlClick(url.id)}
+                            className={cn(
+                              'px-4 py-2 transition-colors border-l-2 group',
+                              !selectionMode && 'cursor-pointer',
+                              selectedUrlId === url.id && !selectionMode
+                                ? 'bg-primary/10 border-primary'
+                                : 'border-transparent hover:bg-muted/50',
+                              url.isHidden && 'opacity-50'
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {/* Checkbox in selection mode */}
+                                {selectionMode && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedUrls.has(url.id)}
+                                    onChange={(e) => {
+                                      e.stopPropagation()
+                                      toggleUrlSelection(url.id)
+                                    }}
+                                    className="rounded border-input"
+                                  />
+                                )}
+
+                                {/* Schema status icon */}
+                                {url.hasSchema ? (
+                                  <SuperSchemaBoltSolid className="h-3.5 w-3.5 flex-shrink-0" />
+                                ) : (
+                                  <LightningBoltIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                )}
+
+                                <span className="text-sm truncate">{url.path}</span>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex items-center gap-1">
+                                {/* Generate button for URLs without schema */}
+                                {!url.hasSchema && !selectionMode && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleGenerateSchema(url.url)
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-primary hover:bg-primary/90 text-primary-foreground rounded p-1.5 flex items-center justify-center"
+                                    title="Generate schema"
+                                  >
+                                    <LightningBoltIcon className="h-3 w-3" />
+                                  </button>
+                                )}
+
+                                {/* Hide/Unhide button */}
+                                {!selectionMode && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      url.isHidden ? handleUnhideUrl(url.id) : handleHideUrl(url.id)
+                                    }}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    {url.isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                                  </button>
+                                )}
+
+                                {/* Delete button */}
+                                {!selectionMode && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteUrl(url.id)
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                                    title="Delete URL"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
+
+            {/* Standalone URLs */}
+            {!domainsLoading && !urlsLoading && urlsWithoutDomain.length > 0 && (
+              <div className="border-b border-input">
+                <div className="bg-muted/30 px-4 py-2">
+                  <h3 className="font-medium text-sm">Individual URLs</h3>
+                  <p className="text-xs text-muted-foreground">Direct schema generations</p>
+                </div>
+                {urlsWithoutDomain.map((url) => (
+                  <div
+                    key={url.id}
+                    onClick={() => !selectionMode && handleUrlClick(url.id)}
+                    className={cn(
+                      'px-4 py-2 transition-colors border-l-2 group',
+                      !selectionMode && 'cursor-pointer',
+                      selectedUrlId === url.id && !selectionMode
+                        ? 'bg-primary/10 border-primary'
+                        : 'border-transparent hover:bg-muted/50',
+                      url.isHidden && 'opacity-50'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {selectionMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedUrls.has(url.id)}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              toggleUrlSelection(url.id)
+                            }}
+                            className="rounded border-input"
+                          />
+                        )}
+                        {url.hasSchema ? (
+                          <SuperSchemaBoltSolid className="h-3.5 w-3.5 flex-shrink-0" />
+                        ) : (
+                          <LightningBoltIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        )}
+                        <span className="text-sm truncate">{url.url}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {!url.hasSchema && !selectionMode && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleGenerateSchema(url.url)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity bg-primary hover:bg-primary/90 text-primary-foreground rounded p-1.5 flex items-center justify-center"
+                            title="Generate schema"
+                          >
+                            <LightningBoltIcon className="h-3 w-3" />
+                          </button>
+                        )}
+                        {!selectionMode && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteUrl(url.id)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
+                              title="Delete URL"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                url.isHidden ? handleUnhideUrl(url.id) : handleHideUrl(url.id)
+                              }}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              {url.isHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right column - Schema viewer (60%) */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-muted/20">
+          {!selectedUrlId ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Library className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Select a URL to view its schema</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click on any URL from the list to view and edit its schema
+                </p>
+              </div>
+            </div>
+          ) : schemaLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : schemaError ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <AlertCircle className="h-16 w-16 mx-auto mb-4 text-destructive opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Error loading schema</h3>
+                <p className="text-sm text-muted-foreground">
+                  {schemaError instanceof Error ? schemaError.message : 'An error occurred'}
+                </p>
+              </div>
+            </div>
+          ) : schemasArray && schemasArray.length > 0 ? (
+            <div className="flex-1 overflow-auto p-6 space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Schema Editor</h2>
+                  <a
+                    href={urls.find(u => u.id === selectedUrlId)?.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+                    title="Open URL in new tab"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    <span>View Page</span>
+                  </a>
+                </div>
+                <SchemaEditor
+                  schemas={schemasArray}
+                  onSchemaChange={handleSchemaChange}
+                  height="500px"
+                />
+              </div>
+
+              {/* Schema Quality Score */}
+              {displayScore && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">Schema Quality</h2>
+                    <button
+                      onClick={handleRefineSchema}
+                      disabled={isRefining || (schemaResponse?.data?.refinementCount || 0) >= MAX_REFINEMENTS}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
+                        isRefining || (schemaResponse?.data?.refinementCount || 0) >= MAX_REFINEMENTS
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      )}
+                    >
+                      {isRefining ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Refining...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3" />
+                          Refine with AI ({MAX_REFINEMENTS - (schemaResponse?.data?.refinementCount || 0)} left)
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Changes Banner */}
+                  {showChangesBanner && highlightedChanges.length > 0 && (
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            AI Refinement Changes
+                          </h4>
+                          <ul className="space-y-1">
+                            {highlightedChanges.map((change, index) => (
+                              <li key={index} className="text-sm text-blue-800 flex items-start gap-2">
+                                <span className="text-blue-500 mt-0.5">•</span>
+                                <span>{change}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <button
+                          onClick={() => setShowChangesBanner(false)}
+                          className="text-blue-600 hover:text-blue-800 p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <SchemaScoreCompact score={displayScore} />
+                </div>
+              )}
+
+              <div>
+                <h2 className="text-xl font-bold mb-4">Google Rich Results Preview</h2>
+                <RichResultsPreview schemas={schemasArray} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <AlertCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No schema found</h3>
+                <p className="text-sm text-muted-foreground">
+                  This URL doesn't have a schema yet. Generate one from the Generate page.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmBatchDelete}
+        title="Delete URLs"
+        message={`Are you sure you want to delete ${selectedUrls.size} URL${selectedUrls.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+    </div>
+  )
+}

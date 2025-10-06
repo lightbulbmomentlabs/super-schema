@@ -1,0 +1,1505 @@
+import OpenAI from 'openai'
+import type { JsonLdSchema } from '@shared/types/index.js'
+
+// Enhanced interfaces for comprehensive AEO metadata
+export interface AuthorInfo {
+  name: string
+  url?: string
+  email?: string
+  jobTitle?: string
+  worksFor?: string
+}
+
+export interface BusinessInfo {
+  name: string
+  type?: string
+  address?: {
+    streetAddress?: string
+    addressLocality?: string
+    addressRegion?: string
+    postalCode?: string
+    addressCountry?: string
+  }
+  contactPoint?: {
+    telephone?: string
+    email?: string
+    contactType?: string
+  }
+  url?: string
+  logo?: string
+  sameAs?: string[]
+}
+
+export interface FAQ {
+  question: string
+  answer: string
+}
+
+export interface ContentAnalysis {
+  title?: string
+  description?: string
+  content: string
+  url: string
+  metadata?: {
+    // Core metadata (existing)
+    author?: string | AuthorInfo
+    publishDate?: string
+    modifiedDate?: string
+    images?: string[]
+    videos?: string[]
+    breadcrumbs?: string[]
+    contactInfo?: any
+    businessInfo?: BusinessInfo
+    productInfo?: any
+    eventInfo?: any
+
+    // Enhanced AEO metadata
+    language?: string
+    wordCount?: number
+    articleSection?: string
+    keywords?: string[]
+    entities?: string[]
+    mentions?: string[]
+    categories?: string[]
+    tags?: string[]
+
+    // Structured content
+    faqContent?: FAQ[]
+    headings?: string[]
+    jsonLdData?: any[]
+
+    // Image metadata
+    imageInfo?: {
+      featuredImage?: string
+      featuredImageAlt?: string
+      imageCount?: number
+      allImages?: Array<{
+        url: string
+        alt?: string
+        caption?: string
+      }>
+    }
+
+    // Content analysis
+    contentType?: 'article' | 'blog' | 'news' | 'product' | 'service' | 'about' | 'contact' | 'home'
+    readingTime?: number
+    socialUrls?: string[]
+
+    // Technical metadata
+    canonicalUrl?: string
+    alternateLanguages?: Array<{
+      lang: string
+      url: string
+    }>
+
+    // Business/Organization specific
+    openingHours?: string
+    priceRange?: string
+
+    // Review/Rating data
+    reviews?: Array<{
+      rating: number
+      author: string
+      text: string
+      date?: string
+    }>
+    aggregateRating?: {
+      ratingValue: number
+      reviewCount: number
+      bestRating?: number
+      worstRating?: number
+    }
+
+    // Enhanced HTML processing metrics (from new HTML cleaning service)
+    originalLength?: number
+    processedLength?: number
+    tokenEstimate?: number
+    contentHierarchy?: any[]
+
+    // Enhanced metadata from HTML cleaning service
+    openGraph?: any
+    twitterCard?: any
+    existingJsonLd?: any[]
+    technical?: any
+  }
+}
+
+export interface SchemaGenerationOptions {
+  includeImages?: boolean
+  includeVideos?: boolean
+  includeProducts?: boolean
+  includeEvents?: boolean
+  includeArticles?: boolean
+  includeOrganization?: boolean
+  includeLocalBusiness?: boolean
+  requestedSchemaTypes?: string[]
+}
+
+// Schema property requirements for AEO optimization
+export interface SchemaPropertyRequirements {
+  required: string[]
+  recommended: string[]
+  advanced: string[]
+  description: string
+}
+
+export const SCHEMA_PROPERTY_TEMPLATES: Record<string, SchemaPropertyRequirements> = {
+  BlogPosting: {
+    required: ['@context', '@type', 'headline', 'datePublished', 'dateModified', 'author', 'publisher', 'mainEntityOfPage'],
+    recommended: ['description', 'image', 'keywords', 'articleSection', 'inLanguage', 'wordCount', 'timeRequired', 'isPartOf'],
+    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'about', 'mentions'],
+    description: 'Blog post content optimized for AI search engines (ChatGPT quality)'
+  },
+  Article: {
+    required: ['@context', '@type', 'headline', 'datePublished', 'author', 'publisher', 'mainEntityOfPage'],
+    recommended: ['description', 'dateModified', 'image', 'keywords', 'articleSection', 'inLanguage', 'articleBody', 'about', 'mentions'],
+    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'isPartOf', 'wordCount'],
+    description: 'General article content with comprehensive metadata'
+  },
+  WebPage: {
+    required: ['@context', '@type', 'name', 'url'],
+    recommended: ['description', 'inLanguage', 'isPartOf', 'mainEntity', 'breadcrumb', 'lastReviewed'],
+    advanced: ['potentialAction', 'speakable', 'significantLink', 'relatedLink'],
+    description: 'Basic web page structure and navigation'
+  },
+  Organization: {
+    required: ['@context', '@type', 'name', 'url'],
+    recommended: ['logo', 'description', 'contactPoint', 'address', 'sameAs', 'founder'],
+    advanced: ['brand', 'parentOrganization', 'subOrganization', 'award', 'knowsAbout'],
+    description: 'Business or organization information'
+  },
+  LocalBusiness: {
+    required: ['@context', '@type', 'name', 'address', 'telephone'],
+    recommended: ['url', 'description', 'openingHours', 'priceRange', 'image', 'geo'],
+    advanced: ['aggregateRating', 'review', 'paymentAccepted', 'currenciesAccepted', 'areaServed'],
+    description: 'Local business with location and contact information'
+  },
+  FAQPage: {
+    required: ['@context', '@type', 'mainEntity'],
+    recommended: ['name', 'description'],
+    advanced: ['about', 'audience', 'keywords'],
+    description: 'Frequently asked questions page'
+  },
+  BreadcrumbList: {
+    required: ['@context', '@type', 'itemListElement'],
+    recommended: ['name', 'description'],
+    advanced: ['numberOfItems'],
+    description: 'Navigation breadcrumb trail'
+  },
+  ImageObject: {
+    required: ['@context', '@type', 'url'],
+    recommended: ['description', 'name', 'contentUrl', 'width', 'height'],
+    advanced: ['caption', 'exifData', 'representativeOfPage'],
+    description: 'Image with metadata'
+  },
+  Person: {
+    required: ['@context', '@type', 'name'],
+    recommended: ['url', 'image', 'jobTitle', 'worksFor', 'description'],
+    advanced: ['sameAs', 'knowsAbout', 'alumniOf', 'award'],
+    description: 'Person or author information'
+  },
+  VideoObject: {
+    required: ['@context', '@type', 'name', 'description', 'contentUrl'],
+    recommended: ['thumbnailUrl', 'duration', 'uploadDate', 'publisher'],
+    advanced: ['transcript', 'caption', 'interactionStatistic'],
+    description: 'Video content with metadata'
+  }
+}
+
+class OpenAIService {
+  private client: OpenAI | null = null
+  private clientInitialized = false
+
+  private initializeClient(): OpenAI | null {
+    if (this.clientInitialized) {
+      return this.client
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY
+    console.log('OpenAI Service Debug:', {
+      hasApiKey: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      keyStart: apiKey?.substring(0, 10) || 'none'
+    })
+
+    if (!apiKey) {
+      console.warn('OpenAI API key not provided - using mock responses for development')
+      this.client = null
+    } else {
+      console.log('Initializing OpenAI client with API key')
+      this.client = new OpenAI({
+        apiKey: apiKey
+      })
+    }
+
+    this.clientInitialized = true
+    return this.client
+  }
+
+  async generateSchemas(
+    analysis: ContentAnalysis,
+    options: SchemaGenerationOptions = {}
+  ): Promise<JsonLdSchema[]> {
+    // Initialize client lazily
+    const client = this.initializeClient()
+
+    // Return mock schemas for development when no API key is provided
+    if (!client) {
+      return this.getMockSchemas(analysis, options)
+    }
+
+    // Check if user has requested specific schema types
+    const isUserSpecificMode = options.requestedSchemaTypes && options.requestedSchemaTypes.length > 0
+    console.log(`🤖 AI Mode: ${isUserSpecificMode ? 'User-Specific' : 'Auto-Detection'}`)
+    if (isUserSpecificMode) {
+      console.log(`📋 Requested Schema Types: ${options.requestedSchemaTypes!.join(', ')}`)
+    }
+
+    const prompt = this.buildPrompt(analysis, options)
+    const systemPrompt = isUserSpecificMode
+      ? this.getUserSpecificSystemPrompt(options.requestedSchemaTypes!)
+      : this.getExpertSystemPrompt()
+
+    try {
+      const model = process.env.OPENAI_MODEL || 'gpt-4o'
+
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_completion_tokens: 6000,
+        response_format: { type: 'json_object' }
+      })
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No response from OpenAI')
+      }
+
+      const result = JSON.parse(content)
+      const schemas = result.schemas || []
+
+      if (schemas.length === 0) {
+        throw new Error('No valid schemas generated')
+      }
+
+      console.log(`Generated ${schemas.length} schemas successfully`)
+
+      // Clean schemas first to remove HTML and fix malformed properties
+      const cleanedSchemas = schemas.map(schema => this.cleanSchemaProperties(schema))
+
+      // Validate and enhance schemas using the property completion engine
+      const enhancedSchemas = await this.validateAndEnhanceSchemas(cleanedSchemas, analysis)
+
+      if (enhancedSchemas.length === 0) {
+        throw new Error('No valid schemas generated after enhancement')
+      }
+
+      const schemaTypes = enhancedSchemas.map(s => s['@type']).join(', ')
+      console.log(`✅ Generated ${enhancedSchemas.length} enhanced AEO schemas: ${schemaTypes}`)
+
+      // Validate user-specific mode compliance
+      if (isUserSpecificMode) {
+        const requestedTypes = options.requestedSchemaTypes!
+        const generatedTypes = enhancedSchemas.map(s => s['@type'])
+        const unauthorizedTypes = generatedTypes.filter(type => !requestedTypes.includes(type))
+
+        if (unauthorizedTypes.length > 0) {
+          console.warn(`⚠️ AI generated unauthorized schema types: ${unauthorizedTypes.join(', ')}`)
+          console.warn(`📋 User requested: ${requestedTypes.join(', ')}`)
+          console.warn(`🤖 AI generated: ${generatedTypes.join(', ')}`)
+        } else {
+          console.log(`✅ User-specific mode compliance: Generated only requested types`)
+        }
+      }
+
+      return enhancedSchemas
+
+    } catch (error) {
+      console.error('OpenAI schema generation error:', error)
+      throw new Error(`Failed to generate schemas: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  private buildPrompt(analysis: ContentAnalysis, options: SchemaGenerationOptions): string {
+    // Apply intelligent content prioritization for token optimization
+    const prioritizedContent = this.prioritizeContent(analysis.content)
+
+    // Calculate reading time for timeRequired property
+    const wordCount = analysis.metadata?.wordCount || 0
+    const readingMinutes = Math.ceil(wordCount / 200) // 200 WPM average reading speed
+    const timeRequired = readingMinutes > 0 ? `PT${readingMinutes}M` : undefined
+
+    let prompt = `🎯 CHATGPT-QUALITY SCHEMA GENERATION - EXTRACT FROM PROVIDED METADATA ONLY:
+
+=== VERIFIED PAGE METADATA ===
+URL: ${analysis.url}
+Title: ${analysis.title || '[NOT FOUND]'}
+Description: ${analysis.description || '[NOT FOUND]'}
+Canonical URL: ${analysis.metadata?.canonicalUrl || analysis.url}
+Language: ${analysis.metadata?.language || 'en'}
+
+=== AUTHOR INFORMATION ===
+Author Name: ${analysis.metadata?.author?.name || '[NOT FOUND - OMIT author property]'}
+Author URL: ${analysis.metadata?.author?.url || '[NOT FOUND]'}
+
+=== PUBLICATION DATES ===
+Date Published: ${analysis.metadata?.publishDate || '[NOT FOUND - OMIT datePublished]'}
+Date Modified: ${analysis.metadata?.modifiedDate || analysis.metadata?.publishDate || '[NOT FOUND - USE datePublished if available]'}
+
+=== IMAGES ===
+Featured Image: ${analysis.metadata?.imageInfo?.featuredImage || '[NOT FOUND - OMIT image property]'}
+Publisher Logo: ${analysis.metadata?.businessInfo?.logo || '[NOT FOUND - CREATE ImageObject with featured image or site icon]'}
+
+=== PUBLISHER/ORGANIZATION ===
+Organization Name: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}
+Organization URL: ${new URL(analysis.url).origin}
+Logo URL: ${analysis.metadata?.businessInfo?.logo || analysis.metadata?.imageInfo?.featuredImage || `${new URL(analysis.url).origin}/favicon.ico`}
+
+=== KEYWORDS & TAXONOMY ===
+Keywords (MUST be array): ${analysis.metadata?.keywords?.length ? JSON.stringify(analysis.metadata.keywords.slice(0, 10)) : '[]'}
+Tags: ${analysis.metadata?.tags?.length ? JSON.stringify(analysis.metadata.tags.slice(0, 10)) : '[]'}
+
+=== ARTICLE STRUCTURE ===
+Article Sections (from H2 headings): ${analysis.metadata?.articleSections?.length ? JSON.stringify(analysis.metadata.articleSections) : '[NO H2 HEADINGS FOUND]'}
+Primary Section: ${analysis.metadata?.articleSection || '[NOT FOUND]'}
+
+=== CONTENT METRICS ===
+Word Count: ${wordCount || '[NOT CALCULATED]'}
+Reading Time (timeRequired): ${timeRequired || '[CALCULATE: PT' + readingMinutes + 'M]'}
+Content Type: ${analysis.metadata?.contentType || 'article'}
+
+=== URL ANALYSIS ===
+Is Blog Post: ${analysis.url.includes('/blog/') || analysis.url.includes('/post/') ? 'YES - Use BlogPosting' : 'NO - Use Article'}
+Parent Blog URL: ${analysis.url.includes('/blog/') ? analysis.url.substring(0, analysis.url.indexOf('/blog/') + 6) : '[NOT A BLOG POST]'}
+
+=== CONTENT PREVIEW ===
+${prioritizedContent.substring(0, 3000)}${prioritizedContent.length > 3000 ? '...' : ''}
+`
+
+    // Add concise generation instruction
+    prompt += `\n\n🎯 GENERATION INSTRUCTIONS:
+
+1. Select appropriate schema type based on URL analysis and content type
+2. Use EXACT mainEntityOfPage format: {"@type": "WebPage", "@id": "url"}
+3. Include publisher with logo ImageObject
+4. Use provided author name exactly as shown (or omit if [NOT FOUND])
+5. Include BOTH datePublished and dateModified if available
+6. Format keywords as array from provided data
+7. Build articleSection array from provided H2 headings
+8. Include wordCount and timeRequired (PT format)
+9. Add isPartOf for blog posts
+10. Clean all text properties (no HTML fragments)
+
+Return JSON with "schemas" array containing 1-4 ChatGPT-quality schemas.`
+
+    return prompt
+  }
+
+  private getMockSchemas(analysis: ContentAnalysis, options: SchemaGenerationOptions = {}): JsonLdSchema[] {
+    // If user requested specific types, only return those
+    if (options.requestedSchemaTypes && options.requestedSchemaTypes.length > 0) {
+      console.log(`🎯 Mock mode: Generating only requested types: ${options.requestedSchemaTypes.join(', ')}`)
+
+      const schemas: JsonLdSchema[] = []
+
+      for (const type of options.requestedSchemaTypes) {
+        switch (type) {
+          case 'Article':
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "Article",
+              "headline": analysis.title || "SEO Best Practices for Success",
+              "description": analysis.description || "Comprehensive guide covering key SEO strategies and best practices for improving search engine rankings and driving organic traffic.",
+              "author": analysis.metadata?.author ? (typeof analysis.metadata.author === 'object' ? {
+                "@type": "Person",
+                "name": analysis.metadata.author.name,
+                "url": analysis.metadata.author.url
+              } : {
+                "@type": "Person",
+                "name": analysis.metadata.author
+              }) : {
+                "@type": "Person",
+                "name": "Miriam-Rose LeDuc"
+              },
+              "datePublished": analysis.metadata?.publishDate || "2024-09-15",
+              "dateModified": analysis.metadata?.modifiedDate,
+              "publisher": {
+                "@type": "Organization",
+                "name": analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', ''),
+                "url": analysis.metadata?.businessInfo?.url || new URL(analysis.url).origin
+              },
+              "mainEntityOfPage": analysis.metadata?.canonicalUrl || analysis.url,
+              "image": analysis.metadata?.imageInfo?.featuredImage || `${new URL(analysis.url).origin}/images/seo-guide.jpg`,
+              "inLanguage": analysis.metadata?.language || "en",
+              "wordCount": analysis.metadata?.wordCount || 2500,
+              "keywords": analysis.metadata?.keywords?.length ? analysis.metadata.keywords : ["SEO", "search engine optimization", "digital marketing", "content strategy", "SERP rankings"],
+              "articleSection": analysis.metadata?.articleSection || "SEO Guide",
+              "about": ["Search Engine Optimization", "Digital Marketing", "Content Marketing"],
+              "mentions": ["Google", "Bing", "Search Console", "Analytics"],
+              "potentialAction": [{
+                "@type": "ReadAction",
+                "target": analysis.metadata?.canonicalUrl || analysis.url
+              }]
+            })
+            break
+          case 'Organization':
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Sample Organization",
+              "url": analysis.url,
+              "description": analysis.description || "A sample organization for development testing"
+            })
+            break
+          case 'WebPage':
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "WebPage",
+              "name": analysis.title || "Sample Web Page",
+              "description": analysis.description || "A sample web page for development testing",
+              "url": analysis.url
+            })
+            break
+          case 'LocalBusiness':
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": "Sample Local Business",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "123 Main St",
+                "addressLocality": "Anytown",
+                "addressRegion": "ST",
+                "postalCode": "12345"
+              },
+              "telephone": "+1-555-123-4567"
+            })
+            break
+          default:
+            // For any other requested type, create a basic schema
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": type,
+              "name": analysis.title || `Sample ${type}`,
+              "description": analysis.description || `A sample ${type} for development testing`
+            })
+        }
+      }
+
+      return schemas
+    }
+
+    // Default: return multiple schemas for auto mode
+    return [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": analysis.title || "Sample Web Page",
+        "description": analysis.description || "A sample web page for development testing",
+        "url": analysis.url
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": analysis.title || "Sample Article Headline",
+        "description": analysis.description || "A sample article for development testing",
+        "author": {
+          "@type": "Person",
+          "name": "Sample Author"
+        },
+        "datePublished": new Date().toISOString().split('T')[0],
+        "publisher": {
+          "@type": "Organization",
+          "name": "Sample Publisher"
+        }
+      }
+    ]
+  }
+
+  private getExpertSystemPrompt(): string {
+    return `You are an elite Schema.org expert specializing in creating ChatGPT-quality, production-ready JSON-LD schemas for AI search optimization (AEO). Your schemas MUST match or exceed the quality of manual ChatGPT schema generation.
+
+🎯 CRITICAL QUALITY STANDARDS:
+
+**SCHEMA TYPE SELECTION (CRITICAL - MUST FOLLOW EXACTLY):**
+- BlogPosting: REQUIRED for URLs containing /blog/, /post/, or any blog content. NEVER use Article for blog URLs!
+- Article: ONLY for news sites, press releases, or general articles NOT on /blog/ URLs
+- WebPage: For static pages, landing pages without article characteristics
+- Organization: For business/company information
+- Person: For author profiles, team member pages
+- LocalBusiness: For businesses with physical locations
+
+⚠️ CRITICAL RULE: If URL contains "/blog/" → MUST use BlogPosting (not Article)
+
+**REQUIRED PROPERTY FORMATS (ChatGPT Standard):**
+
+1. **mainEntityOfPage** - MUST be structured object:
+   ✅ CORRECT: {"@type": "WebPage", "@id": "https://example.com/article"}
+   ❌ WRONG: "https://example.com/article"
+
+2. **publisher** - MUST include logo as ImageObject:
+   ✅ CORRECT: {
+     "@type": "Organization",
+     "name": "Publisher Name",
+     "logo": {
+       "@type": "ImageObject",
+       "url": "https://example.com/logo.png"
+     }
+   }
+   ❌ WRONG: {"@type": "Organization", "name": "Publisher Name", "url": "..."}
+
+3. **author** - MUST be Person object with name:
+   ✅ CORRECT: {"@type": "Person", "name": "John Doe"}
+   ❌ WRONG: Missing or string value
+
+4. **datePublished & dateModified** - BOTH required for blog/article:
+   ✅ CORRECT: "datePublished": "2025-09-25", "dateModified": "2025-09-25"
+   ❌ WRONG: Only one date or missing
+
+5. **keywords** - MUST be array format:
+   ✅ CORRECT: ["keyword1", "keyword2", "keyword3"]
+   ❌ WRONG: "keyword1, keyword2" or mixed types
+
+6. **articleSection** - MUST be array of H2 headings:
+   ✅ CORRECT: ["Introduction", "Main Topic", "Conclusion"]
+   ❌ WRONG: "General Article" or single string
+
+7. **wordCount** - Include when available:
+   ✅ CORRECT: "wordCount": 1200
+
+8. **timeRequired** - Calculate reading time in ISO 8601 duration:
+   ✅ CORRECT: "timeRequired": "PT6M" (6 minutes)
+   Formula: Math.ceil(wordCount / 200) → PT{minutes}M
+
+9. **isPartOf** - Reference parent blog/website:
+   ✅ CORRECT: {
+     "@type": "Blog",
+     "name": "Company Blog",
+     "url": "https://example.com/blog/"
+   }
+
+**DATA EXTRACTION RULES:**
+- Extract author from meta tags, JSON-LD, or bylines (provided in metadata)
+- Use EXACT publish/modified dates from metadata
+- Use featured image from metadata.images.featured
+- Extract keywords from metadata.keywords array
+- Build articleSection array from metadata.articleSections (H2 headings)
+- Calculate timeRequired from metadata.wordCount
+- Use metadata.business.logo for publisher logo
+
+**ANTI-HALLUCINATION RULES:**
+- ❌ NEVER invent author names if not in metadata
+- ❌ NEVER create fake dates
+- ❌ NEVER use placeholder images
+- ❌ NEVER include HTML fragments in text properties
+- ❌ NEVER mix data types in arrays (all strings or all objects)
+- ✅ OMIT properties rather than guess
+- ✅ Use EXACT values from provided metadata
+
+**EXAMPLE - ChatGPT Quality BlogPosting:**
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://blog.example.com/article-slug"
+  },
+  "headline": "Exact Article Title",
+  "description": "Exact meta description",
+  "image": "https://blog.example.com/images/featured.jpg",
+  "author": {
+    "@type": "Person",
+    "name": "Extracted Author Name"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Company Name",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://blog.example.com/logo.png"
+    }
+  },
+  "datePublished": "2025-09-25",
+  "dateModified": "2025-09-25",
+  "keywords": ["extracted", "keyword", "array"],
+  "wordCount": 1200,
+  "timeRequired": "PT6M",
+  "articleSection": ["Section 1", "Section 2", "Section 3"],
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Company Blog",
+    "url": "https://blog.example.com/"
+  }
+}
+
+Return JSON with "schemas" array containing 1-4 expert-quality schemas based on available metadata.`
+  }
+
+  private getUserSpecificSystemPrompt(requestedTypes: string[]): string {
+    return `You are an elite Schema.org expert with deep knowledge of semantic web technologies, AI search optimization, and anti-hallucination best practices. The user has specifically requested ONLY these schema types: ${requestedTypes.join(', ')}.
+
+🎯 EXPERT-LEVEL GENERATION CONSTRAINTS:
+
+🔒 ANTI-HALLUCINATION PROTOCOL (CRITICAL):
+1. **METADATA-FIRST VALIDATION**: Before writing ANY property value, verify it exists in the provided metadata
+2. **CONTENT-EXTRACTION ONLY**: Use ONLY information explicitly present in page content or metadata
+3. **NO INFERENCE BEYOND FACTS**: Never "guess" or "assume" details not directly stated
+4. **OMIT OVER INVENT**: If a standard property has no real data, omit it entirely rather than fabricate
+5. **VERIFICATION CHECKPOINT**: Each property must trace back to specific provided data
+
+🎯 GENERATION REQUIREMENTS:
+- Generate EXACTLY the requested schema types: ${requestedTypes.join(', ')}
+- Do NOT generate any additional schema types unless specifically requested
+- If a requested type cannot be generated due to insufficient content, explicitly state why
+- Focus on creating rich, detailed schemas using ONLY real extracted data
+- Each schema must be complete with all verifiable properties
+
+📊 EXPERT DATA UTILIZATION FRAMEWORK:
+
+✅ TIER 1 - VERIFIED METADATA (USE FULLY):
+- Extracted metadata fields (title, description, author, dates, images, keywords)
+- Open Graph and Twitter Card data
+- Existing JSON-LD structured data
+- HTML semantic elements (h1, meta tags, img alt text)
+- Business contact information explicitly present
+
+✅ TIER 2 - CONTENT-DERIVED (EXTRACT CAREFULLY):
+- URL-based publisher identification (domain → organization name)
+- Content language detection from actual text
+- Image URLs present in page content
+- Real headings and text structure for content categorization
+- Actual word count and reading time calculations
+
+❌ TIER 3 - FORBIDDEN FABRICATION:
+- Author names not in metadata (NO "John Smith", "Sample Author", "Content Creator")
+- Publication dates not in meta tags (NO "2024-01-01", "Today's date")
+- Placeholder images (NO "example.com/image.jpg", "placeholder.png")
+- Fake business addresses, phone numbers, or contact details
+- Invented social media profiles or external URLs
+- Audio/video files masquerading as images (.mp3, .wav, .mp4 extensions)
+
+🎯 SCHEMA QUALITY EXCELLENCE:
+
+**PROPERTY COMPLETION PRIORITY:**
+1. **REQUIRED PROPERTIES**: Must be present with real data or schema is invalid
+2. **RECOMMENDED PROPERTIES**: Include when authentic data exists
+3. **ADVANCED PROPERTIES**: Add for AEO optimization using verified content
+4. **CONTEXTUAL PROPERTIES**: Generate only from explicit content relationships
+
+**CONTENT-TYPE SPECIALIZATION:**
+- BlogPosting: Focus on article metadata, author info, publishing details
+- Organization: Extract from contact pages, about sections, footer info
+- Person: Use author bios, bylines, staff pages only
+- LocalBusiness: Derive from contact/location pages with real address data
+- Product: Extract from product pages with real pricing/availability
+
+**AEO OPTIMIZATION TECHNIQUES:**
+- Semantic entity linking using content-mentioned entities only
+- Voice search optimization with real FAQ content structure
+- Cross-schema referencing using actual page relationships
+- Rich snippets preparation with verified metadata
+
+🔍 VALIDATION CHECKLIST (BEFORE EACH PROPERTY):
+1. ✅ Does this data exist in the provided metadata?
+2. ✅ Can I trace this value to specific content or structured data?
+3. ✅ Am I using the exact extracted value without modification?
+4. ✅ If uncertain, am I omitting rather than guessing?
+5. ✅ Does this property enhance schema value without fabrication?
+
+RESPONSE FORMAT:
+{
+  "schemas": [
+    // ONLY requested schema types with 100% verified data
+  ]
+}
+
+🎯 EXPERT SUCCESS CRITERIA:
+- Maximum schema richness using authentic data only
+- Complete property coverage where real data supports it
+- Production-ready markup with zero fabricated content
+- AEO-optimized structure respecting anti-hallucination principles
+- Specific schema type selection based on actual content characteristics
+
+⚠️ CRITICAL: This is expert-level generation. Quality over quantity. Rich schemas built on verified data outperform basic schemas with fabricated content.`
+  }
+
+  private analyzeMetadataQuality(analysis: ContentAnalysis): string {
+    const metadata = analysis.metadata
+    let qualityReport = ''
+
+    // Assess metadata completeness
+    const hasTitle = !!analysis.title
+    const hasDescription = !!analysis.description && analysis.description.length > 50
+    const hasAuthor = !!metadata?.author
+    const hasPublishDate = !!metadata?.publishDate
+    const hasImages = !!(metadata?.imageInfo?.featuredImage || metadata?.images?.length)
+    const hasKeywords = !!(metadata?.keywords?.length)
+    const hasBusinessInfo = !!metadata?.businessInfo?.name
+    const hasFAQContent = !!(metadata?.faqContent?.length)
+    const hasStructuredData = !!(metadata?.jsonLdData?.length)
+
+    const completenessScore = [hasTitle, hasDescription, hasAuthor, hasPublishDate, hasImages, hasKeywords].filter(Boolean).length
+
+    qualityReport += 'Metadata Completeness: ' + completenessScore + '/6 core elements detected\\n'
+    qualityReport += '- Title: ' + (hasTitle ? '✅ Available' : '❌ Missing') + '\\n'
+    qualityReport += '- Description: ' + (hasDescription ? '✅ Quality description found' : '❌ Missing or insufficient') + '\\n'
+    qualityReport += '- Author Info: ' + (hasAuthor ? '✅ Author data extracted' : '❌ No author information') + '\\n'
+    qualityReport += '- Publication Date: ' + (hasPublishDate ? '✅ Date metadata found' : '❌ No publication date') + '\\n'
+    qualityReport += '- Images: ' + (hasImages ? '✅ Image metadata available' : '❌ No image data extracted') + '\\n'
+    qualityReport += '- Keywords: ' + (hasKeywords ? '✅ ' + (metadata?.keywords?.length || 0) + ' keywords extracted' : '❌ No keyword data') + '\\n'
+
+    if (hasBusinessInfo) qualityReport += '- Business Info: ✅ Organization data available\\n'
+    if (hasFAQContent) qualityReport += '- FAQ Content: ✅ ' + (metadata?.faqContent?.length || 0) + ' Q&A pairs detected\\n'
+    if (hasStructuredData) qualityReport += '- Existing Schemas: ✅ ' + (metadata?.jsonLdData?.length || 0) + ' JSON-LD schemas found\\n'
+
+    // Content quality indicators
+    const wordCount = metadata?.wordCount || 0
+    const contentQuality = wordCount > 1000 ? 'Rich' : wordCount > 500 ? 'Moderate' : wordCount > 200 ? 'Basic' : 'Minimal'
+    qualityReport += '- Content Depth: ' + contentQuality + ' (' + wordCount + ' words)\\n'
+
+    return qualityReport
+  }
+
+  private generateSchemaRecommendations(analysis: ContentAnalysis): string {
+    const metadata = analysis.metadata
+    const url = analysis.url
+    const recommendations: string[] = []
+
+    // Determine optimal schema types based on available data
+    const hasAuthor = !!metadata?.author
+    const hasPublishDate = !!metadata?.publishDate
+    const hasImages = !!(metadata?.imageInfo?.featuredImage || metadata?.images?.length)
+    const hasBusinessInfo = !!metadata?.businessInfo?.name
+    const hasFAQContent = !!(metadata?.faqContent?.length)
+    const wordCount = metadata?.wordCount || 0
+
+    // Content type detection
+    const isArticle = wordCount > 300 && hasAuthor
+    const isBlogPost = url.includes('/blog/') || url.includes('/post/') || url.includes('/article/')
+    const isBusinessPage = hasBusinessInfo || url.includes('/about') || url.includes('/company')
+    const isHomePage = url === new URL(url).origin || url.endsWith('/')
+
+    // Schema recommendations based on content analysis
+    if (isArticle || isBlogPost) {
+      if (hasAuthor && hasPublishDate) {
+        recommendations.push('BlogPosting (Rich author & date metadata available)')
+      } else {
+        recommendations.push('Article (Basic content schema - limited metadata)')
+      }
+    } else {
+      recommendations.push('WebPage (Standard page markup)')
+    }
+
+    if (hasBusinessInfo || isBusinessPage) {
+      if (metadata?.businessInfo?.address) {
+        recommendations.push('LocalBusiness (Complete business data available)')
+      } else {
+        recommendations.push('Organization (Basic business information)')
+      }
+    }
+
+    if (hasAuthor) {
+      recommendations.push('Person (Author information available)')
+    }
+
+    if (hasImages) {
+      recommendations.push(`ImageObject (${metadata?.imageInfo?.allImages?.length || 1} images detected)`)
+    }
+
+    if (hasFAQContent) {
+      recommendations.push(`FAQPage (${metadata?.faqContent?.length} Q&A pairs found)`)
+    }
+
+    if (metadata?.breadcrumbs?.length) {
+      recommendations.push('BreadcrumbList (Navigation structure detected)')
+    }
+
+    const priority = recommendations.length > 4 ? 'Focus on top 4-5 schemas' : 'Generate all recommended schemas'
+
+    return 'Primary Schema Types (' + recommendations.length + ' recommended):\\n' +
+           recommendations.map((rec, i) => (i + 1) + '. ' + rec).join('\\n') +
+           '\\n\\nGeneration Strategy: ' + priority + ' with rich property coverage using verified metadata.'
+  }
+
+  private prioritizeContent(content: string): string {
+    // Simple text-based content prioritization
+    // This prioritizes content that's likely to be main article content
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+
+    const prioritizedLines: Array<{ line: string, priority: number }> = []
+
+    for (const line of lines) {
+      let priority = 0
+
+      // High priority indicators (main content)
+      if (line.length > 100) priority += 10 // Longer lines likely article content
+      if (/^[A-Z]/.test(line) && line.length > 50) priority += 8 // Sentences starting with capital
+      if (line.includes('.') && line.length > 80) priority += 7 // Full sentences
+      if (/\b(article|post|blog|content|story|news)\b/i.test(line)) priority += 5
+      if (/\b(author|published|date|time)\b/i.test(line)) priority += 5
+
+      // Medium priority
+      if (line.length > 50) priority += 3
+      if (line.includes(':') && line.length > 30) priority += 2 // Headlines with colons
+
+      // Low priority or deprioritized content
+      if (/\b(nav|menu|footer|sidebar|widget|ad|advertisement)\b/i.test(line)) priority -= 10
+      if (/\b(cookie|privacy|terms|subscribe|newsletter)\b/i.test(line)) priority -= 8
+      if (/^(Home|About|Contact|Login|Register|Cart)\s*$/i.test(line)) priority -= 15
+      if (line.includes('©') || line.includes('®') || line.includes('™')) priority -= 5
+      if (/^\d{4}.*rights.*reserved/i.test(line)) priority -= 10
+      if (line.length < 20 && !/\w+\s+\w+/.test(line)) priority -= 5 // Short non-descriptive lines
+
+      // Skip very low quality content
+      if (priority > -10) {
+        prioritizedLines.push({ line, priority })
+      }
+    }
+
+    // Sort by priority (highest first) and take top content
+    const sortedLines = prioritizedLines
+      .sort((a, b) => b.priority - a.priority)
+      .map(item => item.line)
+
+    // Ensure we get a good mix by taking top 70% of high-priority content
+    const highPriorityCount = Math.ceil(sortedLines.length * 0.7)
+    const selectedLines = sortedLines.slice(0, highPriorityCount)
+
+    const prioritizedContent = selectedLines.join('\n')
+
+    console.log(`🎯 Content prioritization: ${lines.length} lines → ${selectedLines.length} prioritized lines`)
+
+    return prioritizedContent
+  }
+
+  private calculateContentQualityScore(analysis: ContentAnalysis): number {
+    let score = 0
+    const metadata = analysis.metadata
+
+    // Core metadata scoring (60 points)
+    if (analysis.title && analysis.title.length > 20) score += 15
+    if (analysis.description && analysis.description.length > 100) score += 15
+    if (metadata?.author) score += 15
+    if (metadata?.publishDate) score += 15
+
+    // Rich metadata scoring (25 points)
+    if (metadata?.keywords?.length) score += 5
+    if (metadata?.imageInfo?.featuredImage) score += 5
+    if (metadata?.wordCount && metadata.wordCount > 300) score += 5
+    if (metadata?.businessInfo?.name) score += 5
+    if (metadata?.faqContent?.length) score += 5
+
+    // Technical metadata scoring (15 points)
+    if (metadata?.openGraph) score += 5
+    if (metadata?.twitterCard) score += 5
+    if (metadata?.jsonLdData?.length) score += 5
+
+    return Math.min(100, score)
+  }
+
+  // Clean schema properties to remove HTML and fix malformed data
+  private cleanSchemaProperties(schema: any): any {
+    const cleaned: any = {}
+
+    for (const [key, value] of Object.entries(schema)) {
+      if (typeof value === 'string') {
+        // Remove HTML tags and clean whitespace
+        let cleanValue = value.replace(/<[^>]*>/g, '').trim()
+        // Normalize whitespace (remove multiple spaces, newlines, tabs)
+        cleanValue = cleanValue.replace(/\s+/g, ' ').trim()
+        cleaned[key] = cleanValue
+      } else if (Array.isArray(value)) {
+        // Clean array items - remove HTML and ensure consistent types
+        cleaned[key] = value.map(item => {
+          if (typeof item === 'string') {
+            // Remove HTML tags first
+            let cleanItem = item.replace(/<[^>]*>/g, '')
+            // Aggressively replace ALL whitespace variants (newlines, tabs, multiple spaces, non-breaking spaces)
+            // This catches: \n, \r, \t, \r\n, multiple spaces, non-breaking spaces (\u00A0), etc.
+            cleanItem = cleanItem.replace(/[\s\n\r\t\u00A0]+/g, ' ')
+            // Extra pass to remove literal "\n" strings that might be escaped
+            cleanItem = cleanItem.replace(/\\n/g, ' ')
+            cleanItem = cleanItem.trim()
+            return cleanItem
+          } else if (typeof item === 'object' && item !== null) {
+            return this.cleanSchemaProperties(item)
+          }
+          return item
+        }).filter(item => {
+          // Remove empty strings or malformed items
+          if (typeof item === 'string') {
+            return item.length > 0 && item.length < 500 && !item.match(/^\s*$/)  // Also remove suspiciously long items
+          }
+          return true
+        })
+      } else if (typeof value === 'object' && value !== null) {
+        // Recursively clean nested objects
+        cleaned[key] = this.cleanSchemaProperties(value)
+      } else {
+        // Keep other types as-is (numbers, booleans, null)
+        cleaned[key] = value
+      }
+    }
+
+    return cleaned
+  }
+
+  // Schema property validation and completion engine
+  private async validateAndEnhanceSchemas(schemas: JsonLdSchema[], analysis: ContentAnalysis): Promise<JsonLdSchema[]> {
+    console.log('🔧 Running schema validation and enhancement engine...')
+
+    const enhancedSchemas: JsonLdSchema[] = []
+
+    for (const schema of schemas) {
+      try {
+        const schemaType = schema['@type']
+        if (!schemaType) {
+          console.warn('⚠️ Schema missing @type, skipping')
+          continue
+        }
+
+        // Get property requirements for this schema type
+        const requirements = SCHEMA_PROPERTY_TEMPLATES[schemaType]
+        if (!requirements) {
+          console.log(`📝 No specific requirements for ${schemaType}, using as-is`)
+          enhancedSchemas.push(schema)
+          continue
+        }
+
+        // Create enhanced schema with completed properties
+        const enhancedSchema = { ...schema }
+
+        // Ensure required properties are present
+        this.ensureRequiredProperties(enhancedSchema, requirements, analysis)
+
+        // Add recommended properties when data is available
+        this.addRecommendedProperties(enhancedSchema, requirements, analysis)
+
+        // Add advanced AEO properties
+        this.addAdvancedAEOProperties(enhancedSchema, requirements, analysis)
+
+        // Validate basic Schema.org compliance
+        if (this.validateSchemaCompliance(enhancedSchema)) {
+          enhancedSchemas.push(enhancedSchema)
+          console.log(`✅ Enhanced ${schemaType} schema with ${Object.keys(enhancedSchema).length} properties`)
+        } else {
+          console.warn(`⚠️ Schema ${schemaType} failed compliance, skipping`)
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ Error enhancing schema ${schema['@type']}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    return enhancedSchemas
+  }
+
+  private ensureRequiredProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    // Ensure @context is always present
+    if (!schema['@context']) {
+      schema['@context'] = 'https://schema.org'
+    }
+
+    // Add mainEntityOfPage for content schemas
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['mainEntityOfPage']) {
+      schema['mainEntityOfPage'] = analysis.metadata?.canonicalUrl || analysis.url
+    }
+
+    // Add publisher with logo ImageObject (ChatGPT format)
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['publisher']) {
+      const logoUrl = analysis.metadata?.businessInfo?.logo ||
+                     analysis.metadata?.imageInfo?.featuredImage ||
+                     `${new URL(analysis.url).origin}/favicon.ico`
+
+      // Try to get proper site name from various sources
+      const publisherName = analysis.metadata?.businessInfo?.name ||
+                           analysis.metadata?.openGraph?.siteName ||
+                           new URL(analysis.url).hostname.replace('www.', '')
+
+      schema['publisher'] = {
+        '@type': 'Organization',
+        'name': publisherName,
+        'url': new URL(analysis.url).origin,
+        'logo': {
+          '@type': 'ImageObject',
+          'url': logoUrl
+        }
+      }
+    } else if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && schema['publisher']) {
+      // Enhance existing publisher
+      if (!schema['publisher']['logo']) {
+        const logoUrl = analysis.metadata?.businessInfo?.logo ||
+                       analysis.metadata?.imageInfo?.featuredImage ||
+                       `${new URL(analysis.url).origin}/favicon.ico`
+
+        schema['publisher']['logo'] = {
+          '@type': 'ImageObject',
+          'url': logoUrl
+        }
+      }
+
+      // Improve publisher name if it's just a domain
+      if (schema['publisher']['name'] && schema['publisher']['name'].includes('.')) {
+        const betterName = analysis.metadata?.business?.name ||
+                          analysis.metadata?.openGraph?.siteName
+        console.log(`🔍 Publisher name enhancement: current="${schema['publisher']['name']}", business.name="${analysis.metadata?.business?.name}", ogSiteName="${analysis.metadata?.openGraph?.siteName}"`)
+        if (betterName) {
+          console.log(`✅ Updating publisher name to: "${betterName}"`)
+          schema['publisher']['name'] = betterName
+        } else {
+          console.log(`❌ No better name found in metadata`)
+        }
+      }
+
+      // Add URL if missing
+      if (!schema['publisher']['url']) {
+        schema['publisher']['url'] = new URL(analysis.url).origin
+      }
+    }
+
+    // Add author if missing (REQUIRED for BlogPosting/Article)
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['author'] && analysis.metadata?.author) {
+      const authorData = typeof analysis.metadata.author === 'object' ? analysis.metadata.author : { name: analysis.metadata.author }
+
+      schema['author'] = {
+        '@type': 'Person',
+        'name': authorData.name || analysis.metadata.author
+      }
+
+      // Add author image if available
+      if (authorData.image) {
+        schema['author']['image'] = authorData.image
+      }
+
+      // Add author URL if available
+      if (authorData.url) {
+        schema['author']['url'] = authorData.url
+      }
+    } else if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && schema['author'] && typeof schema['author'] === 'object') {
+      // Enhance existing author with image/URL if missing
+      const authorData = typeof analysis.metadata?.author === 'object' ? analysis.metadata.author : null
+      console.log(`🔍 Author enhancement: existingAuthor=${JSON.stringify(schema['author'])}, metadataAuthor=${JSON.stringify(analysis.metadata?.author)}`)
+
+      if (authorData?.image && !schema['author']['image']) {
+        console.log(`➕ Adding author image: ${authorData.image}`)
+        schema['author']['image'] = authorData.image
+      } else if (authorData?.image) {
+        console.log(`⏭️  Author already has image`)
+      } else {
+        console.log(`❌ No author image in metadata`)
+      }
+
+      if (authorData?.url && !schema['author']['url']) {
+        schema['author']['url'] = authorData.url
+      }
+    }
+
+    // Add datePublished if missing (REQUIRED)
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['datePublished'] && analysis.metadata?.publishDate) {
+      schema['datePublished'] = analysis.metadata.publishDate
+    }
+
+    // Add image if missing (important for SEO)
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['image'] && analysis.metadata?.imageInfo?.featuredImage) {
+      schema['image'] = analysis.metadata.imageInfo.featuredImage
+    }
+
+    // Add inLanguage if missing
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article' || schema['@type'] === 'WebPage') && !schema['inLanguage']) {
+      schema['inLanguage'] = analysis.metadata?.language || 'en'
+    }
+  }
+
+  private addRecommendedProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    const schemaType = schema['@type']
+
+    // Fix mainEntityOfPage to be object structure (ChatGPT format)
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && schema['mainEntityOfPage']) {
+      if (typeof schema['mainEntityOfPage'] === 'string') {
+        schema['mainEntityOfPage'] = {
+          '@type': 'WebPage',
+          '@id': schema['mainEntityOfPage']
+        }
+      }
+    }
+
+    // Add description if available and missing
+    if (!schema['description'] && analysis.description) {
+      schema['description'] = analysis.description
+    }
+
+    // Add word count for content schemas
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['wordCount'] && analysis.metadata?.wordCount) {
+      schema['wordCount'] = analysis.metadata.wordCount
+    }
+
+    // Add timeRequired (reading time) for content schemas
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['timeRequired'] && analysis.metadata?.wordCount) {
+      const readingMinutes = Math.ceil(analysis.metadata.wordCount / 200)
+      schema['timeRequired'] = `PT${readingMinutes}M`
+    }
+
+    // Add article section array from H2 headings (ChatGPT format)
+    console.log(`🔍 articleSection Debug: schemaType=${schemaType}, existingArticleSection=${!!schema['articleSection']}, metadataSections=${analysis.metadata?.articleSections?.length || 0}`)
+    if (analysis.metadata?.articleSections?.length) {
+      console.log(`📑 Metadata articleSections:`, analysis.metadata.articleSections)
+    }
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['articleSection'] && analysis.metadata?.articleSections?.length) {
+      schema['articleSection'] = analysis.metadata.articleSections.slice(0, 6)
+      console.log(`✅ Added articleSection from metadata:`, schema['articleSection'])
+    } else {
+      console.log(`❌ articleSection condition NOT met`)
+    }
+
+    // Add keywords from metadata as array
+    if (!schema['keywords'] && analysis.metadata?.keywords?.length) {
+      schema['keywords'] = analysis.metadata.keywords.slice(0, 10)
+    }
+
+    // Add image for content schemas
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article' || schemaType === 'WebPage') && !schema['image'] && analysis.metadata?.imageInfo?.featuredImage) {
+      schema['image'] = analysis.metadata.imageInfo.featuredImage
+    }
+
+    // Add dateModified if available (or use datePublished)
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['dateModified']) {
+      if (analysis.metadata?.modifiedDate) {
+        schema['dateModified'] = analysis.metadata.modifiedDate
+      } else if (schema['datePublished']) {
+        schema['dateModified'] = schema['datePublished']
+      }
+    }
+
+    // Add/fix isPartOf for blog posts (ChatGPT format)
+    const urlObj = new URL(analysis.url)
+    const isBlogPath = analysis.url.includes('/blog/')
+    const isBlogSubdomain = urlObj.hostname.startsWith('blog.')
+    const isBlogSite = isBlogPath || isBlogSubdomain
+    console.log(`🔍 isPartOf Debug: schemaType=${schemaType}, url=${analysis.url}, isBlogPath=${isBlogPath}, isBlogSubdomain=${isBlogSubdomain}, existingIsPartOf=${!!schema['isPartOf']}`)
+
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && isBlogSite) {
+      // Determine the blog base URL
+      let blogUrl: string
+      if (isBlogPath) {
+        blogUrl = analysis.url.substring(0, analysis.url.indexOf('/blog/') + 6)
+      } else {
+        blogUrl = `${urlObj.protocol}//${urlObj.hostname}`
+      }
+      console.log(`✅ isPartOf condition met! blogUrl=${blogUrl}`)
+
+      // Fix incorrect @type if exists, or create new
+      if (schema['isPartOf'] && schema['isPartOf']['@type'] === 'WebPage') {
+        console.log(`🔧 Fixing existing isPartOf from WebPage to WebSite`)
+        schema['isPartOf']['@type'] = 'WebSite'  // Fix incorrect type (WebSite is the correct Schema.org type)
+      } else if (!schema['isPartOf']) {
+        console.log(`➕ Adding new isPartOf property`)
+        schema['isPartOf'] = {
+          '@type': 'WebSite',  // WebSite is the correct Schema.org type for blogs
+          'name': (analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '').replace('blog.', '')) + ' Blog',
+          'url': blogUrl
+        }
+        console.log(`✅ isPartOf added:`, schema['isPartOf'])
+      } else {
+        console.log(`⏭️  isPartOf already exists with correct type: ${schema['isPartOf']['@type']}`)
+      }
+    } else {
+      console.log(`❌ isPartOf condition NOT met (not a blog site)`)
+    }
+
+    // Add breadcrumb for WebPage
+    if (schemaType === 'WebPage' && !schema['breadcrumb'] && analysis.metadata?.breadcrumbs?.length) {
+      schema['breadcrumb'] = {
+        '@type': 'BreadcrumbList',
+        'itemListElement': analysis.metadata.breadcrumbs.map((crumb, index) => ({
+          '@type': 'ListItem',
+          'position': index + 1,
+          'name': crumb
+        }))
+      }
+    }
+  }
+
+  private addAdvancedAEOProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    const schemaType = schema['@type']
+
+    // Add about and mentions for content schemas
+    if (schemaType === 'BlogPosting' || schemaType === 'Article') {
+      if (!schema['about'] && analysis.metadata?.entities?.length) {
+        schema['about'] = analysis.metadata.entities.slice(0, 5)
+      }
+
+      if (!schema['mentions'] && analysis.metadata?.tags?.length) {
+        schema['mentions'] = analysis.metadata.tags.slice(0, 5)
+      }
+
+      // Add potential action for engagement
+      if (!schema['potentialAction']) {
+        schema['potentialAction'] = [{
+          '@type': 'ReadAction',
+          'target': analysis.metadata?.canonicalUrl || analysis.url
+        }]
+      }
+
+      // Add speakable for FAQ content
+      if (analysis.metadata?.faqContent?.length && !schema['speakable']) {
+        schema['speakable'] = {
+          '@type': 'SpeakableSpecification',
+          'cssSelector': ['.faq', '.question', '.answer']
+        }
+      }
+    }
+
+    // Add technical metadata for WebPage
+    if (schemaType === 'WebPage') {
+      if (!schema['isPartOf'] && analysis.metadata?.businessInfo?.name) {
+        schema['isPartOf'] = {
+          '@type': 'WebSite',
+          'name': analysis.metadata.businessInfo.name,
+          'url': new URL(analysis.url).origin
+        }
+      }
+    }
+
+    // Add social media presence to Organization
+    if (schemaType === 'Organization' && analysis.metadata?.socialUrls?.length && !schema['sameAs']) {
+      schema['sameAs'] = analysis.metadata.socialUrls
+    }
+  }
+
+  private validateSchemaCompliance(schema: JsonLdSchema): boolean {
+    // Basic validation checks
+    if (!schema['@context'] || !schema['@type']) {
+      return false
+    }
+
+    // In development mode, be more permissive to allow schema generation
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🚀 Development mode: Using permissive schema validation for ${schema['@type']}`)
+      return true
+    }
+
+    // Check for minimum viable properties based on schema type
+    const schemaType = schema['@type']
+
+    if (schemaType === 'BlogPosting' || schemaType === 'Article') {
+      return !!(schema['headline'] && schema['author'] && schema['publisher'])
+    }
+
+    if (schemaType === 'Organization') {
+      return !!(schema['name'] && schema['url'])
+    }
+
+    if (schemaType === 'WebPage') {
+      return !!(schema['name'] && schema['url'])
+    }
+
+    if (schemaType === 'Person') {
+      return !!schema['name']
+    }
+
+    // Default to valid for other schema types
+    return true
+  }
+
+  async validateContent(content: string): Promise<{
+    isValid: boolean
+    suggestions: string[]
+    detectedTypes: string[]
+  }> {
+    const client = this.initializeClient()
+
+    // Return mock validation for development when no API key is provided
+    if (!client) {
+      return {
+        isValid: true,
+        suggestions: ['Mock validation - content appears suitable for schema generation'],
+        detectedTypes: ['WebPage', 'Article']
+      }
+    }
+
+    try {
+      const model = process.env.OPENAI_MODEL || 'gpt-4o'
+
+      const systemMessage = `You are a content analysis expert. Analyze the provided content and determine:
+1. If it has sufficient structured information for schema generation
+2. What schema types would be most appropriate
+3. Suggestions for improving the content for better schema markup
+
+Return a JSON object with:
+- isValid: boolean (true if content is suitable for schema generation)
+- suggestions: array of strings with improvement suggestions
+- detectedTypes: array of probable Schema.org types that could be generated`
+
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: systemMessage
+          },
+          {
+            role: 'user',
+            content: `Analyze this content for schema generation potential:\n\n${content.substring(0, 2000)}`
+          }
+        ],
+        max_completion_tokens: 1000,
+        response_format: { type: 'json_object' }
+      })
+
+      const result = response.choices[0]?.message?.content
+      if (!result) {
+        throw new Error('No response from OpenAI')
+      }
+
+      // Enhanced JSON parsing for content validation
+      try {
+        return JSON.parse(result)
+      } catch (parseError) {
+        console.warn(`⚠️ Content validation JSON parsing failed, attempting extraction...`)
+
+        // Try to extract JSON from response
+        const jsonMatch = result.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0])
+          } catch (extractError) {
+            console.warn(`⚠️ JSON extraction also failed`)
+          }
+        }
+
+        // Return fallback validation result
+        return {
+          isValid: true,
+          suggestions: ['Unable to analyze content quality - proceeding with generation'],
+          detectedTypes: ['WebPage']
+        }
+      }
+    } catch (error) {
+      console.error('Content validation error:', error)
+      return {
+        isValid: true, // Default to valid to not block generation
+        suggestions: ['Unable to analyze content quality'],
+        detectedTypes: ['WebPage']
+      }
+    }
+  }
+
+  async refineSchemas(schemas: JsonLdSchema[], url: string, options?: any): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
+    console.log('🤖 AI refining schemas with intelligent enhancements...')
+
+    // Initialize client lazily
+    const client = this.initializeClient()
+
+    if (!client) {
+      console.error('OpenAI client not initialized')
+      throw new Error('OpenAI service is not properly configured')
+    }
+
+    try {
+      const schemaType = schemas[0]['@type']
+
+      // Create a detailed prompt for AI refinement
+      const refinementPrompt = `You are an expert in Schema.org structured data and SEO best practices. Your task is to enhance the following JSON-LD schema to achieve the highest possible quality score (aiming for grade A).
+
+CURRENT SCHEMA:
+${JSON.stringify(schemas[0], null, 2)}
+
+ORIGINAL URL: ${url}
+
+REFINEMENT OBJECTIVES:
+1. **Add Missing Critical Properties**: Identify and add any missing required or strongly recommended properties for ${schemaType} type
+2. **Enhance Existing Properties**: Improve descriptions, add relevant keywords, ensure completeness
+3. **Add Topical Keywords**: Include relevant industry-specific and topical keywords in appropriate fields (like keywords, about, mentions)
+4. **Follow Best Practices**: Ensure the schema follows Google's Rich Results guidelines and Schema.org specifications
+5. **Improve Discoverability**: Add properties that enhance search engine understanding (inLanguage, datePublished, dateModified, etc.)
+
+SPECIFIC ENHANCEMENTS TO CONSIDER:
+- For Articles: Add keywords, articleSection, speakable, wordCount, inLanguage
+- For all types: Enhance description with SEO-friendly content, add relevant keywords
+- Add structured author information with sameAs links if possible
+- Include publisher information with logo
+- Add breadcrumb or isPartOf relationships
+- Include relevant FAQPage or HowTo schemas if applicable to content
+- Add aggregateRating or review data if relevant
+
+IMPORTANT RULES:
+1. Return ONLY valid JSON (no markdown, no explanations)
+2. Keep the @context and @type unchanged
+3. Don't remove any existing properties
+4. Only add properties that are valid for this schema type according to Schema.org
+5. Make descriptions natural and SEO-friendly (not spammy)
+6. Use realistic, professional values (not placeholders like "example.com")
+
+Return the enhanced schema as a JSON object, followed by a summary of changes made.
+
+FORMAT YOUR RESPONSE AS:
+{
+  "schema": { enhanced schema here },
+  "changes": ["Change 1", "Change 2", ...]
+}`
+
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert in Schema.org structured data, SEO, and Answer Engine Optimization (AEO). You provide precise, valid JSON-LD schemas that follow all best practices.'
+          },
+          {
+            role: 'user',
+            content: refinementPrompt
+          }
+        ],
+        temperature: 0.3, // Lower temperature for more consistent, accurate output
+        response_format: { type: 'json_object' }
+      })
+
+      const responseContent = completion.choices[0]?.message?.content
+      if (!responseContent) {
+        throw new Error('No response from OpenAI')
+      }
+
+      const result = JSON.parse(responseContent)
+
+      // Extract the refined schema and changes
+      const refinedSchema = result.schema || result
+      const changes = result.changes || ['Schema enhanced with AI improvements']
+
+      console.log(`✅ AI refinement completed with ${changes.length} improvements`)
+      console.log('📝 Changes made:', changes)
+
+      return {
+        schemas: [refinedSchema],
+        changes
+      }
+
+    } catch (error) {
+      console.error('❌ AI refinement failed:', error)
+
+      // Fallback to basic refinement if AI fails
+      console.log('⚠️ Falling back to basic refinement')
+      const changes: string[] = []
+      const refinedSchemas = schemas.map(schema => {
+        const refined = { ...schema }
+        if (!refined.url) {
+          refined.url = url
+          changes.push('Added "url" property')
+        }
+        return refined
+      })
+
+      return { schemas: refinedSchemas, changes }
+    }
+  }
+}
+
+export const openaiService = new OpenAIService()

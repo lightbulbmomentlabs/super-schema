@@ -1,0 +1,1993 @@
+import OpenAI from 'openai'
+import type { JsonLdSchema } from '@shared/types/index.js'
+
+// Enhanced interfaces for comprehensive AEO metadata
+export interface AuthorInfo {
+  name: string
+  url?: string
+  email?: string
+  jobTitle?: string
+  worksFor?: string
+}
+
+export interface BusinessInfo {
+  name: string
+  type?: string
+  address?: {
+    streetAddress?: string
+    addressLocality?: string
+    addressRegion?: string
+    postalCode?: string
+    addressCountry?: string
+  }
+  contactPoint?: {
+    telephone?: string
+    email?: string
+    contactType?: string
+  }
+  url?: string
+  logo?: string
+  sameAs?: string[]
+}
+
+export interface FAQ {
+  question: string
+  answer: string
+}
+
+export interface ContentAnalysis {
+  title?: string
+  description?: string
+  content: string
+  url: string
+  metadata?: {
+    // Core metadata (existing)
+    author?: string | AuthorInfo
+    publishDate?: string
+    modifiedDate?: string
+    images?: string[]
+    videos?: string[]
+    breadcrumbs?: string[]
+    contactInfo?: any
+    businessInfo?: BusinessInfo
+    productInfo?: any
+    eventInfo?: any
+
+    // Enhanced AEO metadata
+    language?: string
+    wordCount?: number
+    articleSection?: string
+    keywords?: string[]
+    entities?: string[]
+    mentions?: string[]
+    categories?: string[]
+    tags?: string[]
+
+    // Structured content
+    faqContent?: FAQ[]
+    headings?: string[]
+    jsonLdData?: any[]
+
+    // Image metadata
+    imageInfo?: {
+      featuredImage?: string
+      featuredImageAlt?: string
+      imageCount?: number
+      allImages?: Array<{
+        url: string
+        alt?: string
+        caption?: string
+      }>
+    }
+
+    // Content analysis
+    contentType?: 'article' | 'blog' | 'news' | 'product' | 'service' | 'about' | 'contact' | 'home'
+    readingTime?: number
+    socialUrls?: string[]
+
+    // Technical metadata
+    canonicalUrl?: string
+    alternateLanguages?: Array<{
+      lang: string
+      url: string
+    }>
+
+    // Business/Organization specific
+    openingHours?: string
+    priceRange?: string
+
+    // Review/Rating data
+    reviews?: Array<{
+      rating: number
+      author: string
+      text: string
+      date?: string
+    }>
+    aggregateRating?: {
+      ratingValue: number
+      reviewCount: number
+      bestRating?: number
+      worstRating?: number
+    }
+
+    // Enhanced HTML processing metrics (from new HTML cleaning service)
+    originalLength?: number
+    processedLength?: number
+    tokenEstimate?: number
+    contentHierarchy?: any[]
+
+    // Enhanced metadata from HTML cleaning service
+    openGraph?: any
+    twitterCard?: any
+    existingJsonLd?: any[]
+    technical?: any
+  }
+}
+
+export interface SchemaGenerationOptions {
+  includeImages?: boolean
+  includeVideos?: boolean
+  includeProducts?: boolean
+  includeEvents?: boolean
+  includeArticles?: boolean
+  includeOrganization?: boolean
+  includeLocalBusiness?: boolean
+  requestedSchemaTypes?: string[]
+}
+
+// Schema property requirements for AEO optimization
+export interface SchemaPropertyRequirements {
+  required: string[]
+  recommended: string[]
+  advanced: string[]
+  description: string
+}
+
+export const SCHEMA_PROPERTY_TEMPLATES: Record<string, SchemaPropertyRequirements> = {
+  BlogPosting: {
+    required: ['@context', '@type', 'headline', 'datePublished', 'author', 'publisher', 'mainEntityOfPage'],
+    recommended: ['description', 'dateModified', 'image', 'keywords', 'articleSection', 'inLanguage', 'articleBody', 'about', 'mentions'],
+    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'isPartOf', 'wordCount'],
+    description: 'Blog post content optimized for AI search engines'
+  },
+  Article: {
+    required: ['@context', '@type', 'headline', 'datePublished', 'author', 'publisher', 'mainEntityOfPage'],
+    recommended: ['description', 'dateModified', 'image', 'keywords', 'articleSection', 'inLanguage', 'articleBody', 'about', 'mentions'],
+    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'isPartOf', 'wordCount'],
+    description: 'General article content with comprehensive metadata'
+  },
+  WebPage: {
+    required: ['@context', '@type', 'name', 'url'],
+    recommended: ['description', 'inLanguage', 'isPartOf', 'mainEntity', 'breadcrumb', 'lastReviewed'],
+    advanced: ['potentialAction', 'speakable', 'significantLink', 'relatedLink'],
+    description: 'Basic web page structure and navigation'
+  },
+  Organization: {
+    required: ['@context', '@type', 'name', 'url'],
+    recommended: ['logo', 'description', 'contactPoint', 'address', 'sameAs', 'founder'],
+    advanced: ['brand', 'parentOrganization', 'subOrganization', 'award', 'knowsAbout'],
+    description: 'Business or organization information'
+  },
+  LocalBusiness: {
+    required: ['@context', '@type', 'name', 'address', 'telephone'],
+    recommended: ['url', 'description', 'openingHours', 'priceRange', 'image', 'geo'],
+    advanced: ['aggregateRating', 'review', 'paymentAccepted', 'currenciesAccepted', 'areaServed'],
+    description: 'Local business with location and contact information'
+  },
+  FAQPage: {
+    required: ['@context', '@type', 'mainEntity'],
+    recommended: ['name', 'description'],
+    advanced: ['about', 'audience', 'keywords'],
+    description: 'Frequently asked questions page'
+  },
+  BreadcrumbList: {
+    required: ['@context', '@type', 'itemListElement'],
+    recommended: ['name', 'description'],
+    advanced: ['numberOfItems'],
+    description: 'Navigation breadcrumb trail'
+  },
+  ImageObject: {
+    required: ['@context', '@type', 'url'],
+    recommended: ['description', 'name', 'contentUrl', 'width', 'height'],
+    advanced: ['caption', 'exifData', 'representativeOfPage'],
+    description: 'Image with metadata'
+  },
+  Person: {
+    required: ['@context', '@type', 'name'],
+    recommended: ['url', 'image', 'jobTitle', 'worksFor', 'description'],
+    advanced: ['sameAs', 'knowsAbout', 'alumniOf', 'award'],
+    description: 'Person or author information'
+  },
+  VideoObject: {
+    required: ['@context', '@type', 'name', 'description', 'contentUrl'],
+    recommended: ['thumbnailUrl', 'duration', 'uploadDate', 'publisher'],
+    advanced: ['transcript', 'caption', 'interactionStatistic'],
+    description: 'Video content with metadata'
+  }
+}
+
+class OpenAIService {
+  private client: OpenAI | null = null
+  private clientInitialized = false
+
+  private initializeClient(): OpenAI | null {
+    if (this.clientInitialized) {
+      return this.client
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY
+    console.log('OpenAI Service Debug:', {
+      hasApiKey: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      keyStart: apiKey?.substring(0, 10) || 'none'
+    })
+
+    if (!apiKey) {
+      console.warn('OpenAI API key not provided - using mock responses for development')
+      this.client = null
+    } else {
+      console.log('Initializing OpenAI client with API key')
+      this.client = new OpenAI({
+        apiKey: apiKey
+      })
+    }
+
+    this.clientInitialized = true
+    return this.client
+  }
+
+  async generateSchemas(
+    analysis: ContentAnalysis,
+    options: SchemaGenerationOptions = {}
+  ): Promise<JsonLdSchema[]> {
+    // Initialize client lazily
+    const client = this.initializeClient()
+
+    // Return mock schemas for development when no API key is provided
+    if (!client) {
+      return this.getMockSchemas(analysis)
+    }
+
+    const prompt = this.buildPrompt(analysis, options)
+
+    // Determine if user has specified exact schema types
+    const isUserSpecificMode = options.requestedSchemaTypes && options.requestedSchemaTypes.length > 0
+
+    // Model compatibility detection for prompts
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+    const isLimitedModel = model.includes('gpt-5-nano') || model.includes('gpt-3.5-turbo')
+
+    const systemPrompt = isUserSpecificMode
+      ? this.getUserSpecificSystemPrompt(options.requestedSchemaTypes!, isLimitedModel)
+      : this.getAutoModeSystemPrompt(isLimitedModel)
+
+    console.log(`🤖 AI Mode: ${isUserSpecificMode ? 'User-Specific' : 'Auto-Detection'}`)
+    if (isUserSpecificMode) {
+      console.log(`📋 Requested Schema Types: ${options.requestedSchemaTypes!.join(', ')}`)
+    }
+
+    // Debug logging for development
+    console.log(`📄 Content Length: ${analysis.content.length} characters`)
+    console.log(`🔍 Prompt Length: ${prompt.length} characters`)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📝 System Prompt Preview: ${systemPrompt.substring(0, 200)}...`)
+    }
+
+    try {
+      const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+
+      // Model compatibility detection
+      const isLimitedModel = model.includes('gpt-5-nano') || model.includes('gpt-3.5-turbo')
+      const supportsStructuredOutput = !isLimitedModel
+
+      // Adjust token limits based on model capabilities
+      const maxTokens = isLimitedModel && model.includes('gpt-5-nano')
+        ? 8000  // GPT-5-nano needs extra tokens for reasoning + output
+        : 4000  // Standard models
+
+      console.log(`🤖 Using model: ${model} (Limited: ${isLimitedModel}, Supports structured output: ${supportsStructuredOutput}, Max tokens: ${maxTokens})`)
+
+      const chatParams: any = {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_completion_tokens: maxTokens
+      }
+
+      // Only add advanced parameters for models that support them
+      if (supportsStructuredOutput) {
+        chatParams.temperature = 0.7
+        chatParams.response_format = { type: 'json_object' }
+        console.log('📝 Using advanced parameters for structured output model')
+      } else {
+        // For limited models, use default temperature and add explicit JSON instruction
+        console.log('📝 Using basic parameters for limited model compatibility')
+      }
+
+      // Debug the exact parameters being sent to OpenAI
+      console.log(`🚀 Pre-API Call Debug - Model: ${model}`, {
+        model: chatParams.model,
+        messagesCount: chatParams.messages?.length || 0,
+        hasTemperature: 'temperature' in chatParams,
+        temperature: chatParams.temperature,
+        hasResponseFormat: 'response_format' in chatParams,
+        responseFormat: chatParams.response_format,
+        maxTokens: chatParams.max_completion_tokens
+      })
+
+      let response
+      try {
+        console.log(`🔗 Making API call to OpenAI with ${model}...`)
+        response = await client.chat.completions.create(chatParams)
+        console.log(`✅ API call completed successfully`)
+      } catch (apiError) {
+        console.error(`❌ OpenAI API call failed for ${model}:`, {
+          error: apiError instanceof Error ? apiError.message : 'Unknown error',
+          errorType: apiError instanceof Error ? apiError.constructor.name : 'Unknown',
+          stack: apiError instanceof Error ? apiError.stack : 'No stack trace'
+        })
+        throw apiError
+      }
+
+      // Enhanced debugging for GPT-5-nano responses
+      console.log(`🔍 Full API Response Debug:`, {
+        model: response.model,
+        choices: response.choices?.length || 0,
+        firstChoice: response.choices?.[0] ? {
+          finishReason: response.choices[0].finish_reason,
+          hasMessage: !!response.choices[0].message,
+          messageRole: response.choices[0].message?.role,
+          contentLength: response.choices[0].message?.content?.length || 0,
+          contentPreview: response.choices[0].message?.content?.substring(0, 100) || 'EMPTY'
+        } : 'NO_CHOICE'
+      })
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        console.error(`❌ Empty response from ${model}:`, {
+          fullResponse: JSON.stringify(response, null, 2),
+          choices: response.choices,
+          usage: response.usage
+        })
+        throw new Error(`No response from OpenAI (${model} returned empty content)`)
+      }
+
+      console.log(`🔍 Raw AI Response (first 500 chars): ${content.substring(0, 500)}`)
+
+      // Enhanced JSON parsing with fallback strategies
+      const schemas = this.parseAIResponse(content, model)
+
+      // Validate and enhance schemas using the property completion engine
+      const enhancedSchemas = await this.validateAndEnhanceSchemas(schemas, analysis)
+
+      if (enhancedSchemas.length === 0) {
+        throw new Error('No valid schemas generated')
+      }
+
+      const schemaTypes = enhancedSchemas.map(s => s['@type']).join(', ')
+      console.log(`✅ Generated ${enhancedSchemas.length} enhanced AEO schemas: ${schemaTypes}`)
+
+      // Validate user-specific mode compliance
+      if (isUserSpecificMode) {
+        const requestedTypes = options.requestedSchemaTypes!
+        const generatedTypes = enhancedSchemas.map(s => s['@type'])
+        const unauthorizedTypes = generatedTypes.filter(type => !requestedTypes.includes(type))
+
+        if (unauthorizedTypes.length > 0) {
+          console.warn(`⚠️ AI generated unauthorized schema types: ${unauthorizedTypes.join(', ')}`)
+          console.warn(`📋 User requested: ${requestedTypes.join(', ')}`)
+          console.warn(`🤖 AI generated: ${generatedTypes.join(', ')}`)
+        } else {
+          console.log(`✅ User-specific mode compliance: Generated only requested types`)
+        }
+      }
+
+      return enhancedSchemas
+
+    } catch (error) {
+      console.error('OpenAI schema generation error:', error)
+      throw new Error(`Failed to generate schemas: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  private parseAIResponse(content: string, model: string): JsonLdSchema[] {
+    console.log(`🔧 Parsing AI response for model: ${model}`)
+
+    try {
+      // Strategy 1: Try direct JSON parsing
+      const parsed = JSON.parse(content)
+      console.log(`✅ Direct JSON parse successful`)
+
+      // Handle different response formats
+      let schemas: JsonLdSchema[]
+
+      // Format 1: Standard { schemas: [...] } format
+      if (parsed.schemas && Array.isArray(parsed.schemas)) {
+        schemas = parsed.schemas
+        console.log(`📋 Found schemas array with ${schemas.length} items`)
+      }
+      // Format 2: Direct array of schemas
+      else if (Array.isArray(parsed)) {
+        schemas = parsed
+        console.log(`📋 Found direct array with ${schemas.length} items`)
+      }
+      // Format 3: Single schema object
+      else if (parsed['@type']) {
+        schemas = [parsed]
+        console.log(`📋 Found single schema object: ${parsed['@type']}`)
+      }
+      // Format 4: Check for nested schema properties
+      else if (parsed.schema && parsed.schema['@type']) {
+        schemas = [parsed.schema]
+        console.log(`📋 Found nested schema object: ${parsed.schema['@type']}`)
+      }
+      // Format 5: Look for any objects with @type property at root level
+      else {
+        const schemaObjects = Object.values(parsed).filter((value: any) =>
+          value && typeof value === 'object' && value['@type']
+        ) as JsonLdSchema[]
+
+        if (schemaObjects.length > 0) {
+          schemas = schemaObjects
+          console.log(`📋 Found ${schemas.length} schema objects in response`)
+        } else {
+          throw new Error('No valid schema objects found in response')
+        }
+      }
+
+      // Validate all found schemas have required properties
+      const validSchemas = schemas.filter(schema => {
+        const hasType = schema['@type']
+        const hasContext = schema['@context']
+        if (!hasType) {
+          console.warn(`⚠️ Schema missing @type: ${JSON.stringify(schema).substring(0, 100)}`)
+          return false
+        }
+        return true
+      })
+
+      if (validSchemas.length === 0) {
+        throw new Error('No valid schemas found after filtering')
+      }
+
+      console.log(`✅ Successfully parsed ${validSchemas.length} valid schemas`)
+      return validSchemas
+
+    } catch (parseError) {
+      console.warn(`⚠️ JSON parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+
+      // Strategy 2: Try to extract JSON from text (for models that add explanations)
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        console.log(`🔧 Attempting to extract JSON from text...`)
+        try {
+          return this.parseAIResponse(jsonMatch[0], model)
+        } catch (extractError) {
+          console.warn(`⚠️ JSON extraction failed: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`)
+        }
+      }
+
+      // Strategy 3: Try to extract multiple JSON objects
+      const jsonObjects = content.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)
+      if (jsonObjects && jsonObjects.length > 0) {
+        console.log(`🔧 Found ${jsonObjects.length} potential JSON objects, trying to parse...`)
+        const schemas: JsonLdSchema[] = []
+
+        for (const jsonStr of jsonObjects) {
+          try {
+            const obj = JSON.parse(jsonStr)
+            if (obj['@type']) {
+              schemas.push(obj)
+            }
+          } catch (objError) {
+            // Skip invalid JSON objects
+          }
+        }
+
+        if (schemas.length > 0) {
+          console.log(`✅ Extracted ${schemas.length} schemas from multiple JSON objects`)
+          return schemas
+        }
+      }
+
+      // If all parsing strategies fail, throw error
+      throw new Error(`Failed to parse AI response as JSON. Content preview: ${content.substring(0, 200)}`)
+    }
+  }
+
+  private getUserSpecificSystemPrompt(requestedTypes: string[], isLimitedModel: boolean = false): string {
+    const jsonFormatInstruction = isLimitedModel
+      ? `
+
+🎯 CRITICAL JSON FORMAT REQUIREMENT:
+You MUST respond with ONLY valid JSON in this exact format:
+{
+  "schemas": [
+    // Array of schema objects here
+  ]
+}
+
+Do not include any text before or after the JSON. Start your response with { and end with }.`
+      : ''
+
+    return `You are an elite Schema.org expert with deep knowledge of semantic web technologies, AI search optimization, and anti-hallucination best practices. The user has specifically requested ONLY these schema types: ${requestedTypes.join(', ')}.
+
+🎯 EXPERT-LEVEL GENERATION CONSTRAINTS:
+
+🔒 ANTI-HALLUCINATION PROTOCOL (CRITICAL):
+1. **METADATA-FIRST VALIDATION**: Before writing ANY property value, verify it exists in the provided metadata
+2. **CONTENT-EXTRACTION ONLY**: Use ONLY information explicitly present in page content or metadata
+3. **NO INFERENCE BEYOND FACTS**: Never "guess" or "assume" details not directly stated
+4. **OMIT OVER INVENT**: If a standard property has no real data, omit it entirely rather than fabricate
+5. **VERIFICATION CHECKPOINT**: Each property must trace back to specific provided data
+
+🎯 GENERATION REQUIREMENTS:
+- Generate EXACTLY the requested schema types: ${requestedTypes.join(', ')}
+- Do NOT generate any additional schema types unless specifically requested
+- If a requested type cannot be generated due to insufficient content, explicitly state why
+- Focus on creating rich, detailed schemas using ONLY real extracted data
+- Each schema must be complete with all verifiable properties${jsonFormatInstruction}
+
+📊 EXPERT DATA UTILIZATION FRAMEWORK:
+
+✅ TIER 1 - VERIFIED METADATA (USE FULLY):
+- Extracted metadata fields (title, description, author, dates, images, keywords)
+- Open Graph and Twitter Card data
+- Existing JSON-LD structured data
+- HTML semantic elements (h1, meta tags, img alt text)
+- Business contact information explicitly present
+
+✅ TIER 2 - CONTENT-DERIVED (EXTRACT CAREFULLY):
+- URL-based publisher identification (domain → organization name)
+- Content language detection from actual text
+- Image URLs present in page content
+- Real headings and text structure for content categorization
+- Actual word count and reading time calculations
+
+❌ TIER 3 - FORBIDDEN FABRICATION:
+- Author names not in metadata (NO "John Smith", "Sample Author", "Content Creator")
+- Publication dates not in meta tags (NO "2024-01-01", "Today's date")
+- Placeholder images (NO "example.com/image.jpg", "placeholder.png")
+- Fake business addresses, phone numbers, or contact details
+- Invented social media profiles or external URLs
+- Audio/video files masquerading as images (.mp3, .wav, .mp4 extensions)
+
+🎯 SCHEMA QUALITY EXCELLENCE:
+
+**PROPERTY COMPLETION PRIORITY:**
+1. **REQUIRED PROPERTIES**: Must be present with real data or schema is invalid
+2. **RECOMMENDED PROPERTIES**: Include when authentic data exists
+3. **ADVANCED PROPERTIES**: Add for AEO optimization using verified content
+4. **CONTEXTUAL PROPERTIES**: Generate only from explicit content relationships
+
+**CONTENT-TYPE SPECIALIZATION:**
+- BlogPosting: Focus on article metadata, author info, publishing details
+- Organization: Extract from contact pages, about sections, footer info
+- Person: Use author bios, bylines, staff pages only
+- LocalBusiness: Derive from contact/location pages with real address data
+- Product: Extract from product pages with real pricing/availability
+
+**AEO OPTIMIZATION TECHNIQUES:**
+- Semantic entity linking using content-mentioned entities only
+- Voice search optimization with real FAQ content structure
+- Cross-schema referencing using actual page relationships
+- Rich snippets preparation with verified metadata
+
+🔍 VALIDATION CHECKLIST (BEFORE EACH PROPERTY):
+1. ✅ Does this data exist in the provided metadata?
+2. ✅ Can I trace this value to specific content or structured data?
+3. ✅ Am I using the exact extracted value without modification?
+4. ✅ If uncertain, am I omitting rather than guessing?
+5. ✅ Does this property enhance schema value without fabrication?
+
+RESPONSE FORMAT:
+{
+  "schemas": [
+    // ONLY requested schema types with 100% verified data
+  ]
+}
+
+🎯 EXPERT SUCCESS CRITERIA:
+- Maximum schema richness using authentic data only
+- Complete property coverage where real data supports it
+- Production-ready markup with zero fabricated content
+- AEO-optimized structure respecting anti-hallucination principles
+- Specific schema type selection based on actual content characteristics
+
+⚠️ CRITICAL: This is expert-level generation. Quality over quantity. Rich schemas built on verified data outperform basic schemas with fabricated content.`
+  }
+
+  private getAutoModeSystemPrompt(isLimitedModel: boolean = false): string {
+    const jsonFormatInstruction = isLimitedModel
+      ? `
+
+🎯 CRITICAL JSON FORMAT REQUIREMENT:
+You MUST respond with ONLY valid JSON in this exact format:
+{
+  "schemas": [
+    // Array of schema objects here
+  ]
+}
+
+Do not include any text before or after the JSON. Start your response with { and end with }.`
+      : ''
+
+    return `You are an elite Schema.org architect specializing in premium AEO (Answer Engine Optimization) and anti-hallucination schema generation. Your mission is to create sophisticated, production-ready JSON-LD schemas that maximize visibility in AI search engines while maintaining absolute data integrity.${jsonFormatInstruction}
+
+🔒 EXPERT ANTI-HALLUCINATION FRAMEWORK:
+
+🎯 PREMIUM AEO SCHEMA GENERATION OBJECTIVES:
+
+1. **ZERO-HALLUCINATION FOUNDATION**: Every property value must trace to verified source data
+2. **COMPREHENSIVE PROPERTY COVERAGE**: Include ALL required and recommended properties using real data
+3. **INTELLIGENT MULTI-SCHEMA ARCHITECTURE**: Generate 4-6 interconnected schemas based on content analysis
+4. **AI SEARCH OPTIMIZATION**: Structure verified data for ChatGPT, Perplexity, Claude, and voice assistants
+5. **SEMANTIC RELATIONSHIP MAPPING**: Create rich entity connections using actual content relationships
+6. **PRODUCTION-GRADE VALIDATION**: Generate enterprise-ready schemas with maximum authentic SEO value
+
+🛡️ ANTI-HALLUCINATION PROTOCOL:
+
+**VERIFICATION STAGES:**
+1. **METADATA AUDIT**: Inventory all available structured data before generation
+2. **CONTENT EXTRACTION**: Parse real content for semantic entities and relationships
+3. **PROPERTY VALIDATION**: Cross-reference each schema property against source data
+4. **FABRICATION PREVENTION**: Implement hard stops for common hallucination patterns
+5. **QUALITY ASSURANCE**: Final verification that no invented data exists in output
+
+**HALLUCINATION PREVENTION CHECKLIST:**
+- ❌ NEVER create author names not in metadata
+- ❌ NEVER invent publication dates
+- ❌ NEVER use placeholder images or fake URLs
+- ❌ NEVER generate business contact info not explicitly present
+- ❌ NEVER assume social media profiles or external links
+- ❌ NEVER use audio/video files as image properties
+- ❌ NEVER create fake addresses, phone numbers, or locations
+- ❌ NEVER invent product prices, ratings, or availability
+- ❌ NEVER generate event dates, times, or locations not in content
+
+🔧 SCHEMA PROPERTY REQUIREMENTS:
+
+For each schema type, you MUST include these properties when data is available:
+
+**BlogPosting/Article (REQUIRED FOR CONTENT PAGES):**
+- REQUIRED: @context, @type, headline, datePublished, author, publisher, mainEntityOfPage
+- RECOMMENDED: description, dateModified, image, keywords, articleSection, inLanguage, articleBody, about, mentions, wordCount
+- ADVANCED: potentialAction, interactionStatistic, speakable, review, isPartOf
+
+**WebPage (REQUIRED FOR ALL PAGES):**
+- REQUIRED: @context, @type, name, url
+- RECOMMENDED: description, inLanguage, isPartOf, mainEntity, breadcrumb, lastReviewed
+- ADVANCED: potentialAction, speakable, significantLink, relatedLink
+
+**Organization (REQUIRED FOR PUBLISHER INFO):**
+- REQUIRED: @context, @type, name, url
+- RECOMMENDED: logo, description, contactPoint, address, sameAs, founder
+- ADVANCED: brand, parentOrganization, subOrganization, award, knowsAbout
+
+**FAQPage (IF FAQ CONTENT DETECTED):**
+- REQUIRED: @context, @type, mainEntity (with Question/Answer pairs)
+- RECOMMENDED: name, description, about, audience, keywords
+
+**BreadcrumbList (IF NAVIGATION DETECTED):**
+- REQUIRED: @context, @type, itemListElement
+- RECOMMENDED: name, description, numberOfItems
+
+**ImageObject (IF IMAGES PRESENT):**
+- REQUIRED: @context, @type, url
+- RECOMMENDED: description, name, contentUrl, width, height, caption
+
+**Person (IF AUTHOR DETECTED):**
+- REQUIRED: @context, @type, name
+- RECOMMENDED: url, image, jobTitle, worksFor, description, sameAs
+
+🚀 ADVANCED AEO FEATURES TO INCLUDE:
+
+1. **Voice Assistant Optimization:**
+   - Add "speakable" properties for content suitable for voice reading
+   - Structure Q&A content for voice queries
+   - Include pronunciation guides where relevant
+
+2. **AI Search Enhancement:**
+   - Rich "about" and "mentions" entities
+   - Comprehensive keyword arrays based on content
+   - Detailed publisher and author relationships
+   - Cross-schema references (mainEntityOfPage, isPartOf, etc.)
+
+3. **Engagement Optimization:**
+   - "potentialAction" schemas (ReadAction, ShareAction, etc.)
+   - "interactionStatistic" when engagement data available
+   - Rich image metadata with alt text and captions
+
+4. **Technical Excellence:**
+   - Proper "inLanguage" specification
+   - "canonicalUrl" and alternate language versions
+   - Complete date metadata (published, modified)
+   - Word count and reading time estimates
+
+📊 PROPERTY COMPLETION STRATEGY:
+
+1. **Data Prioritization:**
+   - USE extracted metadata as primary source
+   - DERIVE intelligent properties from available data
+   - GENERATE contextual keywords from content analysis
+   - CREATE logical relationships between entities
+
+2. **Smart Property Generation:**
+   - mainEntityOfPage: Always reference canonical URL
+   - publisher: Generate from business info or domain
+   - inLanguage: Use detected language or default to "en"
+   - wordCount: Include actual word count from content analysis
+   - keywords: Extract from meta tags, headings, and content topics
+
+3. **Cross-Schema Relationships:**
+   - Link Article author to Person schema
+   - Connect WebPage mainEntity to primary content schema
+   - Reference Organization in publisher fields
+   - Link images to primary content schemas
+
+🎯 MANDATORY SCHEMA COMBINATIONS:
+
+Generate these schema combinations based on content type:
+
+**Content Pages (Blog/Article):** BlogPosting + WebPage + Organization + Person + ImageObject + [FAQPage if applicable]
+**Business Pages:** Organization/LocalBusiness + WebPage + ImageObject + Person + [FAQ if applicable]
+**Product Pages:** Product + WebPage + Organization + ImageObject + [Review if applicable]
+**Home/About Pages:** WebPage + Organization + Person + ImageObject + BreadcrumbList
+
+📋 REQUIRED RESPONSE FORMAT:
+
+{
+  "schemas": [
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "[REAL PAGE TITLE]",
+      "description": "[REAL META DESCRIPTION]",
+      "author": {
+        "@type": "Person",
+        "name": "[REAL AUTHOR NAME OR OMIT]",
+        "url": "[REAL AUTHOR URL OR OMIT]"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "[DOMAIN NAME OR BUSINESS NAME]",
+        "url": "[SITE URL]",
+        "logo": "[REAL LOGO URL OR OMIT]"
+      },
+      "datePublished": "[REAL DATE OR OMIT]",
+      "dateModified": "[REAL DATE OR OMIT]",
+      "mainEntityOfPage": "[CANONICAL URL]",
+      "image": "[REAL IMAGE URL OR OMIT]",
+      "keywords": ["[REAL KEYWORDS FROM CONTENT]"],
+      "articleSection": "[REAL CATEGORY OR OMIT]",
+      "inLanguage": "[DETECTED LANGUAGE]",
+      "wordCount": "[ACTUAL WORD COUNT]",
+      "about": ["[RELEVANT TOPICS/ENTITIES]"],
+      "mentions": ["[MENTIONED ENTITIES]"]
+    },
+    // ... 4-6 additional schemas following same pattern
+  ]
+}
+
+🔍 EXPERT DATA UTILIZATION METHODOLOGY:
+
+**TIER 1: VERIFIED METADATA (PRIORITY USE)**
+- ✅ Extracted structured data (Open Graph, Twitter Cards, JSON-LD)
+- ✅ HTML meta elements (title, description, keywords, author)
+- ✅ Business information from contact/about pages
+- ✅ Image metadata with alt text and captions
+- ✅ Publication dates from meta tags or content
+- ✅ Real author information from bylines or bios
+
+**TIER 2: CONTENT-DERIVED (CAREFUL EXTRACTION)**
+- ✅ Publisher identification from domain analysis
+- ✅ Content categorization from URL structure and headings
+- ✅ Language detection from actual text content
+- ✅ Word count and reading time from content analysis
+- ✅ Entity extraction from content mentions
+- ✅ FAQ structure from actual Q&A content
+
+**TIER 3: CONTEXTUAL INFERENCE (MINIMAL, VERIFIABLE)**
+- ✅ Basic organization schema from domain registration
+- ✅ Content type classification from URL patterns
+- ✅ Navigation structure from breadcrumb elements
+- ✅ Image relationships from semantic HTML structure
+
+**FORBIDDEN FABRICATION PATTERNS:**
+- 🚫 Author names: "John Smith", "Content Creator", "Blog Admin", "Sample Author"
+- 🚫 Fake dates: "2024-01-01", "Today", Generic timestamps
+- 🚫 Placeholder images: "example.com", "placeholder.jpg", "image-url.png"
+- 🚫 Generic business data: "123 Main St", "555-0123", "info@example.com"
+- 🚫 Audio as images: File extensions .mp3, .wav, .mp4, .avi
+- 🚫 Social profiles: Generic Facebook, Twitter, LinkedIn URLs
+- 🚫 Invented prices: "$99.99", "Contact for pricing", "Free"
+- 🚫 Fake ratings: 5-star ratings, "Great product" reviews
+
+💎 PREMIUM SCHEMA INTELLIGENCE:
+
+**METADATA-GUIDED GENERATION:**
+1. **Content Analysis First**: Determine optimal schema types from content characteristics
+2. **Data Availability Mapping**: Match available metadata to schema property requirements
+3. **Property Prioritization**: Focus on properties with rich, verified data
+4. **Cross-Schema Relationships**: Link schemas using actual content connections
+5. **AEO Enhancement**: Add voice search and AI assistant optimization using real content structure
+
+**QUALITY OVER QUANTITY PRINCIPLE:**
+Generate fewer schemas with rich, verified properties rather than many schemas with sparse or fabricated data. Each property must justify its inclusion through authentic source material.
+
+🎯 ENTERPRISE-GRADE OUTPUT STANDARDS:
+- Production-ready markup suitable for Fortune 500 implementation
+- Complete traceability of every property value to source data
+- Maximum AEO optimization using only authentic content
+- Zero liability from fabricated or inaccurate information
+- Premium value justifying significant cost advantage over basic AI tools
+  }
+
+  private analyzeMetadataQuality(analysis: ContentAnalysis): string {
+    const metadata = analysis.metadata
+    let qualityReport = ''
+
+    // Assess metadata completeness
+    const hasTitle = !!analysis.title
+    const hasDescription = !!analysis.description && analysis.description.length > 50
+    const hasAuthor = !!metadata?.author
+    const hasPublishDate = !!metadata?.publishDate
+    const hasImages = !!(metadata?.imageInfo?.featuredImage || metadata?.images?.length)
+    const hasKeywords = !!(metadata?.keywords?.length)
+    const hasBusinessInfo = !!metadata?.businessInfo?.name
+    const hasFAQContent = !!(metadata?.faqContent?.length)
+    const hasStructuredData = !!(metadata?.jsonLdData?.length)
+
+    const completenessScore = [hasTitle, hasDescription, hasAuthor, hasPublishDate, hasImages, hasKeywords].filter(Boolean).length
+
+    qualityReport += 'Metadata Completeness: ' + completenessScore + '/6 core elements detected\\n'
+    qualityReport += '- Title: ' + (hasTitle ? '✅ Available' : '❌ Missing') + '\\n'
+    qualityReport += '- Description: ' + (hasDescription ? '✅ Quality description found' : '❌ Missing or insufficient') + '\\n'
+    qualityReport += '- Author Info: ' + (hasAuthor ? '✅ Author data extracted' : '❌ No author information') + '\\n'
+    qualityReport += '- Publication Date: ' + (hasPublishDate ? '✅ Date metadata found' : '❌ No publication date') + '\\n'
+    qualityReport += '- Images: ' + (hasImages ? '✅ Image metadata available' : '❌ No image data extracted') + '\\n'
+    qualityReport += '- Keywords: ' + (hasKeywords ? '✅ ' + (metadata?.keywords?.length || 0) + ' keywords extracted' : '❌ No keyword data') + '\\n'
+
+    if (hasBusinessInfo) qualityReport += '- Business Info: ✅ Organization data available\\n'
+    if (hasFAQContent) qualityReport += '- FAQ Content: ✅ ' + (metadata?.faqContent?.length || 0) + ' Q&A pairs detected\\n'
+    if (hasStructuredData) qualityReport += '- Existing Schemas: ✅ ' + (metadata?.jsonLdData?.length || 0) + ' JSON-LD schemas found\\n'
+
+    // Content quality indicators
+    const wordCount = metadata?.wordCount || 0
+    const contentQuality = wordCount > 1000 ? 'Rich' : wordCount > 500 ? 'Moderate' : wordCount > 200 ? 'Basic' : 'Minimal'
+    qualityReport += '- Content Depth: ' + contentQuality + ' (' + wordCount + ' words)\\n'
+
+    return qualityReport
+  }
+
+  private generateSchemaRecommendations(analysis: ContentAnalysis): string {
+    const metadata = analysis.metadata
+    const url = analysis.url
+    const recommendations: string[] = []
+
+    // Determine optimal schema types based on available data
+    const hasAuthor = !!metadata?.author
+    const hasPublishDate = !!metadata?.publishDate
+    const hasImages = !!(metadata?.imageInfo?.featuredImage || metadata?.images?.length)
+    const hasBusinessInfo = !!metadata?.businessInfo?.name
+    const hasFAQContent = !!(metadata?.faqContent?.length)
+    const wordCount = metadata?.wordCount || 0
+
+    // Content type detection
+    const isArticle = wordCount > 300 && hasAuthor
+    const isBlogPost = url.includes('/blog/') || url.includes('/post/') || url.includes('/article/')
+    const isBusinessPage = hasBusinessInfo || url.includes('/about') || url.includes('/company')
+    const isHomePage = url === new URL(url).origin || url.endsWith('/')
+
+    // Schema recommendations based on content analysis
+    if (isArticle || isBlogPost) {
+      if (hasAuthor && hasPublishDate) {
+        recommendations.push('BlogPosting (Rich author & date metadata available)')
+      } else {
+        recommendations.push('Article (Basic content schema - limited metadata)')
+      }
+    } else {
+      recommendations.push('WebPage (Standard page markup)')
+    }
+
+    if (hasBusinessInfo || isBusinessPage) {
+      if (metadata?.businessInfo?.address) {
+        recommendations.push('LocalBusiness (Complete business data available)')
+      } else {
+        recommendations.push('Organization (Basic business information)')
+      }
+    }
+
+    if (hasAuthor) {
+      recommendations.push('Person (Author information available)')
+    }
+
+    if (hasImages) {
+      recommendations.push(`ImageObject (${metadata?.imageInfo?.allImages?.length || 1} images detected)`)
+    }
+
+    if (hasFAQContent) {
+      recommendations.push(`FAQPage (${metadata?.faqContent?.length} Q&A pairs found)`)
+    }
+
+    if (metadata?.breadcrumbs?.length) {
+      recommendations.push('BreadcrumbList (Navigation structure detected)')
+    }
+
+    const priority = recommendations.length > 4 ? 'Focus on top 4-5 schemas' : 'Generate all recommended schemas'
+
+    return 'Primary Schema Types (' + recommendations.length + ' recommended):\\n' +
+           recommendations.map((rec, i) => (i + 1) + '. ' + rec).join('\\n') +
+           '\\n\\nGeneration Strategy: ' + priority + ' with rich property coverage using verified metadata.'
+  }
+
+  private prioritizeContent(content: string): string {
+    // Simple text-based content prioritization
+    // This prioritizes content that's likely to be main article content
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+
+    const prioritizedLines: Array<{ line: string, priority: number }> = []
+
+    for (const line of lines) {
+      let priority = 0
+
+      // High priority indicators (main content)
+      if (line.length > 100) priority += 10 // Longer lines likely article content
+      if (/^[A-Z]/.test(line) && line.length > 50) priority += 8 // Sentences starting with capital
+      if (line.includes('.') && line.length > 80) priority += 7 // Full sentences
+      if (/\b(article|post|blog|content|story|news)\b/i.test(line)) priority += 5
+      if (/\b(author|published|date|time)\b/i.test(line)) priority += 5
+
+      // Medium priority
+      if (line.length > 50) priority += 3
+      if (line.includes(':') && line.length > 30) priority += 2 // Headlines with colons
+
+      // Low priority or deprioritized content
+      if (/\b(nav|menu|footer|sidebar|widget|ad|advertisement)\b/i.test(line)) priority -= 10
+      if (/\b(cookie|privacy|terms|subscribe|newsletter)\b/i.test(line)) priority -= 8
+      if (/^(Home|About|Contact|Login|Register|Cart)\s*$/i.test(line)) priority -= 15
+      if (line.includes('©') || line.includes('®') || line.includes('™')) priority -= 5
+      if (/^\d{4}.*rights.*reserved/i.test(line)) priority -= 10
+      if (line.length < 20 && !/\w+\s+\w+/.test(line)) priority -= 5 // Short non-descriptive lines
+
+      // Skip very low quality content
+      if (priority > -10) {
+        prioritizedLines.push({ line, priority })
+      }
+    }
+
+    // Sort by priority (highest first) and take top content
+    const sortedLines = prioritizedLines
+      .sort((a, b) => b.priority - a.priority)
+      .map(item => item.line)
+
+    // Ensure we get a good mix by taking top 70% of high-priority content
+    const highPriorityCount = Math.ceil(sortedLines.length * 0.7)
+    const selectedLines = sortedLines.slice(0, highPriorityCount)
+
+    const prioritizedContent = selectedLines.join('\n')
+
+    console.log(`🎯 Content prioritization: ${lines.length} lines → ${selectedLines.length} prioritized lines`)
+
+    return prioritizedContent
+  }
+
+  private buildPrompt(analysis: ContentAnalysis, options: SchemaGenerationOptions): string {
+    // Apply intelligent content prioritization for token optimization
+    const prioritizedContent = this.prioritizeContent(analysis.content)
+
+    let prompt = `🎯 EXPERT-LEVEL WEBSITE ANALYSIS FOR PREMIUM AEO SCHEMA GENERATION:
+
+=== VERIFIED PAGE METADATA ===
+Source URL: ${analysis.url}
+Extracted Title: ${analysis.title || '[TITLE NOT FOUND - CRITICAL ISSUE]'}
+Meta Description: ${analysis.description || '[DESCRIPTION NOT FOUND - SEO ISSUE]'}
+Canonical URL: ${analysis.metadata?.canonicalUrl || analysis.url}
+Detected Language: ${analysis.metadata?.language || 'en'}
+HTML Processing: ${analysis.metadata?.tokenEstimate ? `${analysis.metadata.tokenEstimate} estimated tokens` : 'Standard processing'}
+
+=== CONTENT INTELLIGENCE ===
+Content Classification: ${analysis.metadata?.contentType || 'general-article'}
+Content Depth: ${analysis.metadata?.wordCount || 'Unknown'} words
+Reading Complexity: ${analysis.metadata?.readingTime || 'Unknown'} minutes
+Content Quality Score: ${this.calculateContentQualityScore(analysis)}/100
+Token-Optimized Preview: ${prioritizedContent.substring(0, 6000)}${prioritizedContent.length > 6000 ? '...' : ''}
+`
+
+    if (analysis.metadata) {
+      // Enhanced metadata debugging for expert-level generation
+      console.log('🔬 Expert Metadata Analysis:', {
+        hasTitle: !!analysis.title,
+        hasDescription: !!analysis.description,
+        hasAuthor: !!analysis.metadata.author,
+        hasPublishDate: !!analysis.metadata.publishDate,
+        hasImages: !!(analysis.metadata.imageInfo?.featuredImage || analysis.metadata.images?.length),
+        hasKeywords: !!(analysis.metadata.keywords?.length),
+        hasBusinessInfo: !!analysis.metadata.businessInfo?.name,
+        metadataQuality: this.calculateContentQualityScore(analysis)
+      })
+
+      // Author Information (Enhanced)
+      if (analysis.metadata.author) {
+        prompt += `\n=== AUTHOR INFORMATION ===`
+        if (typeof analysis.metadata.author === 'object') {
+          prompt += `\nAuthor Name: ${analysis.metadata.author.name}`
+          if (analysis.metadata.author.url) prompt += `\nAuthor URL: ${analysis.metadata.author.url}`
+          if (analysis.metadata.author.jobTitle) prompt += `\nJob Title: ${analysis.metadata.author.jobTitle}`
+          if (analysis.metadata.author.worksFor) prompt += `\nWorks For: ${analysis.metadata.author.worksFor}`
+        } else {
+          prompt += `\nAuthor: ${analysis.metadata.author}`
+        }
+      }
+
+      // Dates and Publication Info
+      prompt += `\n=== PUBLICATION METADATA ===`
+      if (analysis.metadata.publishDate) {
+        prompt += `\nPublish Date: ${analysis.metadata.publishDate}`
+      }
+      if (analysis.metadata.modifiedDate) {
+        prompt += `\nModified Date: ${analysis.metadata.modifiedDate}`
+      }
+      if (analysis.metadata.articleSection) {
+        prompt += `\nArticle Section/Category: ${analysis.metadata.articleSection}`
+      }
+
+      // Keywords and Semantic Data
+      if (analysis.metadata.keywords?.length || analysis.metadata.tags?.length || analysis.metadata.entities?.length) {
+        prompt += `\n=== SEMANTIC CONTENT DATA ===`
+        if (analysis.metadata.keywords?.length) {
+          prompt += `\nMeta Keywords: ${analysis.metadata.keywords.join(', ')}`
+        }
+        if (analysis.metadata.tags?.length) {
+          prompt += `\nContent Tags: ${analysis.metadata.tags.join(', ')}`
+        }
+        if (analysis.metadata.entities?.length) {
+          prompt += `\nDetected Entities: ${analysis.metadata.entities.join(', ')}`
+        }
+        if (analysis.metadata.categories?.length) {
+          prompt += `\nCategories: ${analysis.metadata.categories.join(', ')}`
+        }
+      }
+
+      // Comprehensive Image Data
+      if (analysis.metadata.imageInfo) {
+        prompt += `\n=== IMAGE METADATA ===`
+        if (analysis.metadata.imageInfo.featuredImage) {
+          prompt += `\nFeatured Image URL: ${analysis.metadata.imageInfo.featuredImage}`
+          if (analysis.metadata.imageInfo.featuredImageAlt) {
+            prompt += `\nFeatured Image Alt: ${analysis.metadata.imageInfo.featuredImageAlt}`
+          }
+        }
+        if (analysis.metadata.imageInfo.imageCount) {
+          prompt += `\nTotal Images: ${analysis.metadata.imageInfo.imageCount}`
+        }
+        if (analysis.metadata.imageInfo.allImages?.length) {
+          prompt += `\nAll Images with Metadata:`
+          analysis.metadata.imageInfo.allImages.slice(0, 5).forEach((img, index) => {
+            prompt += `\n  ${index + 1}. URL: ${img.url}`
+            if (img.alt) prompt += ` | Alt: ${img.alt}`
+            if (img.caption) prompt += ` | Caption: ${img.caption}`
+          })
+        }
+      }
+
+      // Content Structure
+      if (analysis.metadata.headings?.length) {
+        prompt += `\n=== CONTENT STRUCTURE ===`
+        prompt += `\nPage Headings: ${analysis.metadata.headings.slice(0, 8).join(' | ')}`
+      }
+
+      // FAQ Content
+      if (analysis.metadata.faqContent?.length) {
+        prompt += `\n=== FAQ CONTENT DETECTED ===`
+        analysis.metadata.faqContent.forEach((faq, index) => {
+          prompt += `\n${index + 1}. Q: ${faq.question}`
+          prompt += `\n   A: ${faq.answer.substring(0, 150)}${faq.answer.length > 150 ? '...' : ''}`
+        })
+      }
+
+      // Business Information
+      if (analysis.metadata.businessInfo?.name) {
+        prompt += `\n=== BUSINESS/ORGANIZATION INFO ===`
+        prompt += `\nBusiness Name: ${analysis.metadata.businessInfo.name}`
+        if (analysis.metadata.businessInfo.type) prompt += `\nBusiness Type: ${analysis.metadata.businessInfo.type}`
+        if (analysis.metadata.businessInfo.url) prompt += `\nBusiness URL: ${analysis.metadata.businessInfo.url}`
+      }
+
+      // Social Media and External Links
+      if (analysis.metadata.socialUrls?.length) {
+        prompt += `\n=== SOCIAL MEDIA PRESENCE ===`
+        prompt += `\nSocial URLs: ${analysis.metadata.socialUrls.join(', ')}`
+      }
+
+      // Existing Structured Data
+      if (analysis.metadata.jsonLdData?.length) {
+        prompt += `\n=== EXISTING STRUCTURED DATA ===`
+        prompt += `\nFound ${analysis.metadata.jsonLdData.length} existing JSON-LD schema(s) on page`
+        analysis.metadata.jsonLdData.forEach((schema, index) => {
+          if (schema['@type']) {
+            prompt += `\n  ${index + 1}. Type: ${schema['@type']}`
+          }
+        })
+      }
+
+      // Technical SEO Metadata
+      if (analysis.metadata.alternateLanguages?.length) {
+        prompt += `\n=== INTERNATIONAL SEO ===`
+        prompt += `\nAlternate Languages:`
+        analysis.metadata.alternateLanguages.forEach(alt => {
+          prompt += `\n  ${alt.lang}: ${alt.url}`
+        })
+      }
+    }
+
+    // Generation preferences
+    prompt += `\n=== SCHEMA GENERATION PREFERENCES ===`
+    prompt += `\nInclude Images: ${options.includeImages !== false}`
+    prompt += `\nInclude Videos: ${options.includeVideos !== false}`
+    prompt += `\nInclude Products: ${options.includeProducts !== false}`
+    prompt += `\nInclude Events: ${options.includeEvents !== false}`
+    prompt += `\nInclude Articles: ${options.includeArticles !== false}`
+    prompt += `\nInclude Organization: ${options.includeOrganization !== false}`
+    prompt += `\nInclude Local Business: ${options.includeLocalBusiness !== false}`
+
+    // Generate metadata-guided generation instructions
+    const metadataAnalysis = this.analyzeMetadataQuality(analysis)
+    const schemaRecommendations = this.generateSchemaRecommendations(analysis)
+
+    prompt += `\n\n🚀 EXPERT-LEVEL METADATA-GUIDED SCHEMA GENERATION:
+
+📋 METADATA QUALITY ANALYSIS:
+${metadataAnalysis}
+
+🎯 RECOMMENDED SCHEMA ARCHITECTURE:
+${schemaRecommendations}
+
+🔬 PRECISION PROPERTY MAPPING PROTOCOL:
+
+**VERIFIED DATA UTILIZATION:**
+\n✅ TIER 1 - EXTRACTED METADATA (USE FULLY):
+- headline/name: "${analysis.title || '[TITLE NOT EXTRACTED]'}"
+- description: "${analysis.description || '[DESCRIPTION NOT EXTRACTED]'}"
+- url/mainEntityOfPage: "${analysis.metadata?.canonicalUrl || analysis.url}"
+- inLanguage: "${analysis.metadata?.language || 'en'}"
+- datePublished: ${analysis.metadata?.publishDate ? `"${analysis.metadata.publishDate}"` : '[DATE NOT EXTRACTED - OMIT]'}
+- dateModified: ${analysis.metadata?.modifiedDate ? `"${analysis.metadata.modifiedDate}"` : '[MODIFIED DATE NOT EXTRACTED - OMIT]'}
+- author: ${analysis.metadata?.author ? (typeof analysis.metadata.author === 'object' ? `{"@type": "Person", "name": "${analysis.metadata.author.name}"}` : `{"@type": "Person", "name": "${analysis.metadata.author}"}`) : '[AUTHOR NOT EXTRACTED - OMIT]'}
+- image: ${analysis.metadata?.imageInfo?.featuredImage ? `"${analysis.metadata.imageInfo.featuredImage}"` : '[FEATURED IMAGE NOT EXTRACTED - OMIT]'}
+- keywords: ${analysis.metadata?.keywords?.length ? `["${analysis.metadata.keywords.slice(0, 10).join('", "')}"]` : '[KEYWORDS NOT EXTRACTED - OMIT]'}
+- wordCount: ${analysis.metadata?.wordCount || '[WORD COUNT NOT CALCULATED - OMIT]'}
+
+**CONTENT-DERIVED PROPERTIES (EXTRACT CAREFULLY):**
+- publisher: ${analysis.metadata?.businessInfo?.name ? `{"@type": "Organization", "name": "${analysis.metadata.businessInfo.name}", "url": "${analysis.metadata.businessInfo.url || new URL(analysis.url).origin}"}` : `{"@type": "Organization", "name": "${new URL(analysis.url).hostname.replace('www.', '')}", "url": "${new URL(analysis.url).origin}"}`}
+- articleSection: ${analysis.metadata?.articleSection ? `"${analysis.metadata.articleSection}"` : '[SECTION NOT DETECTED - OMIT]'}
+- about: ${analysis.metadata?.entities?.length ? `["${analysis.metadata.entities.slice(0, 5).join('", "')}"]` : '[ENTITIES NOT EXTRACTED - OMIT]'}
+- mentions: ${analysis.metadata?.tags?.length ? `["${analysis.metadata.tags.slice(0, 5).join('", "')}"]` : '[TAGS NOT EXTRACTED - OMIT]'}
+
+**ADVANCED AEO ENHANCEMENTS (WHEN SUPPORTED BY REAL DATA):**
+- FAQPage: ${analysis.metadata?.faqContent?.length ? `Generate using ${analysis.metadata.faqContent.length} detected Q&A pairs` : '[NO FAQ CONTENT DETECTED - SKIP]'}
+- BreadcrumbList: ${analysis.metadata?.breadcrumbs?.length ? `Generate using real navigation data` : '[NO BREADCRUMBS DETECTED - SKIP]'}
+- ImageObject: ${analysis.metadata?.imageInfo?.allImages?.length ? `Generate for ${analysis.metadata.imageInfo.allImages.length} detected images` : '[NO IMAGES WITH METADATA - SKIP]'}
+- LocalBusiness: ${analysis.metadata?.businessInfo?.address ? 'Generate using extracted business data' : '[NO BUSINESS ADDRESS DATA - SKIP]'}
+
+🛡️ ANTI-HALLUCINATION SAFEGUARDS:
+
+**MANDATORY VERIFICATION STEPS:**
+1. ✅ Cross-reference each property value against the extracted metadata above
+2. ✅ If metadata shows '[NOT EXTRACTED]' or '[SKIP]', DO NOT generate that property
+3. ✅ Use exact values from metadata without modification or "improvement"
+4. ✅ Omit properties rather than inventing placeholder data
+5. ✅ Validate that all URLs, dates, and names trace to provided data
+
+**FORBIDDEN ACTIONS:**
+- ❌ Creating author names not listed in the metadata analysis above
+- ❌ Generating dates not explicitly provided in the metadata
+- ❌ Using images not verified in the imageInfo section
+- ❌ Inventing business contact information
+- ❌ Adding social media profiles not in the extracted data
+
+🎯 SCHEMA GENERATION REQUIREMENTS:
+1. ✅ Generate 3-6 schemas based on available verified metadata
+2. ✅ Focus on schema types supported by the richest available data
+3. ✅ Create comprehensive property coverage using only verified information
+4. ✅ Establish proper schema relationships using real content connections
+5. ✅ Optimize for AEO while maintaining 100% data authenticity
+
+Return a production-grade JSON object with "schemas" array containing expert-level, metadata-guided Schema.org markup that maximizes search visibility through verified data excellence.`
+
+    return prompt
+  }
+
+  private calculateContentQualityScore(analysis: ContentAnalysis): number {
+    let score = 0
+    const metadata = analysis.metadata
+
+    // Core metadata scoring (60 points)
+    if (analysis.title && analysis.title.length > 20) score += 15
+    if (analysis.description && analysis.description.length > 100) score += 15
+    if (metadata?.author) score += 15
+    if (metadata?.publishDate) score += 15
+
+    // Rich metadata scoring (25 points)
+    if (metadata?.keywords?.length) score += 5
+    if (metadata?.imageInfo?.featuredImage) score += 5
+    if (metadata?.wordCount && metadata.wordCount > 300) score += 5
+    if (metadata?.businessInfo?.name) score += 5
+    if (metadata?.faqContent?.length) score += 5
+
+    // Technical metadata scoring (15 points)
+    if (metadata?.openGraph) score += 5
+    if (metadata?.twitterCard) score += 5
+    if (metadata?.jsonLdData?.length) score += 5
+
+    return Math.min(100, score)
+  }
+
+  private getMockSchemas(analysis: ContentAnalysis): JsonLdSchema[] {
+    return [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": analysis.title || "Sample Web Page",
+        "description": analysis.description || "A sample web page for development testing",
+        "url": analysis.url
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": analysis.title || "Sample Article Headline",
+        "description": analysis.description || "A sample article for development testing",
+        "author": {
+          "@type": "Person",
+          "name": "Sample Author"
+        },
+        "datePublished": new Date().toISOString().split('T')[0],
+        "publisher": {
+          "@type": "Organization",
+          "name": "Sample Publisher"
+        }
+      }
+    ]
+  }
+
+  // Schema property validation and completion engine
+  private async validateAndEnhanceSchemas(schemas: JsonLdSchema[], analysis: ContentAnalysis): Promise<JsonLdSchema[]> {
+    console.log('🔧 Running schema validation and enhancement engine...')
+
+    const enhancedSchemas: JsonLdSchema[] = []
+
+    for (const schema of schemas) {
+      try {
+        const schemaType = schema['@type']
+        if (!schemaType) {
+          console.warn('⚠️ Schema missing @type, skipping')
+          continue
+        }
+
+        // Get property requirements for this schema type
+        const requirements = SCHEMA_PROPERTY_TEMPLATES[schemaType]
+        if (!requirements) {
+          console.log(`📝 No specific requirements for ${schemaType}, using as-is`)
+          enhancedSchemas.push(schema)
+          continue
+        }
+
+        // Create enhanced schema with completed properties
+        const enhancedSchema = { ...schema }
+
+        // Ensure required properties are present
+        this.ensureRequiredProperties(enhancedSchema, requirements, analysis)
+
+        // Add recommended properties when data is available
+        this.addRecommendedProperties(enhancedSchema, requirements, analysis)
+
+        // Add advanced AEO properties
+        this.addAdvancedAEOProperties(enhancedSchema, requirements, analysis)
+
+        // Validate basic Schema.org compliance
+        if (this.validateSchemaCompliance(enhancedSchema)) {
+          enhancedSchemas.push(enhancedSchema)
+          console.log(`✅ Enhanced ${schemaType} schema with ${Object.keys(enhancedSchema).length} properties`)
+        } else {
+          console.warn(`⚠️ Schema ${schemaType} failed compliance, skipping`)
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ Error enhancing schema ${schema['@type']}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    return enhancedSchemas
+  }
+
+  private ensureRequiredProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    // Ensure @context is always present
+    if (!schema['@context']) {
+      schema['@context'] = 'https://schema.org'
+    }
+
+    // Add mainEntityOfPage for content schemas
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['mainEntityOfPage']) {
+      schema['mainEntityOfPage'] = analysis.metadata?.canonicalUrl || analysis.url
+    }
+
+    // Add basic publisher info if missing
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['publisher']) {
+      schema['publisher'] = {
+        '@type': 'Organization',
+        'name': analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', ''),
+        'url': analysis.metadata?.businessInfo?.url || new URL(analysis.url).origin
+      }
+    }
+
+    // Add inLanguage if missing
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article' || schema['@type'] === 'WebPage') && !schema['inLanguage']) {
+      schema['inLanguage'] = analysis.metadata?.language || 'en'
+    }
+  }
+
+  private addRecommendedProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    const schemaType = schema['@type']
+
+    // Add description if available and missing
+    if (!schema['description'] && analysis.description) {
+      schema['description'] = analysis.description
+    }
+
+    // Add word count for content schemas
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['wordCount'] && analysis.metadata?.wordCount) {
+      schema['wordCount'] = analysis.metadata.wordCount
+    }
+
+    // Add article section/category
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['articleSection'] && analysis.metadata?.articleSection) {
+      schema['articleSection'] = analysis.metadata.articleSection
+    }
+
+    // Add keywords from metadata
+    if (!schema['keywords'] && analysis.metadata?.keywords?.length) {
+      schema['keywords'] = analysis.metadata.keywords.slice(0, 10)
+    }
+
+    // Add image for content schemas
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article' || schemaType === 'WebPage') && !schema['image'] && analysis.metadata?.imageInfo?.featuredImage) {
+      schema['image'] = analysis.metadata.imageInfo.featuredImage
+    }
+
+    // Add dateModified if available
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['dateModified'] && analysis.metadata?.modifiedDate) {
+      schema['dateModified'] = analysis.metadata.modifiedDate
+    }
+
+    // Add breadcrumb for WebPage
+    if (schemaType === 'WebPage' && !schema['breadcrumb'] && analysis.metadata?.breadcrumbs?.length) {
+      schema['breadcrumb'] = {
+        '@type': 'BreadcrumbList',
+        'itemListElement': analysis.metadata.breadcrumbs.map((crumb, index) => ({
+          '@type': 'ListItem',
+          'position': index + 1,
+          'name': crumb
+        }))
+      }
+    }
+  }
+
+  private addAdvancedAEOProperties(schema: JsonLdSchema, requirements: SchemaPropertyRequirements, analysis: ContentAnalysis): void {
+    const schemaType = schema['@type']
+
+    // Add about and mentions for content schemas
+    if (schemaType === 'BlogPosting' || schemaType === 'Article') {
+      if (!schema['about'] && analysis.metadata?.entities?.length) {
+        schema['about'] = analysis.metadata.entities.slice(0, 5)
+      }
+
+      if (!schema['mentions'] && analysis.metadata?.tags?.length) {
+        schema['mentions'] = analysis.metadata.tags.slice(0, 5)
+      }
+
+      // Add potential action for engagement
+      if (!schema['potentialAction']) {
+        schema['potentialAction'] = [{
+          '@type': 'ReadAction',
+          'target': analysis.metadata?.canonicalUrl || analysis.url
+        }]
+      }
+
+      // Add speakable for FAQ content
+      if (analysis.metadata?.faqContent?.length && !schema['speakable']) {
+        schema['speakable'] = {
+          '@type': 'SpeakableSpecification',
+          'cssSelector': ['.faq', '.question', '.answer']
+        }
+      }
+    }
+
+    // Add technical metadata for WebPage
+    if (schemaType === 'WebPage') {
+      if (!schema['isPartOf'] && analysis.metadata?.businessInfo?.name) {
+        schema['isPartOf'] = {
+          '@type': 'WebSite',
+          'name': analysis.metadata.businessInfo.name,
+          'url': new URL(analysis.url).origin
+        }
+      }
+    }
+
+    // Add social media presence to Organization
+    if (schemaType === 'Organization' && analysis.metadata?.socialUrls?.length && !schema['sameAs']) {
+      schema['sameAs'] = analysis.metadata.socialUrls
+    }
+  }
+
+  private validateSchemaCompliance(schema: JsonLdSchema): boolean {
+    // Basic validation checks
+    if (!schema['@context'] || !schema['@type']) {
+      return false
+    }
+
+    // Check for minimum viable properties based on schema type
+    const schemaType = schema['@type']
+
+    if (schemaType === 'BlogPosting' || schemaType === 'Article') {
+      return !!(schema['headline'] && schema['author'] && schema['publisher'])
+    }
+
+    if (schemaType === 'Organization') {
+      return !!(schema['name'] && schema['url'])
+    }
+
+    if (schemaType === 'WebPage') {
+      return !!(schema['name'] && schema['url'])
+    }
+
+    if (schemaType === 'Person') {
+      return !!schema['name']
+    }
+
+    // Default to valid for other schema types
+    return true
+  }
+
+  async validateContent(content: string): Promise<{
+    isValid: boolean
+    suggestions: string[]
+    detectedTypes: string[]
+  }> {
+    const client = this.initializeClient()
+
+    // Return mock validation for development when no API key is provided
+    if (!client) {
+      return {
+        isValid: true,
+        suggestions: ['Mock validation - content appears suitable for schema generation'],
+        detectedTypes: ['WebPage', 'Article']
+      }
+    }
+
+    try {
+      const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+      const isLimitedModel = model.includes('gpt-5-nano') || model.includes('gpt-3.5-turbo')
+
+      // Adjust token limits based on model capabilities for validation
+      const maxTokens = isLimitedModel && model.includes('gpt-5-nano')
+        ? 4000  // GPT-5-nano needs extra tokens for reasoning + output
+        : 1000  // Standard models
+
+      console.log(`🔍 Content Validation - Model: ${model}, Limited: ${isLimitedModel}, Max tokens: ${maxTokens}`)
+
+      const systemMessage = isLimitedModel
+        ? `You are a content analysis expert. Analyze the provided content and determine:
+1. If it has sufficient structured information for schema generation
+2. What schema types would be most appropriate
+3. Suggestions for improving the content for better schema markup
+
+🎯 CRITICAL: You MUST respond with ONLY valid JSON in this exact format:
+{
+  "isValid": true/false,
+  "suggestions": ["suggestion1", "suggestion2"],
+  "detectedTypes": ["type1", "type2"]
+}
+
+Do not include any text before or after the JSON.`
+        : `You are a content analysis expert. Analyze the provided content and determine:
+1. If it has sufficient structured information for schema generation
+2. What schema types would be most appropriate
+3. Suggestions for improving the content for better schema markup
+
+Return a JSON object with:
+- isValid: boolean (true if content is suitable for schema generation)
+- suggestions: array of strings with improvement suggestions
+- detectedTypes: array of probable Schema.org types that could be generated`
+
+      const chatParams: any = {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: systemMessage
+          },
+          {
+            role: 'user',
+            content: `Analyze this content for schema generation potential:\n\n${content.substring(0, 2000)}`
+          }
+        ],
+        max_completion_tokens: maxTokens
+      }
+
+      // Only add advanced parameters for models that support them
+      if (!isLimitedModel) {
+        chatParams.temperature = 0.3
+        chatParams.response_format = { type: 'json_object' }
+        console.log(`🔧 Content Validation - Adding advanced parameters for non-limited model`)
+      } else {
+        console.log(`🔧 Content Validation - Skipping advanced parameters for limited model`)
+      }
+
+      console.log(`🚀 Content Validation - API Call Params:`, JSON.stringify({
+        model: chatParams.model,
+        temperature: chatParams.temperature,
+        response_format: chatParams.response_format,
+        hasTemperature: 'temperature' in chatParams
+      }))
+
+      const response = await this.client.chat.completions.create(chatParams)
+
+      const result = response.choices[0]?.message?.content
+      if (!result) {
+        throw new Error('No response from OpenAI')
+      }
+
+      // Enhanced JSON parsing for content validation
+      try {
+        return JSON.parse(result)
+      } catch (parseError) {
+        console.warn(`⚠️ Content validation JSON parsing failed, attempting extraction...`)
+
+        // Try to extract JSON from response
+        const jsonMatch = result.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0])
+          } catch (extractError) {
+            console.warn(`⚠️ JSON extraction also failed`)
+          }
+        }
+
+        // Return fallback validation result
+        return {
+          isValid: true,
+          suggestions: ['Unable to analyze content quality - proceeding with generation'],
+          detectedTypes: ['WebPage']
+        }
+      }
+    } catch (error) {
+      console.error('Content validation error:', error)
+      return {
+        isValid: true, // Default to valid to not block generation
+        suggestions: ['Unable to analyze content quality'],
+        detectedTypes: ['WebPage']
+      }
+    }
+  }
+}
+
+// Schema Quality Scoring System
+export interface SchemaScore {
+  overallScore: number
+  breakdown: {
+    requiredProperties: number
+    recommendedProperties: number
+    advancedAEOFeatures: number
+    contentQuality: number
+  }
+  suggestions: string[]
+  strengths: string[]
+  contentIssues?: {
+    lowWordCount?: boolean
+    missingImages?: boolean
+    noAuthorInfo?: boolean
+    noDateInfo?: boolean
+    poorMetadata?: boolean
+  }
+}
+
+export interface QualityAnalysis {
+  schemas: JsonLdSchema[]
+  score: SchemaScore
+  metadata: any
+}
+
+class SchemaQualityAnalyzer {
+  calculateSchemaScore(schemas: JsonLdSchema[], contentAnalysis: ContentAnalysis): SchemaScore {
+    const breakdown = {
+      requiredProperties: this.scoreRequiredProperties(schemas),
+      recommendedProperties: this.scoreRecommendedProperties(schemas),
+      advancedAEOFeatures: this.scoreAdvancedFeatures(schemas),
+      contentQuality: this.scoreContentQuality(contentAnalysis)
+    }
+
+    const overallScore = this.calculateOverallScore(breakdown)
+    const suggestions = this.generateSuggestions(schemas, contentAnalysis, breakdown)
+    const strengths = this.identifyStrengths(schemas, breakdown)
+    const contentIssues = this.identifyContentIssues(contentAnalysis)
+
+    return {
+      overallScore,
+      breakdown,
+      suggestions,
+      strengths,
+      contentIssues
+    }
+  }
+
+  private scoreRequiredProperties(schemas: JsonLdSchema[]): number {
+    let totalRequired = 0
+    let presentRequired = 0
+
+    schemas.forEach(schema => {
+      const schemaType = schema['@type']
+      const requirements = SCHEMA_PROPERTY_TEMPLATES[schemaType]
+
+      if (requirements) {
+        totalRequired += requirements.required.length
+        requirements.required.forEach(prop => {
+          if (this.hasProperty(schema, prop)) {
+            presentRequired++
+          }
+        })
+      }
+    })
+
+    return totalRequired > 0 ? Math.round((presentRequired / totalRequired) * 100) : 100
+  }
+
+  private scoreRecommendedProperties(schemas: JsonLdSchema[]): number {
+    let totalRecommended = 0
+    let presentRecommended = 0
+
+    schemas.forEach(schema => {
+      const schemaType = schema['@type']
+      const requirements = SCHEMA_PROPERTY_TEMPLATES[schemaType]
+
+      if (requirements) {
+        totalRecommended += requirements.recommended.length
+        requirements.recommended.forEach(prop => {
+          if (this.hasProperty(schema, prop)) {
+            presentRecommended++
+          }
+        })
+      }
+    })
+
+    return totalRecommended > 0 ? Math.round((presentRecommended / totalRecommended) * 100) : 100
+  }
+
+  private scoreAdvancedFeatures(schemas: JsonLdSchema[]): number {
+    let totalAdvanced = 0
+    let presentAdvanced = 0
+
+    schemas.forEach(schema => {
+      const schemaType = schema['@type']
+      const requirements = SCHEMA_PROPERTY_TEMPLATES[schemaType]
+
+      if (requirements) {
+        totalAdvanced += requirements.advanced.length
+        requirements.advanced.forEach(prop => {
+          if (this.hasProperty(schema, prop)) {
+            presentAdvanced++
+          }
+        })
+      }
+    })
+
+    return totalAdvanced > 0 ? Math.round((presentAdvanced / totalAdvanced) * 100) : 0
+  }
+
+  private scoreContentQuality(contentAnalysis: ContentAnalysis): number {
+    let score = 100
+    const metadata = contentAnalysis.metadata
+
+    // Deduct points for missing content elements
+    if (!metadata?.wordCount || metadata.wordCount < 300) score -= 20
+    if (!metadata?.images || metadata.images.length === 0) score -= 15
+    if (!metadata?.author) score -= 15
+    if (!metadata?.publishDate) score -= 10
+    if (!contentAnalysis.description || contentAnalysis.description.length < 100) score -= 15
+    if (!metadata?.keywords || metadata.keywords.length === 0) score -= 10
+    if (!contentAnalysis.title || contentAnalysis.title.length < 20) score -= 15
+
+    return Math.max(0, score)
+  }
+
+  private calculateOverallScore(breakdown: any): number {
+    // Weighted scoring system
+    const weights = {
+      requiredProperties: 0.4,     // 40% - Most important
+      recommendedProperties: 0.3,  // 30% - Very important
+      advancedAEOFeatures: 0.2,   // 20% - Nice to have
+      contentQuality: 0.1         // 10% - Content foundation
+    }
+
+    return Math.round(
+      breakdown.requiredProperties * weights.requiredProperties +
+      breakdown.recommendedProperties * weights.recommendedProperties +
+      breakdown.advancedAEOFeatures * weights.advancedAEOFeatures +
+      breakdown.contentQuality * weights.contentQuality
+    )
+  }
+
+  private generateSuggestions(schemas: JsonLdSchema[], contentAnalysis: ContentAnalysis, breakdown: any): string[] {
+    const suggestions: string[] = []
+    const metadata = contentAnalysis.metadata
+    const url = contentAnalysis.url
+    const schemaTypes = schemas.map(s => s['@type'])
+
+    // Analyze what's actually missing or could be improved
+    const analysis = this.analyzeContentAndSchemas(schemas, contentAnalysis)
+
+    // Content quality suggestions (only if truly needed)
+    if (metadata?.wordCount && metadata.wordCount < 300) {
+      suggestions.push(`Your page has ${metadata.wordCount} words. Consider expanding to 300+ words for better schema richness`)
+    }
+
+    // Missing schema-specific suggestions based on detected content type
+    if (analysis.contentType === 'blog' || analysis.contentType === 'article') {
+      if (!analysis.hasArticleSchema) {
+        suggestions.push("Add Article or BlogPosting schema to better represent your blog content")
+      }
+      if (!analysis.hasAuthor && metadata?.wordCount > 200) {
+        suggestions.push("Include author byline or bio section to enhance content credibility and enable Person schema")
+      }
+      if (!analysis.hasPublishDate) {
+        suggestions.push("Add publication date metadata (in HTML or meta tags) for better temporal SEO")
+      }
+    }
+
+    // Business/Organization suggestions
+    if (analysis.isBusinessSite && !analysis.hasOrganizationSchema) {
+      suggestions.push("Add Organization schema with business details (address, contact info, social profiles)")
+    }
+
+    // Image optimization suggestions
+    if (analysis.hasImages && !analysis.hasImageSchema) {
+      suggestions.push("Enhance your images with ImageObject schema including alt text and captions")
+    } else if (!analysis.hasImages && analysis.contentType !== 'contact') {
+      suggestions.push("Consider adding relevant images to improve visual appeal and enable ImageObject schema")
+    }
+
+    // FAQ/Structured content suggestions
+    if (analysis.hasFAQContent && !analysis.hasFAQSchema) {
+      suggestions.push("Structure your Q&A content with FAQPage schema for better voice search visibility")
+    }
+
+    // Navigation/Breadcrumb suggestions
+    if (analysis.hasNavigation && !analysis.hasBreadcrumbSchema && analysis.pageDepth > 1) {
+      suggestions.push("Add breadcrumb navigation with BreadcrumbList schema for better site structure")
+    }
+
+    // Advanced AEO suggestions based on content type
+    if (breakdown.advancedAEOFeatures < 50) {
+      if (analysis.contentType === 'product' && !analysis.hasProductSchema) {
+        suggestions.push("Add Product schema with pricing, availability, and review information")
+      } else if (analysis.contentType === 'local' && !analysis.hasLocalBusinessSchema) {
+        suggestions.push("Include LocalBusiness schema with hours, location, and contact details")
+      } else if (analysis.isLongFormContent) {
+        suggestions.push("Add speakable properties to optimize for voice assistants and audio content")
+      }
+    }
+
+    // Technical SEO suggestions
+    if (!metadata?.keywords || metadata.keywords.length === 0) {
+      suggestions.push(`Add relevant keywords and meta tags to help search engines understand your ${analysis.contentType} content`)
+    }
+
+    if (!contentAnalysis.description || contentAnalysis.description.length < 120) {
+      const recommendedLength = analysis.contentType === 'product' ? '155' : '150'
+      suggestions.push(`Write a compelling meta description (${recommendedLength} characters) that summarizes your content`)
+    }
+
+    // Social media and sharing suggestions
+    if (breakdown.advancedAEOFeatures < 70 && !analysis.hasSocialMeta) {
+      suggestions.push("Add Open Graph and Twitter Card meta tags for better social media sharing")
+    }
+
+    // Performance-based suggestions
+    if (breakdown.requiredProperties < 90) {
+      const missingSchemas = this.identifyMissingRequiredSchemas(schemas, analysis)
+      if (missingSchemas.length > 0) {
+        suggestions.push(`Consider adding ${missingSchemas.join(', ')} schema types relevant to your content`)
+      }
+    }
+
+    // Prioritize and limit suggestions based on impact
+    return this.prioritizeSuggestions(suggestions, analysis).slice(0, 4)
+  }
+
+  private analyzeContentAndSchemas(schemas: JsonLdSchema[], contentAnalysis: ContentAnalysis): any {
+    const url = contentAnalysis.url
+    const metadata = contentAnalysis.metadata
+    const schemaTypes = schemas.map(s => s['@type'])
+
+    // Determine content type from URL and content
+    let contentType = 'article'
+    if (url.includes('/blog/') || url.includes('/post/')) contentType = 'blog'
+    else if (url.includes('/product/') || url.includes('/shop/')) contentType = 'product'
+    else if (url.includes('/about') || url.includes('/company')) contentType = 'about'
+    else if (url.includes('/contact')) contentType = 'contact'
+    else if (url.includes('/business/') || url.includes('/location/')) contentType = 'local'
+    else if (url === new URL(url).origin || url.endsWith('/')) contentType = 'home'
+
+    // Analyze existing schemas
+    const hasArticleSchema = schemaTypes.some(type => ['Article', 'BlogPosting', 'NewsArticle'].includes(type))
+    const hasOrganizationSchema = schemaTypes.includes('Organization')
+    const hasPersonSchema = schemaTypes.includes('Person')
+    const hasImageSchema = schemaTypes.includes('ImageObject')
+    const hasFAQSchema = schemaTypes.includes('FAQPage')
+    const hasBreadcrumbSchema = schemaTypes.includes('BreadcrumbList')
+    const hasProductSchema = schemaTypes.includes('Product')
+    const hasLocalBusinessSchema = schemaTypes.includes('LocalBusiness')
+
+    // Analyze content characteristics
+    const wordCount = metadata?.wordCount || 0
+    const isLongFormContent = wordCount > 1000
+    const hasImages = metadata?.images && metadata.images.length > 0
+    const hasAuthor = metadata?.author || false
+    const hasPublishDate = metadata?.publishDate || false
+
+    // Detect FAQ content patterns
+    const contentText = contentAnalysis.content?.toLowerCase() || ''
+    const hasFAQContent = contentText.includes('question') && contentText.includes('answer') ||
+                         contentText.includes('faq') || contentText.includes('frequently asked')
+
+    // Detect business indicators
+    const isBusinessSite = contentText.includes('contact') || contentText.includes('address') ||
+                          contentText.includes('phone') || contentText.includes('business') ||
+                          url.includes('business') || url.includes('company')
+
+    // Page depth analysis
+    const urlParts = new URL(url).pathname.split('/').filter(part => part.length > 0)
+    const pageDepth = urlParts.length
+
+    // Navigation detection
+    const hasNavigation = pageDepth > 1 || contentText.includes('home') && contentText.includes('>')
+
+    // Social media detection
+    const hasSocialMeta = contentText.includes('og:') || contentText.includes('twitter:')
+
+    return {
+      contentType,
+      hasArticleSchema,
+      hasOrganizationSchema,
+      hasPersonSchema,
+      hasImageSchema,
+      hasFAQSchema,
+      hasBreadcrumbSchema,
+      hasProductSchema,
+      hasLocalBusinessSchema,
+      isLongFormContent,
+      hasImages,
+      hasAuthor,
+      hasPublishDate,
+      hasFAQContent,
+      isBusinessSite,
+      pageDepth,
+      hasNavigation,
+      hasSocialMeta,
+      wordCount
+    }
+  }
+
+  private identifyMissingRequiredSchemas(schemas: JsonLdSchema[], analysis: any): string[] {
+    const missing: string[] = []
+
+    if (analysis.contentType === 'blog' && !analysis.hasArticleSchema) {
+      missing.push('BlogPosting')
+    }
+    if (analysis.isBusinessSite && !analysis.hasOrganizationSchema) {
+      missing.push('Organization')
+    }
+    if (analysis.hasImages && !analysis.hasImageSchema) {
+      missing.push('ImageObject')
+    }
+    if (analysis.hasFAQContent && !analysis.hasFAQSchema) {
+      missing.push('FAQPage')
+    }
+
+    return missing
+  }
+
+  private prioritizeSuggestions(suggestions: string[], analysis: any): string[] {
+    // Sort suggestions by priority based on content type and potential impact
+    return suggestions.sort((a, b) => {
+      // Prioritize schema-related suggestions first
+      if (a.includes('schema') && !b.includes('schema')) return -1
+      if (!a.includes('schema') && b.includes('schema')) return 1
+
+      // Then content-specific improvements
+      if (a.includes(analysis.contentType) && !b.includes(analysis.contentType)) return -1
+      if (!a.includes(analysis.contentType) && b.includes(analysis.contentType)) return 1
+
+      // Then technical SEO
+      if (a.includes('meta') && !b.includes('meta')) return -1
+      if (!a.includes('meta') && b.includes('meta')) return 1
+
+      return 0
+    })
+  }
+
+  private identifyStrengths(schemas: JsonLdSchema[], breakdown: any): string[] {
+    const strengths: string[] = []
+
+    if (breakdown.requiredProperties >= 95) {
+      strengths.push("Excellent coverage of required schema properties")
+    }
+
+    if (breakdown.recommendedProperties >= 80) {
+      strengths.push("Strong implementation of recommended properties")
+    }
+
+    if (breakdown.advancedAEOFeatures >= 50) {
+      strengths.push("Great use of advanced AEO features for AI search optimization")
+    }
+
+    if (breakdown.contentQuality >= 80) {
+      strengths.push("High-quality content foundation with rich metadata")
+    }
+
+    if (schemas.length >= 3) {
+      strengths.push("Comprehensive multi-schema markup covering multiple content types")
+    }
+
+    // Check for specific advanced features
+    const hasAdvancedFeatures = schemas.some(schema =>
+      schema.potentialAction || schema.speakable || schema.interactionStatistic
+    )
+    if (hasAdvancedFeatures) {
+      strengths.push("Advanced voice and interaction optimization features included")
+    }
+
+    return strengths
+  }
+
+  private identifyContentIssues(contentAnalysis: ContentAnalysis): any {
+    const metadata = contentAnalysis.metadata
+    const issues: any = {}
+
+    if (!metadata?.wordCount || metadata.wordCount < 300) {
+      issues.lowWordCount = true
+    }
+
+    if (!metadata?.images || metadata.images.length === 0) {
+      issues.missingImages = true
+    }
+
+    if (!metadata?.author) {
+      issues.noAuthorInfo = true
+    }
+
+    if (!metadata?.publishDate) {
+      issues.noDateInfo = true
+    }
+
+    if (!contentAnalysis.description || contentAnalysis.description.length < 50) {
+      issues.poorMetadata = true
+    }
+
+    return Object.keys(issues).length > 0 ? issues : undefined
+  }
+
+  private hasProperty(schema: JsonLdSchema, property: string): boolean {
+    return schema.hasOwnProperty(property) && schema[property] !== null && schema[property] !== undefined && schema[property] !== ''
+  }
+}
+
+export const schemaQualityAnalyzer = new SchemaQualityAnalyzer()
+export const openaiService = new OpenAIService()

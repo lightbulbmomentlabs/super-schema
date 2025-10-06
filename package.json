@@ -1,0 +1,42 @@
+{
+  "name": "aeo-schema-generator",
+  "version": "1.0.0",
+  "description": "AI-powered schema markup generator for optimizing websites for AI search",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client && npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "type-check": "npm run type-check --workspace=client && npm run type-check --workspace=server",
+    "lint": "npm run lint --workspace=client && npm run lint --workspace=server",
+    "test": "npm run test --workspace=client && npm run test --workspace=server",
+    "db:verify": "node database/verify.js",
+    "db:deploy": "echo '📋 Please run database/deploy-all.sql in Supabase SQL Editor' && echo '🔗 https://app.supabase.com/project/atopvinhrlicujtwltsg/sql/new'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "schema",
+    "json-ld",
+    "seo",
+    "ai-search",
+    "aeo",
+    "structured-data"
+  ],
+  "author": "AEO Schema Generator",
+  "license": "MIT"
+}
