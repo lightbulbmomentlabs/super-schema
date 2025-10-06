@@ -20,7 +20,7 @@ import adminRoutes from './routes/admin.js'
 import supportRoutes from './routes/support.js'
 
 const app = express()
-const PORT = process.env.PORT || 3002
+const PORT = process.env.PORT || 8080
 
 // Security middleware
 app.use(helmet({
