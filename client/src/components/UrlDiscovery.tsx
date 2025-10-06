@@ -39,7 +39,8 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
     const pollInterval = setInterval(async () => {
       try {
         const token = await getToken()
-        const response = await fetch(`http://localhost:3001/api/crawler/results/${crawlId}`, {
+        const API_URL = import.meta.env.VITE_API_URL || window.location.origin
+        const response = await fetch(`${API_URL}/api/crawler/results/${crawlId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -84,7 +85,8 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
 
     try {
       const token = await getToken()
-      const response = await fetch('http://localhost:3001/api/crawler/discover', {
+      const API_URL = import.meta.env.VITE_API_URL || window.location.origin
+      const response = await fetch(`${API_URL}/api/crawler/discover`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
