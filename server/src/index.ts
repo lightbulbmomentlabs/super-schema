@@ -6,6 +6,11 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import { rateLimit } from 'express-rate-limit'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 import { errorHandler } from './middleware/errorHandler.js'
 import { authMiddleware } from './middleware/auth.js'
@@ -71,7 +76,7 @@ app.get('/health', (req, res) => {
 // Webhook routes (no auth required)
 app.use('/webhooks', webhookRoutes)
 
-// Routes
+// API Routes
 app.use('/api/admin', adminRoutes) // Admin routes include their own auth middleware
 app.use('/api/schema', authMiddleware, schemaRoutes)
 app.use('/api/user', authMiddleware, userRoutes)
@@ -81,9 +86,13 @@ app.use('/api/crawler', authMiddleware, crawlerRoutes)
 app.use('/api/library', authMiddleware, urlLibraryRoutes)
 app.use('/api/support', supportRoutes) // Support routes include their own auth middleware
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' })
+// Serve static files from client build
+const clientDistPath = path.join(__dirname, '../../client/dist')
+app.use(express.static(clientDistPath))
+
+// Serve index.html for all non-API routes (SPA fallback)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'))
 })
 
 // Error handling middleware
