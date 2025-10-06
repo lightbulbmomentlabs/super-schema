@@ -83,19 +83,18 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files first
+# Copy root package files for workspace setup
 COPY --from=base /app/package*.json ./
 COPY --from=base /app/server/package*.json ./server/
 COPY --from=base /app/shared/package*.json ./shared/
+COPY --from=base /app/client/package*.json ./client/
 
-# Install production dependencies only
-RUN npm install --workspace=shared --omit=dev
-RUN npm install --workspace=server --omit=dev
+# Install all production dependencies using workspace from root
+RUN npm ci --omit=dev --workspaces
 
 # Copy built application from base stage
 COPY --from=base /app/server/dist ./server/dist
 COPY --from=base /app/shared/dist ./shared/dist
-COPY --from=base /app/shared/package.json ./shared/package.json
 COPY --from=base /app/client/dist ./client/dist
 
 # Set environment variables
