@@ -11,7 +11,9 @@ const getAdminEmails = (): string[] => {
 
 // Admin user IDs - for cases where user might not be in DB yet or has multiple accounts
 const getAdminUserIds = (): string[] => {
-  const adminUserIds = process.env.ADMIN_USER_IDS || ''
+  // Fallback to hardcoded admin IDs if env var not set (temporary until DO applies config)
+  const defaultAdminIds = 'user_33hfeOP0UYLcyLEkfcCdITEYY6W,user_33Fdrdz4hyXRWshiOjEsVOGmbTv'
+  const adminUserIds = process.env.ADMIN_USER_IDS || defaultAdminIds
   return adminUserIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
 }
 
