@@ -9,6 +9,12 @@ const getAdminEmails = (): string[] => {
   return adminEmails.split(',').map(email => email.trim().toLowerCase())
 }
 
+// Admin user IDs - for cases where user might not be in DB yet or has multiple accounts
+const getAdminUserIds = (): string[] => {
+  const adminUserIds = process.env.ADMIN_USER_IDS || ''
+  return adminUserIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
+}
+
 export const adminAuthMiddleware = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -27,6 +33,14 @@ export const adminAuthMiddleware = async (
     if (!req.auth?.userId) {
       console.error('❌ [AdminAuth] No auth object or userId found')
       throw createError('Authentication required', 401)
+    }
+
+    // Check if userId is directly whitelisted (bypasses DB check)
+    const adminUserIds = getAdminUserIds()
+    if (adminUserIds.includes(req.auth.userId)) {
+      console.log(`✅ [AdminAuth] Admin access GRANTED via userId whitelist:`, req.auth.userId)
+      req.auth.isAdmin = true
+      return next()
     }
 
     // Get user details from database

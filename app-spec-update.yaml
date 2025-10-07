@@ -66,7 +66,10 @@ envs:
   value: gpt-4o
 - key: ADMIN_EMAILS
   scope: RUN_AND_BUILD_TIME
-  value: kevinfremon@gmail.com
+  value: kevinfremon@gmail.com,kevin@lightbulbmoment.com
+- key: ADMIN_USER_IDS
+  scope: RUN_AND_BUILD_TIME
+  value: user_33hfeOP0UYLcyLEkfcCdITEYY6W
 ingress:
   rules:
   - component:
