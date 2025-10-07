@@ -9,15 +9,16 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
     // Set up request interceptor to add auth token
     const requestInterceptor = api.interceptors.request.use(
       async (config) => {
-        if (isSignedIn) {
-          try {
-            const token = await getToken()
-            if (token) {
-              config.headers.Authorization = `Bearer ${token}`
-            }
-          } catch (error) {
-            console.error('Failed to get auth token:', error)
+        try {
+          const token = await getToken()
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`
+            console.log('🔐 [ApiProvider] Auth token added to request:', config.url)
+          } else {
+            console.warn('⚠️ [ApiProvider] No auth token available for request:', config.url, '| isSignedIn:', isSignedIn)
           }
+        } catch (error) {
+          console.error('❌ [ApiProvider] Failed to get auth token for:', config.url, error)
         }
         return config
       },
