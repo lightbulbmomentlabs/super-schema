@@ -367,9 +367,9 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       </div>
 
       {/* 2-Column Layout: Form on Left (40%), Editor on Right (60%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(500px,2fr)_minmax(0,3fr)] gap-6">
         {/* LEFT COLUMN - Generation Form */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-[500px]">
           {/* Generation Form */}
           <div className="bg-card border border-border rounded-lg p-6">
             <form onSubmit={handleGenerate} className="space-y-4">
