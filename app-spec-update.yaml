@@ -69,7 +69,7 @@ envs:
   value: kevinfremon@gmail.com,kevin@lightbulbmoment.com
 - key: ADMIN_USER_IDS
   scope: RUN_AND_BUILD_TIME
-  value: user_33hfeOP0UYLcyLEkfcCdITEYY6W
+  value: user_33hfeOP0UYLcyLEkfcCdITEYY6W,user_33Fdrdz4hyXRWshiOjEsVOGmbTv
 ingress:
   rules:
   - component:
