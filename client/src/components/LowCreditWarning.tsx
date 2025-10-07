@@ -96,8 +96,8 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
               </p>
               <div className="mt-3 flex space-x-3">
                 <Link
-                  to="/dashboard/credits"
-                  className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  to="/dashboard/credits?purchase=true"
+                  className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                 >
                   <CreditCard className="h-4 w-4 mr-1" />
                   View Credit Packs

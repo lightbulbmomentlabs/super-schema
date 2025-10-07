@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@clerk/clerk-react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CreditCard,
   Plus,
@@ -17,12 +18,23 @@ import { cn } from '@/utils/cn'
 
 export default function CreditsPage() {
   const { user } = useUser()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [showPurchase, setShowPurchase] = useState(false)
 
   // Set page title
   useEffect(() => {
     document.title = 'Super Schema | Credits'
   }, [])
+
+  // Check URL parameter to auto-show purchase page
+  useEffect(() => {
+    if (searchParams.get('purchase') === 'true') {
+      setShowPurchase(true)
+      // Remove the parameter from URL after reading it
+      searchParams.delete('purchase')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   // Get user credits
   const { data: creditsData, refetch: refetchCredits } = useQuery({
