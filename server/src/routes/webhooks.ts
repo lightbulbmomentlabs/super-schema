@@ -97,29 +97,12 @@ async function handleUserCreated(data: any) {
       return
     }
 
-    // Create user in our database with 2 free credits
+    // Create user in our database
+    // Note: Credits are NOT granted here to avoid double allocation
+    // Credits are granted via the /user/init endpoint when the user first logs in
     await db.upsertUserFromClerk(userId, email, firstName, lastName)
 
-    // Add welcome bonus credits
-    await db.addCredits(
-      userId,
-      2,
-      'Welcome bonus - 2 free credits for new users'
-    )
-
-    // Track signup analytics
-    await db.trackUsage(
-      userId,
-      'signup',
-      {
-        source: 'clerk_webhook',
-        email,
-        firstName,
-        lastName
-      }
-    )
-
-    console.log(`User created: ${userId} (${email})`)
+    console.log(`User created via webhook: ${userId} (${email})`)
   } catch (error) {
     console.error('Error creating user:', error)
   }
