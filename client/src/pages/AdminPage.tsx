@@ -161,11 +161,11 @@ export default function AdminPage() {
   const getCategoryBadgeColor = (category: string) => {
     switch (category) {
       case 'general':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-info text-info-foreground'
       case 'feature_request':
         return 'bg-purple-100 text-purple-800'
       case 'bug_report':
-        return 'bg-red-100 text-red-800'
+        return 'bg-destructive text-destructive-foreground'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -213,8 +213,8 @@ export default function AdminPage() {
         <div className="max-w-md w-full">
           <div className="rounded-lg border border-border bg-card p-8 text-center">
             <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-red-100 p-3">
-                <Shield className="h-8 w-8 text-red-600" />
+              <div className="rounded-full bg-destructive p-3">
+                <Shield className="h-8 w-8 text-destructive-foreground" />
               </div>
             </div>
             <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
@@ -378,7 +378,7 @@ export default function AdminPage() {
                   </div>
                   <span className={`px-2 py-1 text-xs rounded-full ${
                     userDetails.user.isActive
-                      ? 'bg-green-100 text-green-800'
+                      ? 'bg-success text-success-foreground'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
                     {userDetails.user.isActive ? 'Active' : 'Inactive'}
@@ -398,17 +398,17 @@ export default function AdminPage() {
 
               {/* LTV - Lifetime Value */}
               {userDetails.stats && (
-                <div className="p-4 border-2 border-green-200 rounded-md bg-green-50">
+                <div className="p-4 border-2 border-success rounded-md bg-success">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-green-900 mb-1">Lifetime Value (LTV)</p>
-                      <p className="text-3xl font-bold text-green-700">
+                      <p className="text-sm font-medium text-success-foreground mb-1">Lifetime Value (LTV)</p>
+                      <p className="text-3xl font-bold text-success-foreground">
                         ${((userDetails.stats.total_spent_cents || 0) / 100).toFixed(2)}
                       </p>
                     </div>
-                    <CreditCard className="h-10 w-10 text-green-600" />
+                    <CreditCard className="h-10 w-10 text-success-foreground" />
                   </div>
-                  <p className="text-xs text-green-700 mt-2">
+                  <p className="text-xs text-success-foreground mt-2">
                     Total spent on credit purchases
                   </p>
                 </div>
@@ -488,7 +488,7 @@ export default function AdminPage() {
           {selectedTickets.size > 0 && (
             <button
               onClick={() => setShowBatchDeleteConfirm(true)}
-              className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors flex items-center gap-1.5"
             >
               <Trash2 className="h-4 w-4" />
               Delete Selected ({selectedTickets.size})
@@ -677,7 +677,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-red-600">Delete User</h3>
+              <h3 className="text-lg font-semibold text-destructive-foreground">Delete User</h3>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="text-muted-foreground hover:text-foreground"
@@ -704,7 +704,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => deleteUser.mutate(selectedUser.id)}
                   disabled={deleteUser.isPending}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleteUser.isPending ? 'Deleting...' : 'Delete Permanently'}
                 </button>

@@ -287,25 +287,25 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
 
         {/* Error Message */}
         {status === 'error' && errorMessage && (
-          <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="flex items-start space-x-2 p-3 bg-destructive border border-destructive rounded-md">
+            <AlertCircle className="h-5 w-5 text-destructive-foreground mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm text-red-800 font-medium">Error</p>
-              <p className="text-xs text-red-700 mt-1">{errorMessage}</p>
+              <p className="text-sm text-destructive-foreground font-medium">Error</p>
+              <p className="text-xs text-destructive-foreground mt-1">{errorMessage}</p>
             </div>
           </div>
         )}
 
         {/* Status Message */}
         {(status === 'discovering' || status === 'completed') && discoveredUrls.length > 0 && (
-          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-center justify-between p-3 bg-info border border-info rounded-md">
             <div className="flex items-center space-x-2">
               {status === 'discovering' ? (
-                <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                <Loader2 className="h-4 w-4 text-info-foreground animate-spin" />
               ) : (
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success-foreground" />
               )}
-              <span className="text-sm text-blue-800">
+              <span className="text-sm text-info-foreground">
                 {status === 'discovering'
                   ? `Discovered ${discoveredUrls.length} URLs (loading more...)`
                   : `Discovered ${discoveredUrls.length} URLs`}
@@ -319,7 +319,7 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter URLs..."
-                className="px-3 py-1 text-sm border border-blue-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-1 text-sm border border-info rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-info"
               />
             )}
           </div>
@@ -362,7 +362,7 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                     <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
                   </div>
                 </div>
-                <div className="bg-blue-50/50">
+                <div className="bg-info/50">
                   {priorityPages.map((urlData, index) => (
                     <div
                       key={index}

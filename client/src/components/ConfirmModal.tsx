@@ -31,7 +31,7 @@ export default function ConfirmModal({
 
   const variantStyles = {
     danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-    warning: 'bg-yellow-600 text-white hover:bg-yellow-700',
+    warning: 'bg-warning text-warning-foreground hover:bg-warning/90',
     info: 'bg-primary text-primary-foreground hover:bg-primary/90'
   }
 

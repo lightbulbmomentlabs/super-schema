@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import Editor from '@monaco-editor/react'
-import { Copy, Check, AlertCircle, CheckCircle, Sun, Moon, Sparkles } from 'lucide-react'
+import { Copy, Check, AlertCircle, CheckCircle, Sun, Moon, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { JsonLdSchema } from '@shared/types'
 
@@ -56,7 +56,7 @@ export default function SchemaEditor({
   const [currentSchemaIndex] = useState(0)
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
   const [isValidating, setIsValidating] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copying' | 'copied' | 'super'>('idle')
   const [editorValue, setEditorValue] = useState('')
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -177,11 +177,31 @@ ${schemas.length === 1
 </script>`
 
     try {
+      // Stage 1: Copying...
+      setCopyState('copying')
+
+      // Brief delay to show "Copying..." state
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Perform the copy
       await navigator.clipboard.writeText(implementationCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+
+      // Stage 2: Copied! 🎉
+      setCopyState('copied')
+
+      // Wait 1 second before showing super message
+      setTimeout(() => {
+        // Stage 3: You're super!
+        setCopyState('super')
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setCopyState('idle')
+        }, 2000)
+      }, 1000)
     } catch (error) {
       console.error('Failed to copy implementation code:', error)
+      setCopyState('idle')
     }
   }
 
@@ -312,10 +332,24 @@ ${schemas.length === 1
 
             <button
               onClick={copyImplementationCode}
-              className="flex items-center px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              disabled={copyState !== 'idle'}
+              className={cn(
+                "flex items-center px-3 py-1 text-xs rounded transition-all",
+                copyState === 'idle' && "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105",
+                copyState === 'copying' && "bg-primary/80 text-primary-foreground",
+                copyState === 'copied' && "bg-success text-success-foreground scale-105",
+                copyState === 'super' && "bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-white scale-105"
+              )}
             >
-              {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-              Copy Schema
+              {copyState === 'idle' && <Copy className="h-3 w-3 mr-1" />}
+              {copyState === 'copying' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              {copyState === 'copied' && <Check className="h-3 w-3 mr-1" />}
+              {copyState === 'super' && <Sparkles className="h-3 w-3 mr-1" />}
+
+              {copyState === 'idle' && 'Copy Schema'}
+              {copyState === 'copying' && 'Copying...'}
+              {copyState === 'copied' && 'Copied! 🎉'}
+              {copyState === 'super' && "You're super!"}
             </button>
           </div>
         </div>

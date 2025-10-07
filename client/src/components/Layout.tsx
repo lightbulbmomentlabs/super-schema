@@ -1,11 +1,9 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton, useUser } from '@clerk/clerk-react'
-import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard,
   Library,
-  CreditCard,
   Settings,
   Shield
 } from 'lucide-react'
@@ -13,7 +11,7 @@ import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
 import LightningBoltIcon from './icons/LightningBoltIcon'
 import Footer from './Footer'
-import { apiService } from '@/services/api'
+import ThemeToggle from './ThemeToggle'
 
 interface LayoutProps {
   children: ReactNode
@@ -53,6 +51,7 @@ export default function Layout({ children }: LayoutProps) {
             <span className="text-sm text-muted-foreground">
               Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
             </span>
+            <ThemeToggle />
             <UserButton
               afterSignOutUrl="/"
               appearance={{

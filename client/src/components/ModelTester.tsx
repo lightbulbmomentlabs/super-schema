@@ -228,7 +228,7 @@ export default function ModelTester({ className }: ModelTesterProps) {
                 className={cn(
                   "p-4 border rounded-lg cursor-pointer transition-colors",
                   selectedModels.includes(model.value)
-                    ? "border-blue-500 bg-blue-50"
+                    ? "border-info bg-info"
                     : "border-gray-200 hover:border-gray-300"
                 )}
               >
@@ -290,7 +290,7 @@ export default function ModelTester({ className }: ModelTesterProps) {
               "flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors",
               isComparing || selectedModels.length === 0
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-info text-info-foreground hover:bg-info/90"
             )}
           >
             {isComparing ? (
@@ -322,7 +322,7 @@ export default function ModelTester({ className }: ModelTesterProps) {
               Test Results
             </h3>
             {getBestPerformingModel() && (
-              <div className="text-sm text-green-600 font-medium">
+              <div className="text-sm text-success-foreground font-medium">
                 Best: {getBestPerformingModel()?.model}
               </div>
             )}
@@ -338,8 +338,8 @@ export default function ModelTester({ className }: ModelTesterProps) {
                   className={cn(
                     "rounded-lg border",
                     result.success
-                      ? "border-green-200 bg-green-50"
-                      : "border-red-200 bg-red-50"
+                      ? "border-success bg-success"
+                      : "border-destructive bg-destructive"
                   )}
                 >
                   {/* Main Result Header */}
@@ -347,9 +347,9 @@ export default function ModelTester({ className }: ModelTesterProps) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {result.success ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <CheckCircle className="h-5 w-5 text-success-foreground" />
                         ) : (
-                          <XCircle className="h-5 w-5 text-red-600" />
+                          <XCircle className="h-5 w-5 text-destructive-foreground" />
                         )}
                         <div>
                           <div className="font-medium">{modelInfo?.label || result.model}</div>
@@ -394,7 +394,7 @@ export default function ModelTester({ className }: ModelTesterProps) {
 
                   {/* Expandable Schema Content */}
                   {isExpanded && result.success && result.schemas && (
-                    <div className="border-t border-green-200 bg-white">
+                    <div className="border-t border-success bg-white">
                       <div className="p-4 space-y-4">
                         <div className="flex items-center justify-between">
                           <h5 className="font-medium text-gray-900">Generated Schemas</h5>
@@ -447,13 +447,13 @@ export default function ModelTester({ className }: ModelTesterProps) {
               <h4 className="font-medium text-sm text-gray-700 mb-2">Performance Summary</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-info-foreground">
                     {Math.min(...testResults.filter(r => r.success).map(r => r.responseTime))}ms
                   </div>
                   <div className="text-gray-600">Fastest Response</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-green-600">
+                  <div className="text-lg font-semibold text-success-foreground">
                     {Math.max(...testResults.filter(r => r.success).map(r => r.schemasGenerated))}
                   </div>
                   <div className="text-gray-600">Most Schemas</div>

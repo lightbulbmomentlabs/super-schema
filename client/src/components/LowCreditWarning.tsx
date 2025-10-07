@@ -83,15 +83,15 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
   if (isNewUser) {
     // Welcoming message for new users with free credits
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <div className="bg-info border border-info rounded-lg p-4 mb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
-            <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <Sparkles className="h-5 w-5 text-info-foreground mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-medium text-blue-800">
+              <h3 className="font-medium text-info-foreground">
                 Welcome! You've Got {creditBalance} Free Credit{creditBalance !== 1 ? 's' : ''}
               </h3>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="text-sm text-info-foreground mt-1">
                 Jump in and generate your first schema—no credit card required. See why life's too short for manual schema markup. When you're ready for more, credit packs are super affordable and super simple to grab.
               </p>
               <div className="mt-3 flex space-x-3">
@@ -104,7 +104,7 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
                 </Link>
                 <button
                   onClick={handleDismiss}
-                  className="text-sm text-blue-700 hover:text-blue-800 underline"
+                  className="text-sm text-info-foreground hover:text-info-foreground/80 underline"
                 >
                   Got it!
                 </button>
@@ -113,9 +113,9 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
           </div>
           <button
             onClick={handleDismiss}
-            className="p-1 hover:bg-blue-100 rounded-md transition-colors"
+            className="p-1 hover:bg-info/90 rounded-md transition-colors"
           >
-            <X className="h-4 w-4 text-blue-600" />
+            <X className="h-4 w-4 text-info-foreground" />
           </button>
         </div>
       </div>
@@ -124,15 +124,15 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
 
   // Warning message for existing users with low credits
   return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+    <div className="bg-warning border border-warning rounded-lg p-4 mb-6">
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+          <AlertTriangle className="h-5 w-5 text-warning-foreground mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <h3 className="font-medium text-yellow-800">
+            <h3 className="font-medium text-warning-foreground">
               {creditBalance === 0 ? 'No Credits Remaining' : 'Low Credit Balance'}
             </h3>
-            <p className="text-sm text-yellow-700 mt-1">
+            <p className="text-sm text-warning-foreground mt-1">
               {creditBalance === 0 ? (
                 'You have used all your credits. Purchase more to continue generating schemas.'
               ) : (
@@ -143,14 +143,14 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
             <div className="mt-3 flex space-x-3">
               <Link
                 to="/dashboard/credits"
-                className="inline-flex items-center px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-warning-foreground text-warning rounded-md hover:bg-warning-foreground/90 transition-colors"
               >
                 <CreditCard className="h-4 w-4 mr-1" />
                 Buy Credits
               </Link>
               <button
                 onClick={handleDismiss}
-                className="text-sm text-yellow-700 hover:text-yellow-800 underline"
+                className="text-sm text-warning-foreground hover:text-warning-foreground/80 underline"
               >
                 Dismiss
               </button>
@@ -159,9 +159,9 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 hover:bg-yellow-100 rounded-md transition-colors"
+          className="p-1 hover:bg-warning/90 rounded-md transition-colors"
         >
-          <X className="h-4 w-4 text-yellow-600" />
+          <X className="h-4 w-4 text-warning-foreground" />
         </button>
       </div>
     </div>

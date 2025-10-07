@@ -244,7 +244,7 @@ export default function CreditPurchase({ onSuccess, onCancel }: CreditPurchasePr
 
               <div className="h-7 mb-4">
                 {pack.savings ? (
-                  <div className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+                  <div className="inline-flex items-center px-2 py-1 rounded-full bg-success text-success-foreground text-xs font-medium">
                     Save {pack.savings}%
                   </div>
                 ) : (
@@ -256,15 +256,15 @@ export default function CreditPurchase({ onSuccess, onCancel }: CreditPurchasePr
 
               <div className="space-y-2 mb-6">
                 <div className="flex items-center justify-center text-sm">
-                  <Check className="h-4 w-4 text-green-600 mr-2" />
+                  <Check className="h-4 w-4 text-success-foreground mr-2" />
                   ${pack.pricePerCredit.toFixed(2)} per credit
                 </div>
                 <div className="flex items-center justify-center text-sm">
-                  <Check className="h-4 w-4 text-green-600 mr-2" />
+                  <Check className="h-4 w-4 text-success-foreground mr-2" />
                   Generate {pack.credits} schemas
                 </div>
                 <div className="flex items-center justify-center text-sm">
-                  <Check className="h-4 w-4 text-green-600 mr-2" />
+                  <Check className="h-4 w-4 text-success-foreground mr-2" />
                   Credits never expire
                 </div>
               </div>

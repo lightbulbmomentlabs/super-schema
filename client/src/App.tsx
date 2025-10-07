@@ -1,5 +1,4 @@
 import { Routes, Route } from 'react-router-dom'
-import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
@@ -24,6 +23,7 @@ import Layout from './components/Layout'
 
 // Contexts
 import { OnboardingProvider } from './contexts/OnboardingContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 // Providers
 import { ApiProvider } from './providers/ApiProvider'
@@ -39,11 +39,12 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider>
-        <OnboardingProvider>
-          <div className="min-h-screen bg-background">
-            <Routes>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider>
+          <OnboardingProvider>
+            <div className="min-h-screen bg-background">
+              <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/sign-in/*" element={<SignInPage />} />
@@ -99,6 +100,7 @@ function App() {
         </OnboardingProvider>
       </ApiProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   )
 }
 

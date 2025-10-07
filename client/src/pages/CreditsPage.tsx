@@ -77,9 +77,9 @@ export default function CreditsPage() {
   const getTransactionIcon = (type: string) => {
     switch (type) {
       case 'purchase':
-        return <Plus className="h-4 w-4 text-green-600" />
+        return <Plus className="h-4 w-4 text-success-foreground" />
       case 'usage':
-        return <TrendingUp className="h-4 w-4 text-blue-600" />
+        return <TrendingUp className="h-4 w-4 text-info-foreground" />
       case 'bonus':
         return <CheckCircle className="h-4 w-4 text-purple-600" />
       default:
@@ -90,11 +90,11 @@ export default function CreditsPage() {
   const getPaymentStatusIcon = (status: string) => {
     switch (status) {
       case 'succeeded':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-success-foreground" />
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />
+        return <XCircle className="h-4 w-4 text-destructive-foreground" />
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />
+        return <Clock className="h-4 w-4 text-warning-foreground" />
       default:
         return <Clock className="h-4 w-4 text-gray-600" />
     }
@@ -180,13 +180,13 @@ export default function CreditsPage() {
 
       {/* Low Credits Warning */}
       {creditBalance < 5 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-warning border border-warning rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <CreditCard className="h-5 w-5 text-yellow-600 mr-3" />
+              <CreditCard className="h-5 w-5 text-warning-foreground mr-3" />
               <div>
-                <h3 className="font-medium text-yellow-800">Low Credit Balance</h3>
-                <p className="text-sm text-yellow-700">
+                <h3 className="font-medium text-warning-foreground">Low Credit Balance</h3>
+                <p className="text-sm text-warning-foreground">
                   You have {creditBalance} credit{creditBalance !== 1 ? 's' : ''} remaining.
                   Purchase more to continue generating schemas.
                 </p>
@@ -194,7 +194,7 @@ export default function CreditsPage() {
             </div>
             <button
               onClick={() => setShowPurchase(true)}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
+              className="px-4 py-2 bg-warning-foreground text-warning rounded-md hover:bg-warning-foreground/90 transition-colors"
             >
               Buy Credits
             </button>
@@ -229,7 +229,7 @@ export default function CreditsPage() {
                   <div className="text-right">
                     <p className={cn(
                       'font-medium text-sm',
-                      transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
+                      transaction.amount > 0 ? 'text-success-foreground' : 'text-destructive-foreground'
                     )}>
                       {transaction.amount > 0 ? '+' : ''}{transaction.amount}
                     </p>
@@ -275,8 +275,8 @@ export default function CreditsPage() {
                     </p>
                     <p className={cn(
                       'text-xs capitalize',
-                      payment.status === 'succeeded' ? 'text-green-600' :
-                      payment.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
+                      payment.status === 'succeeded' ? 'text-success-foreground' :
+                      payment.status === 'failed' ? 'text-destructive-foreground' : 'text-warning-foreground'
                     )}>
                       {payment.status}
                     </p>

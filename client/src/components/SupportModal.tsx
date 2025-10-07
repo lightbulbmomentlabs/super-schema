@@ -82,7 +82,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           {showSuccess ? (
             <div className="px-6 pb-6">
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <CheckCircle2 className="h-16 w-16 text-green-600 mb-4" />
+                <CheckCircle2 className="h-16 w-16 text-success-foreground mb-4" />
                 <p className="text-lg font-semibold mb-2">Message sent successfully!</p>
                 <p className="text-sm text-muted-foreground">
                   We'll get back to you via email soon.
@@ -134,9 +134,9 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
                   <div className="flex items-center justify-between mt-1">
                     <p className={`text-xs ${
                       charCount < MIN_CHARS
-                        ? 'text-red-500'
+                        ? 'text-destructive-foreground'
                         : charCount > MAX_CHARS * 0.9
-                        ? 'text-yellow-600'
+                        ? 'text-warning-foreground'
                         : 'text-muted-foreground'
                     }`}>
                       {charCount < MIN_CHARS
@@ -149,8 +149,8 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
                 {/* Error Message */}
                 {createTicket.isError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-600">
+                  <div className="p-3 bg-destructive border border-destructive rounded-md">
+                    <p className="text-sm text-destructive-foreground">
                       Failed to send message. Please try again.
                     </p>
                   </div>

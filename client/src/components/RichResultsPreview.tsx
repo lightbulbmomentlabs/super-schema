@@ -52,7 +52,7 @@ export default function RichResultsPreview({ schemas, className }: RichResultsPr
               {eligibleTypes.map((type) => (
                 <div
                   key={type}
-                  className="flex items-center space-x-1 px-3 py-1 bg-green-50 border border-green-200 rounded-full text-xs text-green-700"
+                  className="flex items-center space-x-1 px-3 py-1 bg-success border border-success rounded-full text-xs text-success-foreground"
                 >
                   <CheckCircle className="h-3 w-3" />
                   <span className="font-medium">{type}</span>
@@ -74,7 +74,7 @@ export default function RichResultsPreview({ schemas, className }: RichResultsPr
           )}
 
           {/* Info Footer */}
-          <div className="flex items-start space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+          <div className="flex items-start space-x-2 p-3 bg-info border border-info rounded-lg text-xs text-info-foreground">
             <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <p>
               This preview shows how your structured data may appear in Google Search results. Actual appearance may
@@ -244,7 +244,7 @@ function ProductPreview({ schema }: { schema: JsonLdSchema }) {
               </div>
             )}
             {availability && (
-              <div className="text-xs text-green-600 mb-2">
+              <div className="text-xs text-success-foreground mb-2">
                 ✓ {availability.replace('https://schema.org/', '')}
               </div>
             )}

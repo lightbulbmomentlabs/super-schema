@@ -31,17 +31,17 @@ interface SchemaScoreProps {
 }
 
 const getScoreColor = (score: number) => {
-  if (score >= 90) return 'text-green-600'
-  if (score >= 75) return 'text-blue-600'
-  if (score >= 60) return 'text-yellow-600'
-  return 'text-red-600'
+  if (score >= 90) return 'text-success-foreground'
+  if (score >= 75) return 'text-info-foreground'
+  if (score >= 60) return 'text-warning-foreground'
+  return 'text-destructive-foreground'
 }
 
 const getScoreBgColor = (score: number) => {
-  if (score >= 90) return 'bg-green-50 border-green-200'
-  if (score >= 75) return 'bg-blue-50 border-blue-200'
-  if (score >= 60) return 'bg-yellow-50 border-yellow-200'
-  return 'bg-red-50 border-red-200'
+  if (score >= 90) return 'bg-success border-success'
+  if (score >= 75) return 'bg-info border-info'
+  if (score >= 60) return 'bg-warning border-warning'
+  return 'bg-destructive border-destructive'
 }
 
 const getScoreGrade = (score: number) => {
@@ -69,9 +69,9 @@ const getScoreDescription = (score: number) => {
 
 const getPriorityColor = (priority: ActionItem['priority']) => {
   switch (priority) {
-    case 'critical': return 'text-red-600 bg-red-50 border-red-200'
-    case 'important': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-    case 'nice-to-have': return 'text-blue-600 bg-blue-50 border-blue-200'
+    case 'critical': return 'text-destructive-foreground bg-destructive border-destructive'
+    case 'important': return 'text-warning-foreground bg-warning border-warning'
+    case 'nice-to-have': return 'text-info-foreground bg-info border-info'
   }
 }
 
@@ -119,8 +119,8 @@ export default function SchemaScore({
         <div className={cn(
           'mb-4 p-3 rounded-lg border flex items-center justify-between',
           scoreImprovement > 0
-            ? 'bg-green-50 border-green-200 text-green-800'
-            : 'bg-red-50 border-red-200 text-red-800'
+            ? 'bg-success border-success text-success-foreground'
+            : 'bg-destructive border-destructive text-destructive-foreground'
         )}>
           <div className="flex items-center">
             {scoreImprovement > 0 ? (
@@ -176,7 +176,7 @@ export default function SchemaScore({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              <CheckCircle className="h-4 w-4 mr-2 text-success-foreground" />
               Required Properties
             </span>
             <span className={cn('font-semibold', getScoreColor(score.breakdown.requiredProperties))}>
@@ -187,9 +187,9 @@ export default function SchemaScore({
             <div
               className={cn(
                 'h-2 rounded-full transition-all duration-500',
-                score.breakdown.requiredProperties >= 90 ? 'bg-green-500' :
-                score.breakdown.requiredProperties >= 75 ? 'bg-blue-500' :
-                score.breakdown.requiredProperties >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                score.breakdown.requiredProperties >= 90 ? 'bg-success' :
+                score.breakdown.requiredProperties >= 75 ? 'bg-info' :
+                score.breakdown.requiredProperties >= 60 ? 'bg-warning' : 'bg-destructive'
               )}
               style={{ width: `${score.breakdown.requiredProperties}%` }}
             />
@@ -199,7 +199,7 @@ export default function SchemaScore({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium flex items-center">
-              <Target className="h-4 w-4 mr-2 text-blue-600" />
+              <Target className="h-4 w-4 mr-2 text-info-foreground" />
               Recommended Properties
             </span>
             <span className={cn('font-semibold', getScoreColor(score.breakdown.recommendedProperties))}>
@@ -210,9 +210,9 @@ export default function SchemaScore({
             <div
               className={cn(
                 'h-2 rounded-full transition-all duration-500',
-                score.breakdown.recommendedProperties >= 90 ? 'bg-green-500' :
-                score.breakdown.recommendedProperties >= 75 ? 'bg-blue-500' :
-                score.breakdown.recommendedProperties >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                score.breakdown.recommendedProperties >= 90 ? 'bg-success' :
+                score.breakdown.recommendedProperties >= 75 ? 'bg-info' :
+                score.breakdown.recommendedProperties >= 60 ? 'bg-warning' : 'bg-destructive'
               )}
               style={{ width: `${score.breakdown.recommendedProperties}%` }}
             />
@@ -233,9 +233,9 @@ export default function SchemaScore({
             <div
               className={cn(
                 'h-2 rounded-full transition-all duration-500',
-                score.breakdown.advancedAEOFeatures >= 90 ? 'bg-green-500' :
-                score.breakdown.advancedAEOFeatures >= 75 ? 'bg-blue-500' :
-                score.breakdown.advancedAEOFeatures >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                score.breakdown.advancedAEOFeatures >= 90 ? 'bg-success' :
+                score.breakdown.advancedAEOFeatures >= 75 ? 'bg-info' :
+                score.breakdown.advancedAEOFeatures >= 60 ? 'bg-warning' : 'bg-destructive'
               )}
               style={{ width: `${score.breakdown.advancedAEOFeatures}%` }}
             />
@@ -256,9 +256,9 @@ export default function SchemaScore({
             <div
               className={cn(
                 'h-2 rounded-full transition-all duration-500',
-                score.breakdown.contentQuality >= 90 ? 'bg-green-500' :
-                score.breakdown.contentQuality >= 75 ? 'bg-blue-500' :
-                score.breakdown.contentQuality >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                score.breakdown.contentQuality >= 90 ? 'bg-success' :
+                score.breakdown.contentQuality >= 75 ? 'bg-info' :
+                score.breakdown.contentQuality >= 60 ? 'bg-warning' : 'bg-destructive'
               )}
               style={{ width: `${score.breakdown.contentQuality}%` }}
             />
@@ -268,15 +268,15 @@ export default function SchemaScore({
 
       {/* Strengths */}
       {score.strengths.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-          <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center">
+        <div className="bg-success border border-success rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-semibold text-success-foreground mb-2 flex items-center">
             <CheckCircle className="h-4 w-4 mr-2" />
             Strengths ({score.strengths.length})
           </h4>
           <ul className="space-y-1">
             {score.strengths.map((strength, index) => (
-              <li key={index} className="text-sm text-green-700 flex items-start">
-                <span className="text-green-500 mr-2">•</span>
+              <li key={index} className="text-sm text-success-foreground flex items-start">
+                <span className="text-success-foreground mr-2">•</span>
                 {strength}
               </li>
             ))}
@@ -286,43 +286,43 @@ export default function SchemaScore({
 
       {/* Content Issues Warning */}
       {hasContentIssues && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-          <h4 className="text-sm font-semibold text-amber-800 mb-2 flex items-center">
+        <div className="bg-warning border border-warning rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-semibold text-warning-foreground mb-2 flex items-center">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Content Quality Issues
           </h4>
-          <p className="text-sm text-amber-700 mb-3">
+          <p className="text-sm text-warning-foreground mb-3">
             Your website's content has some limitations that may affect schema quality.
             These issues are related to your page content, not our app's performance.
           </p>
           <div className="space-y-2">
             {score.contentIssues?.lowWordCount && (
-              <div className="text-sm text-amber-700 flex items-center">
-                <span className="text-amber-500 mr-2">•</span>
+              <div className="text-sm text-warning-foreground flex items-center">
+                <span className="text-warning-foreground mr-2">•</span>
                 Page has limited content (consider adding more detailed information)
               </div>
             )}
             {score.contentIssues?.missingImages && (
-              <div className="text-sm text-amber-700 flex items-center">
-                <span className="text-amber-500 mr-2">•</span>
+              <div className="text-sm text-warning-foreground flex items-center">
+                <span className="text-warning-foreground mr-2">•</span>
                 No images detected (consider adding relevant images with alt text)
               </div>
             )}
             {score.contentIssues?.noAuthorInfo && (
-              <div className="text-sm text-amber-700 flex items-center">
-                <span className="text-amber-500 mr-2">•</span>
+              <div className="text-sm text-warning-foreground flex items-center">
+                <span className="text-warning-foreground mr-2">•</span>
                 Missing author information (add bylines or author bios)
               </div>
             )}
             {score.contentIssues?.noDateInfo && (
-              <div className="text-sm text-amber-700 flex items-center">
-                <span className="text-amber-500 mr-2">•</span>
+              <div className="text-sm text-warning-foreground flex items-center">
+                <span className="text-warning-foreground mr-2">•</span>
                 Missing publication date (add publish dates to content)
               </div>
             )}
             {score.contentIssues?.poorMetadata && (
-              <div className="text-sm text-amber-700 flex items-center">
-                <span className="text-amber-500 mr-2">•</span>
+              <div className="text-sm text-warning-foreground flex items-center">
+                <span className="text-warning-foreground mr-2">•</span>
                 Limited metadata (improve meta descriptions and page titles)
               </div>
             )}

@@ -1,26 +1,111 @@
 import { Link } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
-import { ArrowRight, Zap, Shield, Clock, CheckCircle } from 'lucide-react'
+import { ArrowRight, Zap, Shield, Clock, CheckCircle, Sparkles, Target, Rocket, Moon, Compass, Library, Award, BarChart3 } from 'lucide-react'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
+import confetti from 'canvas-confetti'
 import SuperSchemaLogo from '@/components/SuperSchemaLogo'
+import LiquidEther from '@/components/backgrounds/LiquidEther'
+import FloatingBadge from '@/components/FloatingBadge'
+import BentoCard from '@/components/BentoCard'
+import FAQItem from '@/components/FAQItem'
+import TestimonialScroller from '@/components/TestimonialScroller'
+import { useKonamiCode } from '@/hooks/useKonamiCode'
 
 export default function LandingPage() {
   const { isSignedIn } = useUser()
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [superModeActive, setSuperModeActive] = useState(false)
+  const [isLateNight, setIsLateNight] = useState(false)
 
-  const features = [
+  // Check if it's late night (11 PM - 4 AM)
+  useEffect(() => {
+    const checkTime = () => {
+      const hour = new Date().getHours()
+      setIsLateNight(hour >= 23 || hour < 4)
+    }
+    checkTime()
+    const interval = setInterval(checkTime, 60000) // Check every minute
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Konami code easter egg
+  const activateSuperMode = useCallback(() => {
+    setSuperModeActive(true)
+
+    // Confetti explosion!
+    const duration = 3000
+    const end = Date.now() + duration
+
+    const colors = ['#8B5CF6', '#EC4899', '#3B82F6']
+
+    ;(function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: colors
+      })
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: colors
+      })
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame)
+      }
+    })()
+
+    // Reset after 5 seconds
+    setTimeout(() => setSuperModeActive(false), 5000)
+  }, [])
+
+  useKonamiCode(activateSuperMode)
+
+  const bentoFeatures = [
     {
       icon: Zap,
       title: 'AI-Powered Schema Generation',
-      description: 'Our AI reads your content faster than you can say "structured data" and generates optimal markup for answer engine optimization and SEO. No PhD in Schema.org required.'
+      description: 'Our AI reads your content faster than you can say "structured data" and generates optimal markup for answer engine optimization and SEO. No PhD in Schema.org required.',
+      featured: true
     },
     {
-      icon: Shield,
-      title: 'Schema.org Compliant',
-      description: 'All generated JSON-LD schemas are validated against Schema.org standards. We speak fluent search engine, so you don\'t have to.'
+      icon: Compass,
+      title: 'Discover Your Site in Seconds',
+      description: 'Drop in your domain and watch us crawl, discover, and map every URL. Your entire sitemap, ready for schema superpowers.'
     },
     {
-      icon: Clock,
-      title: 'Faster Than Your Coffee Break',
-      description: 'Generate comprehensive, AEO-optimized schema markup in under 30 seconds. Seriously, you\'ll spend more time deciding what to have for lunch.'
+      icon: Library,
+      title: 'Your Schema Arsenal',
+      description: 'Build a library of schema-powered URLs. Organize, search, and manage all your structured data in one slick dashboard.'
+    },
+    {
+      icon: Award,
+      title: 'Quality Score That Actually Matters',
+      description: 'Get instant feedback on your schema quality. We grade your markup and tell you exactly what to fix. No mystery, just results.'
+    },
+    {
+      icon: BarChart3,
+      title: 'Real-Time Validation',
+      description: 'Every schema is validated before it hits your code. Catch errors before search engines do. Sleep better at night.'
+    },
+    {
+      icon: Rocket,
+      title: 'One-Click Refinement',
+      description: 'AI-powered optimization that boosts your schema quality score instantly with zero effort.',
+      featured: true
     }
   ]
 
@@ -33,15 +118,92 @@ export default function LandingPage() {
     'User-friendly schema markup editor'
   ]
 
+  const faqs = [
+    {
+      question: 'Do I really need schema markup? My site seems fine without it.',
+      answer: 'Your site might *look* fine to humans, but search engines see it differently. Schema markup is like giving Google, ChatGPT, and other AI search engines a cheat sheet about your content. Without it, they\'re just guessing. With it, you\'re 434% more likely to rank in featured snippets and show up in AI-generated answers. So yeah, you kinda need it.'
+    },
+    {
+      question: 'Can\'t I just write the schema myself?',
+      answer: 'Sure! You could also hand-code your entire website in binary. But why? Manual schema markup is tedious, error-prone, and takes forever. One missing comma and the whole thing breaks. SuperSchema generates perfect, validated JSON-LD in seconds. Your time is worth more than wrestling with Schema.org documentation at midnight.'
+    },
+    {
+      question: 'What\'s the difference between regular SEO and AEO?',
+      answer: 'SEO (Search Engine Optimization) helps you rank in traditional search results. AEO (Answer Engine Optimization) helps you show up in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. Think of it as future-proofing your SEO. Schema markup is crucial for both, but especially for AEO since AI engines rely heavily on structured data to understand and cite your content.'
+    },
+    {
+      question: 'How much does it cost?',
+      answer: 'We use a credit system. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable—way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO. Check out our pricing page for current rates.'
+    },
+    {
+      question: 'Will this work with my [insert platform here]?',
+      answer: 'Yep! SuperSchema generates standard JSON-LD schema markup that works with any website: HubSpot, WordPress, Shopify, Webflow, custom HTML, you name it. If your site loads in a browser, our schema will work with it. Just paste the generated code into your page\'s <head> section and you\'re golden.'
+    },
+    {
+      question: 'Why not just use ChatGPT or another AI tool?',
+      answer: 'ChatGPT is great for many things, but schema markup isn\'t one of them. Here\'s why: ChatGPT hallucinates, makes up data, and can\'t actually crawl your website to extract real information. It\'ll give you generic templates that miss crucial details. SuperSchema actually visits your URL, scrapes your real content, analyzes your page structure, automatically detects the right schema types, validates everything against Schema.org standards, and generates production-ready markup with your actual data. No hallucinations. No guessing. No manual data entry. Just accurate, complete schema that actually works.'
+    },
+    {
+      question: 'What if I don\'t know what schema type I need?',
+      answer: 'That\'s the beauty of AI! Just paste your URL and our system automatically detects what type of schema you need: Article, Product, LocalBusiness, Recipe, Event, you name it. No Schema.org PhD required. We analyze your content and structure, then generate the perfect markup for your page.'
+    },
+    {
+      question: 'Is the generated schema actually valid?',
+      answer: '100%. Every schema we generate is validated against Schema.org standards and Google\'s requirements. We run it through multiple validation checks before showing it to you. Plus, our system stays updated with the latest schema standards so you don\'t have to. No broken markup, no validation errors, no stress.'
+    },
+    {
+      question: 'How quickly will I see results?',
+      answer: 'Schema generation? Under 30 seconds. SEO results? That depends on Google and other search engines. Typically, search engines re-crawl and re-index your pages within a few days to weeks. You might see rich snippets appear faster, while ranking improvements can take a bit longer. The important thing: you\'re giving search engines and AI the data they need to understand and promote your content.'
+    }
+  ]
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Super Mode Activation Message */}
+      <AnimatePresence>
+        {superModeActive && (
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -100 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-50"
+          >
+            <div className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-white px-8 py-4 rounded-2xl shadow-2xl border-2 border-white/20 backdrop-blur-sm">
+              <div className="flex items-center space-x-3">
+                <motion.span
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 0.5 }}
+                  className="text-2xl"
+                >
+                  🦸
+                </motion.span>
+                <span className="font-bold text-lg">SECRET UNLOCKED: You've activated SUPER mode!</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
-      <header className="border-b border-border">
+      <motion.header
+        className={`sticky top-0 z-50 border-b transition-all duration-300 ${
+          isScrolled
+            ? 'border-border/50 bg-background/80 backdrop-blur-xl shadow-lg'
+            : 'border-border bg-background'
+        }`}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <motion.div
+            className="flex items-center space-x-2"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+          >
             <SuperSchemaLogo className="h-8 w-8" />
             <span className="font-bold text-xl">SuperSchema</span>
-          </div>
+          </motion.div>
           <div className="space-x-4">
             {isSignedIn ? (
               <Link
@@ -70,59 +232,189 @@ export default function LandingPage() {
             )}
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            AEO Schema Generator
-            <span className="text-primary block">That's Actually Super</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Stop wrestling with JSON-LD syntax at 2am. Our AI-powered schema markup tool automatically creates optimized structured data for answer engine optimization (AEO) and SEO.
-            Because life's too short for manual schema markup. ⚡
-          </p>
-          <div className="space-x-4">
-            <Link
-              to="/sign-up"
-              className="inline-flex items-center px-8 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-lg font-medium"
+      <section className="relative py-32 px-4 overflow-hidden">
+        {/* Liquid Ether Background */}
+        <LiquidEther />
+
+        <div className="container mx-auto text-center max-w-5xl relative z-10">
+          {/* Floating Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8 flex justify-center"
+          >
+            <FloatingBadge>
+              {isLateNight ? 'Powered by AI & caffeine ☕' : 'Powered by AI'}
+            </FloatingBadge>
+          </motion.div>
+
+          {/* Glass Card Container */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="backdrop-blur-xl bg-background/40 border border-border/50 rounded-3xl p-12 shadow-2xl"
+          >
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="block mb-2"
+              >
+                AEO Schema Generator
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7 }}
+                className="block bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent"
+              >
+                That's Actually Super
+              </motion.span>
+            </h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
             >
-              Get Your Superpowers
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <Link
-              to="#demo"
-              className="inline-flex items-center px-8 py-3 rounded-md border border-border hover:bg-accent transition-colors text-lg font-medium"
+              Stop wrestling with JSON-LD syntax at 2am. Our AI-powered schema markup tool automatically creates optimized structured data for answer engine optimization (AEO) and SEO.
+              Because life's too short for manual schema markup. ⚡
+            </motion.p>
+
+            <AnimatePresence>
+              {isLateNight && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="mb-8"
+                >
+                  <div className="flex items-center justify-center space-x-2 text-muted-foreground/80 text-sm">
+                    <Moon className="h-4 w-4" />
+                    <span>Still up? We've got your back.</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1 }}
+              className="flex justify-center items-center"
             >
-              Watch Demo
-            </Link>
-          </div>
-          <p className="text-sm text-muted-foreground mt-4">
-            2 free credits • No credit card required • No schema-induced headaches
-          </p>
+              <Link
+                to="/sign-up"
+                className="group relative inline-flex items-center px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-lg font-semibold shadow-lg hover:shadow-2xl hover:scale-105"
+              >
+                <span className="relative z-10">Get Your Superpowers</span>
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+
+                {/* Shine effect */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+              </Link>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.3 }}
+              className="text-sm text-muted-foreground mt-6 flex items-center justify-center gap-2 flex-wrap"
+            >
+              <span className="inline-flex items-center">
+                <CheckCircle className="h-4 w-4 text-success mr-1" />
+                2 free credits
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <CheckCircle className="h-4 w-4 text-success mr-1" />
+                No credit card required
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <CheckCircle className="h-4 w-4 text-success mr-1" />
+                No schema-induced headaches
+              </span>
+            </motion.p>
+          </motion.div>
+
+          {/* Social Proof / Stats Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5 }}
+            className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground"
+          >
+            <div className="flex flex-col items-center">
+              <div className="text-2xl font-bold text-foreground">10,000+</div>
+              <div>Schemas Generated</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-2xl font-bold text-foreground">99.9%</div>
+              <div>Accuracy Rate</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-2xl font-bold text-foreground">&lt; 30s</div>
+              <div>Average Generation Time</div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Schema Markup Superpowers for AEO & SEO
+      {/* Features Section - Bento Grid */}
+      <section className="py-24 px-4 bg-muted/30 relative overflow-hidden">
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+
+        <div className="container mx-auto max-w-7xl relative">
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Schema Markup Superpowers
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Everything you need to create professional JSON-LD schema markup that makes Google, AI search engines, and answer engines go "wow, this site gets it." 🎯
             </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center p-6 rounded-lg border border-border bg-card">
-                <feature.icon className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </div>
+          </motion.div>
+
+          {/* Bento Grid */}
+          <div className="grid md:grid-cols-4 gap-6">
+            {bentoFeatures.map((feature, index) => (
+              <BentoCard
+                key={index}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                index={index}
+                featured={feature.featured}
+              />
             ))}
+
+            {/* Testimonial Scroller - Spans 2 columns on the right */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="md:col-span-2"
+            >
+              <TestimonialScroller />
+            </motion.div>
           </div>
         </div>
       </section>
@@ -275,104 +567,28 @@ export default function LandingPage() {
       {/* FAQ Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
               Questions? We've Got Answers.
             </h2>
             <p className="text-xl text-muted-foreground">
               Everything you wanted to know about schema markup (but were too busy to ask)
             </p>
-          </div>
-          <div className="space-y-6">
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                Do I really need schema markup? My site seems fine without it.
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                Your site might *look* fine to humans, but search engines see it differently. Schema markup is like giving Google, ChatGPT, and other AI search engines a cheat sheet about your content. Without it, they're just guessing. With it, you're 434% more likely to rank in featured snippets and show up in AI-generated answers. So yeah, you kinda need it.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                Can't I just write the schema myself?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                Sure! You could also hand-code your entire website in binary. But why? Manual schema markup is tedious, error-prone, and takes forever. One missing comma and the whole thing breaks. SuperSchema generates perfect, validated JSON-LD in seconds. Your time is worth more than wrestling with Schema.org documentation at midnight.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                What's the difference between regular SEO and AEO?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                SEO (Search Engine Optimization) helps you rank in traditional search results. AEO (Answer Engine Optimization) helps you show up in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. Think of it as future-proofing your SEO. Schema markup is crucial for both, but especially for AEO since AI engines rely heavily on structured data to understand and cite your content.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                How much does it cost?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                We use a credit system. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable—way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO. Check out our pricing page for current rates.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                Will this work with my [insert platform here]?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                Yep! SuperSchema generates standard JSON-LD schema markup that works with any website: HubSpot, WordPress, Shopify, Webflow, custom HTML, you name it. If your site loads in a browser, our schema will work with it. Just paste the generated code into your page's &lt;head&gt; section and you're golden.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                Why not just use ChatGPT or another AI tool?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                ChatGPT is great for many things, but schema markup isn't one of them. Here's why: ChatGPT hallucinates, makes up data, and can't actually crawl your website to extract real information. It'll give you generic templates that miss crucial details. SuperSchema actually visits your URL, scrapes your real content, analyzes your page structure, automatically detects the right schema types, validates everything against Schema.org standards, and generates production-ready markup with your actual data. No hallucinations. No guessing. No manual data entry. Just accurate, complete schema that actually works.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                What if I don't know what schema type I need?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                That's the beauty of AI! Just paste your URL and our system automatically detects what type of schema you need: Article, Product, LocalBusiness, Recipe, Event, you name it. No Schema.org PhD required. We analyze your content and structure, then generate the perfect markup for your page.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                Is the generated schema actually valid?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                100%. Every schema we generate is validated against Schema.org standards and Google's requirements. We run it through multiple validation checks before showing it to you. Plus, our system stays updated with the latest schema standards so you don't have to. No broken markup, no validation errors, no stress.
-              </p>
-            </details>
-
-            <details className="group bg-card border border-border rounded-lg p-6 cursor-pointer">
-              <summary className="font-semibold text-lg flex items-center justify-between">
-                How quickly will I see results?
-                <span className="text-2xl group-open:rotate-45 transition-transform">+</span>
-              </summary>
-              <p className="mt-4 text-muted-foreground">
-                Schema generation? Under 30 seconds. SEO results? That depends on Google and other search engines. Typically, search engines re-crawl and re-index your pages within a few days to weeks. You might see rich snippets appear faster, while ranking improvements can take a bit longer. The important thing: you're giving search engines and AI the data they need to understand and promote your content.
-              </p>
-            </details>
+          </motion.div>
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <FAQItem
+                key={index}
+                question={faq.question}
+                answer={faq.answer}
+                index={index}
+              />
+            ))}
           </div>
         </div>
       </section>

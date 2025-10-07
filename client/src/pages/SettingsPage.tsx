@@ -243,39 +243,39 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="border border-red-200 rounded-lg bg-red-50/50">
-        <div className="p-6 border-b border-red-200">
+      <div className="border border-destructive rounded-lg bg-destructive/50">
+        <div className="p-6 border-b border-destructive">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <h2 className="text-xl font-semibold text-red-900">Danger Zone</h2>
+            <AlertTriangle className="h-5 w-5 text-destructive-foreground" />
+            <h2 className="text-xl font-semibold text-destructive-foreground">Danger Zone</h2>
           </div>
         </div>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="font-medium text-red-900">Clear Generation History</p>
-              <p className="text-sm text-red-700">
+              <p className="font-medium text-destructive-foreground">Clear Generation History</p>
+              <p className="text-sm text-destructive-foreground">
                 Permanently delete all schema generation history
               </p>
             </div>
             <button
               onClick={handleClearHistory}
-              className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-100 transition-colors"
+              className="px-4 py-2 border border-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
             >
               Clear History
             </button>
           </div>
 
-          <div className="flex items-center justify-between py-3 border-t border-red-200">
+          <div className="flex items-center justify-between py-3 border-t border-destructive">
             <div>
-              <p className="font-medium text-red-900">Delete Account</p>
-              <p className="text-sm text-red-700">
+              <p className="font-medium text-destructive-foreground">Delete Account</p>
+              <p className="text-sm text-destructive-foreground">
                 Permanently delete your account and all associated data
               </p>
             </div>
             <button
               onClick={handleDeleteAccount}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
             >
               Delete Account
             </button>

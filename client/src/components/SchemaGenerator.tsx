@@ -509,9 +509,9 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           </button>
 
           {creditBalance < 1 && (
-            <div className="flex items-center justify-center p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
-              <span className="text-sm text-yellow-800">
+            <div className="flex items-center justify-center p-3 bg-warning border border-warning rounded-md">
+              <AlertCircle className="h-4 w-4 text-warning-foreground mr-2" />
+              <span className="text-sm text-warning-foreground">
                 You need at least 1 credit to generate schema.
                 <button className="ml-1 underline hover:no-underline">
                   Purchase credits
@@ -539,10 +539,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                 </>
               ) : generationMetadata?.isValidationError ? (
                 <>
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-warning-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-medium text-amber-800">Content Analysis Feedback</p>
-                    <p className="text-sm text-amber-700 mt-1 leading-relaxed">
+                    <p className="font-medium text-warning-foreground">Content Analysis Feedback</p>
+                    <p className="text-sm text-warning-foreground mt-1 leading-relaxed">
                       {generationMetadata.error}
                     </p>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-2">
@@ -550,7 +550,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                         <Clock className="h-3 w-3 mr-1" />
                         {generationMetadata.processingTimeMs}ms
                       </span>
-                      <span className="flex items-center text-green-600">
+                      <span className="flex items-center text-success-foreground">
                         <CreditCard className="h-3 w-3 mr-1" />
                         No credits used
                       </span>
@@ -568,7 +568,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                 </>
               ) : generationMetadata ? (
                 <>
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-success-foreground mt-0.5" />
                   <div>
                     <p className="font-medium">Schema Generated Successfully</p>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -651,7 +651,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                   <div className="text-xs text-muted-foreground mt-1">
                     Schema {index + 1}
                   </div>
-                  <div className="text-xs text-green-600 mt-1">
+                  <div className="text-xs text-success-foreground mt-1">
                     ✓ Generated
                   </div>
                 </div>

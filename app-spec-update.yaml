@@ -1,0 +1,93 @@
+domains:
+- domain: superschema.ai
+  type: PRIMARY
+  zone: superschema.ai
+- domain: www.superschema.ai
+  type: ALIAS
+  zone: superschema.ai
+envs:
+- key: VITE_PUBLIC_SUPABASE_URL
+  scope: RUN_AND_BUILD_TIME
+  value: https://atopvinhrlicujtwltsg.supabase.co
+- key: VITE_PUBLIC_SUPABASE_ANON_KEY
+  scope: RUN_AND_BUILD_TIME
+  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0b3B2aW5ocmxpY3VqdHdsdHNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTM1MTcsImV4cCI6MjA3NDQ4OTUxN30.7vTPZ-rgZh10HqOdn1dJf-_wRbWuVBPJev02TA7_VTQ
+- key: SUPABASE_SERVICE_ROLE_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:BWZhsV7pStE5Tx3HwZtzmQUmr3wKMZXg:DM9vvFgdgn3J8VGJFP/mOnmzpnyX55Z2qQ1MeG1c/mu5MariabwmlB0ryIa5q3oYcOHC7kV09buQYtRmomsZe5VADP0PxPUUr7m++rqQTvN0CiZ7R8h90WvWDRWXNNn3BCN88wTZkI0fh0069HxaV5mk2y5JKQcDjT+hU+iweSN0ULqLP9cNn2/Q+FzHzJF8xepukbNMgQnMRHp26ojG3hgKV/m/1mHzyfDyNQlIzU7gQc3SNyujJJl2zoiHZjVEHfamLog6N5Bn9Tkg8nVg89oJv+mCFUQRluWgZZymK8mUBL9X3wH5QNCR9Q==]
+- key: STRIPE_SECRET_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:b1iefy2R3JP/j4y7SvWOAWwlCm3ORd0Q:zBsebnwQKtwP6lxuzMUrBWH11oeZT92pFKn7k5Y5KtsoAaRbLJf2bh/8T0LABHIAvlCcwBDI8wUOBVHM4ijkTGXh62KEpFy9aC3Jjqm+eWbVVJz3UdJf9XzaX2FcSa+1SFrj40Z+LkKqDVICDy0c0uJDt3U1Nf4X8CvX]
+- key: VITE_STRIPE_PUBLISHABLE_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:OCwjYFzlpnaV+gHPmf8+bCzFGxhIUaoT:p6+fwvtLn5DVg+7sxYjRwSeAGteXQ0KSI15V0syR0Ix9C3Hje3O8g+9Ppcma4IeSCrnQFjapWT5qM0BhR8IVz9eK+S8ZMqY0DCG4KG25daSya6vnQObSL70y1VGDGdBg5FE99A9Q5gaGNEUrWY7yP8yBhu0Rjyqm4eGh]
+- key: VITE_CLERK_PUBLISHABLE_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:CQU/MBLEjwX3F0D7o57LICJMwDH0JHxN:e0sSdw2niDgEeOF7O2F8ZGRomKM7mZJbFC6USszAHMpmEMs4ni0lLnJYICfk5DHVZOETMw==]
+- key: CLERK_SECRET_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:VSl9QAAi0k+7+j6nCtGP/BaeaNCyyKc+:iR58/Belpo9494kM8kXmclCS9dABLPE0BirfNqoQbAfbLK3UBfWUyZ2FO8KyHKhHPeeijqEvyMEaHhYduBD380uS]
+- key: CLERK_WEBHOOK_SECRET
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:V6S8uZJVw78qLmZS+RVHnHa9m/M5tH5D:YJ787NXr9oM5kEB4hthmZ9r0Vk3plRtLB/AIPNDnjt8NzUfe1UOCqMJYrV5bKcpildchwa1/]
+- key: VITE_PUBLIC_CLERK_SIGN_IN_URL
+  scope: RUN_AND_BUILD_TIME
+  value: /dashboard
+- key: VITE_PUBLIC_CLERK_SIGN_UP_URL
+  scope: RUN_AND_BUILD_TIME
+  value: /generate
+- key: VITE_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+  scope: RUN_AND_BUILD_TIME
+  value: /dashboard
+- key: VITE_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+  scope: RUN_AND_BUILD_TIME
+  value: /generate
+- key: VITE_APP_URL
+  scope: RUN_AND_BUILD_TIME
+  value: https://superschema.ai
+- key: VITE_API_URL
+  scope: RUN_AND_BUILD_TIME
+  value: https://superschema.ai
+- key: SUPABASE_URL
+  scope: RUN_AND_BUILD_TIME
+  value: https://atopvinhrlicujtwltsg.supabase.co
+- key: OPENAI_API_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:Dl8QoxqBqhCRshUsqG4z+sClYi3Lmn/p:YgI/GwKpulc2taBKgeBeN5VLSDNanq4YMnE5Q/P8DZx+eXKc/c0Kd98PMS0jgX69Sd89Ys/I9pPZRGqSmdDLDdO1Y9v8YUr9CwE4PeEKNbzTW7fm3cEY7/RQg/ZcKBeVW+6lZE1n2/gIiT6B0AqhGB05T/VYTgvzPA2Q5FvjdOn/AVooTkzrVA78+S06ocSBd2jdAyKPvVc1skWjkvOrN8VUIMclVdylhMmzoV0uZ4TZU4jP]
+- key: OPENAI_MODEL
+  scope: RUN_AND_BUILD_TIME
+  value: gpt-4o
+ingress:
+  rules:
+  - component:
+      name: super-schema
+    match:
+      path:
+        prefix: /
+name: super-schema
+region: nyc
+services:
+- dockerfile_path: Dockerfile
+  envs:
+  - key: NODE_ENV
+    scope: RUN_AND_BUILD_TIME
+    value: production
+  - key: PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "8080"
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: lightbulbmomentlabs/super-schema
+  http_port: 8080
+  instance_count: 2
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: super-schema
+  source_dir: /

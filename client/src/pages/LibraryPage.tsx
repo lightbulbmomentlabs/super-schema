@@ -818,17 +818,17 @@ export default function LibraryPage() {
 
                   {/* Changes Banner */}
                   {showChangesBanner && highlightedChanges.length > 0 && (
-                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <div className="mb-4 bg-info border border-info rounded-md p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-info-foreground mb-2 flex items-center gap-2">
                             <Sparkles className="h-4 w-4" />
                             AI Refinement Changes
                           </h4>
                           <ul className="space-y-1">
                             {highlightedChanges.map((change, index) => (
-                              <li key={index} className="text-sm text-blue-800 flex items-start gap-2">
-                                <span className="text-blue-500 mt-0.5">•</span>
+                              <li key={index} className="text-sm text-info-foreground flex items-start gap-2">
+                                <span className="text-info-foreground mt-0.5">•</span>
                                 <span>{change}</span>
                               </li>
                             ))}
@@ -836,7 +836,7 @@ export default function LibraryPage() {
                         </div>
                         <button
                           onClick={() => setShowChangesBanner(false)}
-                          className="text-blue-600 hover:text-blue-800 p-1"
+                          className="text-info-foreground hover:text-info-foreground/80 p-1"
                         >
                           <X className="h-4 w-4" />
                         </button>
