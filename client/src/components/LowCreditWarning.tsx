@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CreditCard, X } from 'lucide-react'
+import { AlertTriangle, CreditCard, X, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiService } from '@/services/api'
 
@@ -11,6 +11,7 @@ interface LowCreditWarningProps {
 
 export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCreditWarningProps) {
   const [isDismissed, setIsDismissed] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   // Get user credits
   const { data: creditsData } = useQuery({
@@ -19,10 +20,52 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
     refetchInterval: 30000
   })
 
+  // Get payment history to determine if user has ever purchased
+  const { data: paymentHistory } = useQuery({
+    queryKey: ['payment-history'],
+    queryFn: () => apiService.getPaymentHistory(1, 1), // Only need to know if ANY purchases exist
+  })
+
   const creditBalance = creditsData?.data?.creditBalance || 0
+  const hasPurchasedBefore = (paymentHistory?.data?.data?.length ?? 0) > 0
+
+  // Determine if this is a new user (never purchased, has 2 or fewer credits)
+  useEffect(() => {
+    setIsNewUser(!hasPurchasedBefore && creditBalance <= 2)
+  }, [hasPurchasedBefore, creditBalance])
+
+  // Check localStorage for dismiss state
+  useEffect(() => {
+    const dismissKey = isNewUser ? 'new-user-welcome-dismissed' : 'low-credit-warning-dismissed'
+    const dismissed = localStorage.getItem(dismissKey)
+
+    // For low credit warning, only use localStorage if dismissed in this session
+    // (will re-appear next session)
+    if (!isNewUser && dismissed) {
+      const dismissedTime = parseInt(dismissed, 10)
+      const now = Date.now()
+      // Show again if more than 1 hour has passed or in new session
+      if (now - dismissedTime < 3600000) { // 1 hour
+        setIsDismissed(true)
+      }
+    } else if (isNewUser && dismissed === 'true') {
+      // New user welcome stays dismissed permanently
+      setIsDismissed(true)
+    }
+  }, [isNewUser])
 
   const handleDismiss = () => {
     setIsDismissed(true)
+    const dismissKey = isNewUser ? 'new-user-welcome-dismissed' : 'low-credit-warning-dismissed'
+
+    if (isNewUser) {
+      // Permanent dismiss for new users
+      localStorage.setItem(dismissKey, 'true')
+    } else {
+      // Temporary dismiss with timestamp for existing users
+      localStorage.setItem(dismissKey, Date.now().toString())
+    }
+
     onDismiss?.()
   }
 
@@ -36,6 +79,50 @@ export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCredit
     return null
   }
 
+  // Show different message for new users vs existing users
+  if (isNewUser) {
+    // Welcoming message for new users with free credits
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-3">
+            <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-medium text-blue-800">
+                Welcome! You've Got {creditBalance} Free Credit{creditBalance !== 1 ? 's' : ''}
+              </h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Jump in and generate your first schema—no credit card required. See why life's too short for manual schema markup. When you're ready for more, credit packs are super affordable and super simple to grab.
+              </p>
+              <div className="mt-3 flex space-x-3">
+                <Link
+                  to="/dashboard/credits"
+                  className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  View Credit Packs
+                </Link>
+                <button
+                  onClick={handleDismiss}
+                  className="text-sm text-blue-700 hover:text-blue-800 underline"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="p-1 hover:bg-blue-100 rounded-md transition-colors"
+          >
+            <X className="h-4 w-4 text-blue-600" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Warning message for existing users with low credits
   return (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
       <div className="flex items-start justify-between">
