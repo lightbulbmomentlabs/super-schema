@@ -21,8 +21,20 @@ import type { User, SupportTicket } from '@shared/types'
 import ConfirmModal from '@/components/ConfirmModal'
 
 export default function AdminPage() {
-  const { user: currentUser } = useUser()
+  const { user: currentUser, isLoaded, isSignedIn } = useUser()
   const queryClient = useQueryClient()
+
+  // Log auth status on mount for debugging
+  useEffect(() => {
+    console.log('🔐 [AdminPage] Auth Status Check:', {
+      isLoaded,
+      isSignedIn,
+      hasUser: !!currentUser,
+      userId: currentUser?.id,
+      userEmail: currentUser?.emailAddresses[0]?.emailAddress,
+      timestamp: new Date().toISOString()
+    })
+  }, [isLoaded, isSignedIn, currentUser])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)

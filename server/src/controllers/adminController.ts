@@ -19,6 +19,21 @@ const modifyCreditsSchema = z.object({
   reason: z.string().min(1)
 })
 
+// Health check endpoint for admin access verification
+export const adminHealthCheck = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('✅ [AdminController] Health check passed for user:', req.auth?.userId)
+
+  res.json({
+    success: true,
+    data: {
+      message: 'Admin access verified',
+      userId: req.auth?.userId,
+      isAdmin: req.auth?.isAdmin,
+      timestamp: new Date().toISOString()
+    }
+  })
+})
+
 export const searchUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { query } = searchUsersSchema.parse(req.query)
 

@@ -64,6 +64,9 @@ envs:
 - key: OPENAI_MODEL
   scope: RUN_AND_BUILD_TIME
   value: gpt-4o
+- key: ADMIN_EMAILS
+  scope: RUN_AND_BUILD_TIME
+  value: kevinfremon@gmail.com
 ingress:
   rules:
   - component:

@@ -27,51 +27,14 @@ export const api = axios.create({
 })
 
 // Custom hook to get authenticated API instance
+// NOTE: Interceptors are now managed by ApiProvider.tsx to avoid duplicate registration
 export const useApi = () => {
-  const { getToken } = useAuth()
-
-  // Add auth interceptor
-  api.interceptors.request.use(
-    async (config) => {
-      try {
-        const token = await getToken()
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-      } catch (error) {
-        console.error('Failed to get auth token:', error)
-      }
-      return config
-    },
-    (error) => Promise.reject(error)
-  )
-
-  // Add response interceptor for error handling
-  api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        // Handle unauthorized - redirect to login
-        window.location.href = '/sign-in'
-      }
-      return Promise.reject(error)
-    }
-  )
-
   return api
 }
 
 // API Service Class
+// Auth headers are automatically added by ApiProvider.tsx interceptor
 class ApiService {
-  private getAuthHeaders = async () => {
-    try {
-      const { getToken } = useAuth()
-      const token = await getToken()
-      return token ? { Authorization: `Bearer ${token}` } : {}
-    } catch {
-      return {}
-    }
-  }
 
   // User endpoints
   async getProfile(): Promise<ApiResponse<User>> {

@@ -15,8 +15,17 @@ export const adminAuthMiddleware = async (
   next: NextFunction
 ) => {
   try {
+    console.log('🔐 [AdminAuth] Checking admin access:', {
+      url: req.url,
+      method: req.method,
+      hasAuth: !!req.auth,
+      userId: req.auth?.userId,
+      timestamp: new Date().toISOString()
+    })
+
     // First check if user is authenticated
     if (!req.auth?.userId) {
+      console.error('❌ [AdminAuth] No auth object or userId found')
       throw createError('Authentication required', 401)
     }
 
@@ -24,25 +33,41 @@ export const adminAuthMiddleware = async (
     const user = await db.getUser(req.auth.userId)
 
     if (!user) {
+      console.error('❌ [AdminAuth] User not found in database:', req.auth.userId)
       throw createError('User not found', 404)
     }
+
+    console.log('👤 [AdminAuth] User found:', {
+      userId: user.id,
+      email: user.email
+    })
 
     // Check if user's email is in admin whitelist
     const adminEmails = getAdminEmails()
     const userEmail = user.email.toLowerCase()
 
+    console.log('📋 [AdminAuth] Checking whitelist:', {
+      userEmail,
+      adminEmails,
+      isInWhitelist: adminEmails.includes(userEmail)
+    })
+
     if (!adminEmails.includes(userEmail)) {
-      console.warn(`🚫 Admin access denied for user: ${userEmail}`)
+      console.warn(`🚫 [AdminAuth] Admin access DENIED for user: ${userEmail}`)
       throw createError('Forbidden: Admin access required', 403)
     }
 
-    console.log(`✅ Admin access granted for: ${userEmail}`)
+    console.log(`✅ [AdminAuth] Admin access GRANTED for: ${userEmail}`)
 
     // Add admin flag to request
     req.auth.isAdmin = true
 
     next()
   } catch (error) {
+    console.error('❌ [AdminAuth] Error in middleware:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     next(error)
   }
 }

@@ -14,9 +14,20 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log('🔐 [Auth] Processing request:', {
+    url: req.url,
+    method: req.method,
+    hasAuthHeader: !!req.headers.authorization,
+    timestamp: new Date().toISOString()
+  })
+
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('⚠️ [Auth] Missing or invalid authorization header:', {
+      hasAuthHeader: !!authHeader,
+      headerPrefix: authHeader?.substring(0, 10)
+    })
     return next(createError('Authentication required', 401))
   }
 
@@ -29,7 +40,10 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
     // In production, you should verify the signature with Clerk's public key
     const parts = token.split('.')
     if (parts.length !== 3) {
-      console.error('❌ Auth Error: Token does not have 3 parts', { parts: parts.length, token: token.substring(0, 20) + '...' })
+      console.error('❌ [Auth] Token does not have 3 parts:', {
+        parts: parts.length,
+        tokenPreview: token.substring(0, 20) + '...'
+      })
       return next(createError('Invalid token format', 401))
     }
 
@@ -40,9 +54,17 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
     // Clerk tokens have 'sub' field which is the user ID
     if (!payload.sub) {
-      console.error('❌ Auth Error: Token payload missing "sub" field', { payload })
+      console.error('❌ [Auth] Token payload missing "sub" field:', {
+        payloadKeys: Object.keys(payload)
+      })
       return next(createError('Invalid token payload', 401))
     }
+
+    console.log('✅ [Auth] Token decoded successfully:', {
+      userId: payload.sub,
+      email: payload.email || payload.primary_email_address_id,
+      hasSession: !!payload.sid
+    })
 
     req.auth = {
       userId: payload.sub,
@@ -57,7 +79,7 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
     next()
   } catch (error) {
-    console.error('❌ Auth Error: Failed to decode token', {
+    console.error('❌ [Auth] Failed to decode token:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       tokenPreview: token.substring(0, 20) + '...'
     })

@@ -7,7 +7,8 @@ import {
   getUserDetails,
   deleteUser,
   modifyUserCredits,
-  getPlatformStats
+  getPlatformStats,
+  adminHealthCheck
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -15,6 +16,9 @@ const router = Router()
 // All admin routes require authentication + admin access
 router.use(authMiddleware)
 router.use(adminAuthMiddleware)
+
+// GET /api/admin/health - Health check for admin access
+router.get('/health', adminHealthCheck)
 
 // GET /api/admin/stats - Platform statistics
 router.get('/stats', getPlatformStats)

@@ -5,6 +5,16 @@ import { ClerkProvider } from '@clerk/clerk-react'
 import { Toaster } from 'react-hot-toast'
 import App from './App.tsx'
 import './index.css'
+import { APP_VERSION, BUILD_DATE } from './version'
+
+// Log build version for debugging
+console.log(`🚀 Super Schema v${APP_VERSION} - Built: ${BUILD_DATE}`)
+
+// Update build timestamp in HTML
+const timestampMeta = document.getElementById('build-timestamp')
+if (timestampMeta) {
+  timestampMeta.setAttribute('content', BUILD_DATE)
+}
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
