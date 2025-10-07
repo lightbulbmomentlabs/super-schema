@@ -21,8 +21,8 @@ services:
     scope: RUN_AND_BUILD_TIME
 
   # Build-time environment variables for Vite frontend
-  # These are embedded into the client bundle during build
-  # Set these in Digital Ocean App Platform UI under "Environment Variables"
+  # CRITICAL: These MUST have BUILD_TIME scope to be embedded into client bundle
+  # Without BUILD_TIME scope, the client will have 'undefined' for these values
   - key: VITE_CLERK_PUBLISHABLE_KEY
     scope: BUILD_TIME
     type: SECRET
@@ -31,7 +31,6 @@ services:
     type: SECRET
 
   # Server runtime secrets
-  # Set these in Digital Ocean App Platform UI under "Environment Variables"
   - key: CLERK_SECRET_KEY
     scope: RUN_TIME
     type: SECRET
@@ -48,8 +47,5 @@ services:
     scope: RUN_TIME
     type: SECRET
   - key: STRIPE_SECRET_KEY
-    scope: RUN_TIME
-    type: SECRET
-  - key: STRIPE_WEBHOOK_SECRET
     scope: RUN_TIME
     type: SECRET
