@@ -436,10 +436,6 @@ export default function DocsPage() {
                 <span className="font-mono bg-muted px-2 py-0.5 rounded text-sm">1 credit</span>
                 <span>Generating schema for a URL</span>
               </li>
-              <li className="flex items-center space-x-2">
-                <span className="font-mono bg-muted px-2 py-0.5 rounded text-sm">1 credit</span>
-                <span>Refining existing schema with AI</span>
-              </li>
             </ul>
           </div>
 
@@ -461,6 +457,10 @@ export default function DocsPage() {
               <li className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-success-foreground" />
                 <span>Viewing and managing your Library</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-success-foreground" />
+                <span>2 free AI refinements per schema (improves quality automatically)</span>
               </li>
               <li className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-success-foreground" />
@@ -757,7 +757,7 @@ export default function DocsPage() {
                 </button>
 
                 {isExpanded && (
-                  <div className="p-6 pt-0 border-t border-border">
+                  <div className="px-6 py-6 border-t border-border">
                     {section.content}
                   </div>
                 )}
