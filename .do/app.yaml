@@ -29,6 +29,9 @@ services:
   - key: VITE_STRIPE_PUBLISHABLE_KEY
     scope: BUILD_TIME
     type: SECRET
+  - key: VITE_HUBSPOT_CLIENT_ID
+    scope: BUILD_TIME
+    type: SECRET
 
   # Server runtime secrets
   - key: CLERK_SECRET_KEY
@@ -47,5 +50,14 @@ services:
     scope: RUN_TIME
     type: SECRET
   - key: STRIPE_SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: HUBSPOT_CLIENT_ID
+    scope: RUN_TIME
+    type: SECRET
+  - key: HUBSPOT_CLIENT_SECRET
+    scope: RUN_TIME
+    type: SECRET
+  - key: HUBSPOT_ENCRYPTION_KEY
     scope: RUN_TIME
     type: SECRET
