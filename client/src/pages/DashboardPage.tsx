@@ -6,6 +6,7 @@ import { CreditCard, TrendingUp, Database, ExternalLink, Library as LibraryIcon,
 import { apiService } from '@/services/api'
 import { cn } from '@/utils/cn'
 import LightningBoltIcon from '@/components/icons/LightningBoltIcon'
+import SuperSchemaLogo from '@/components/SuperSchemaLogo'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import OnboardingWelcomeModal from '@/components/OnboardingWelcomeModal'
 
@@ -200,7 +201,7 @@ export default function DashboardPage() {
             </div>
           ) : urlsWithoutSchema === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <LightningBoltIcon className="h-12 w-12 text-green-600 mb-3" />
+              <SuperSchemaLogo className="h-12 w-12 mb-3" animate={false} />
               <p className="text-muted-foreground">All URLs have schema!</p>
               <p className="text-sm text-muted-foreground mt-1">Great job on your coverage</p>
             </div>
