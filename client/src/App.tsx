@@ -10,10 +10,13 @@ import CreditsPage from './pages/CreditsPage'
 import LibraryPage from './pages/LibraryPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
+import HubSpotPage from './pages/HubSpotPage'
+import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import DocsPage from './pages/DocsPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -51,6 +54,11 @@ function App() {
           <Route path="/sign-up/*" element={<SignUpPage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/docs" element={
+            <Layout>
+              <DocsPage />
+            </Layout>
+          } />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={
@@ -63,6 +71,23 @@ function App() {
           <Route path="/library" element={
             <Layout>
               <LibraryPage />
+            </Layout>
+          } />
+
+          {/* HubSpot - Standalone route at root level */}
+          <Route path="/hubspot" element={
+            <Layout>
+              <HubSpotPage />
+            </Layout>
+          } />
+
+          {/* HubSpot OAuth Callback - No layout needed */}
+          <Route path="/hubspot/callback" element={<HubSpotCallbackPage />} />
+
+          {/* Settings - Standalone route at root level */}
+          <Route path="/settings" element={
+            <Layout>
+              <SettingsPage />
             </Layout>
           } />
 

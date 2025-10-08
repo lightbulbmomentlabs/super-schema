@@ -619,6 +619,10 @@ export default function LandingPage() {
             © 2024 SuperSchema. Making schema markup super since... well, recently. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground mt-2">
+            <Link to="/docs" className="hover:text-foreground transition-colors">
+              Help
+            </Link>
+            {' • '}
             <Link to="/terms" className="hover:text-foreground transition-colors">
               Terms of Service
             </Link>

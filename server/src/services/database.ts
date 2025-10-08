@@ -1550,6 +1550,321 @@ class DatabaseService {
 
     if (error) throw error
   }
+
+  // ============================================
+  // HubSpot Integration Methods
+  // ============================================
+
+  async createHubSpotConnection(params: {
+    userId: string
+    hubspotPortalId: string
+    portalName?: string
+    accessToken: string
+    refreshToken: string
+    tokenExpiresAt: Date
+    scopes: string[]
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createHubSpotConnection', params)
+      return 'mock-connection-id'
+    }
+
+    const { data, error } = await this.supabase
+      .from('hubspot_connections')
+      .insert({
+        user_id: params.userId,
+        hubspot_portal_id: params.hubspotPortalId,
+        portal_name: params.portalName,
+        access_token: params.accessToken,
+        refresh_token: params.refreshToken,
+        token_expires_at: params.tokenExpiresAt.toISOString(),
+        scopes: params.scopes,
+        is_active: true
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  async getHubSpotConnection(connectionId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getHubSpotConnection', { connectionId })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('hubspot_connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      hubspotPortalId: data.hubspot_portal_id,
+      portalName: data.portal_name,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenExpiresAt: data.token_expires_at,
+      scopes: data.scopes,
+      isActive: data.is_active,
+      lastValidatedAt: data.last_validated_at,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+
+  async getUserHubSpotConnections(userId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getUserHubSpotConnections', { userId })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('hubspot_connections')
+      .select('id, hubspot_portal_id, portal_name, scopes, associated_domains, is_active, last_validated_at, created_at, updated_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return data.map(row => ({
+      id: row.id,
+      userId,
+      hubspotPortalId: row.hubspot_portal_id,
+      portalName: row.portal_name,
+      scopes: row.scopes,
+      associatedDomains: row.associated_domains || [],
+      isActive: row.is_active,
+      lastValidatedAt: row.last_validated_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+  }
+
+  async updateHubSpotTokens(
+    connectionId: string,
+    tokens: {
+      accessToken: string
+      refreshToken: string
+      tokenExpiresAt: Date
+    }
+  ): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateHubSpotTokens', { connectionId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('hubspot_connections')
+      .update({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        token_expires_at: tokens.tokenExpiresAt.toISOString()
+      })
+      .eq('id', connectionId)
+
+    if (error) throw error
+  }
+
+  async updateHubSpotConnectionValidation(connectionId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateHubSpotConnectionValidation', { connectionId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('hubspot_connections')
+      .update({
+        last_validated_at: new Date().toISOString()
+      })
+      .eq('id', connectionId)
+
+    if (error) throw error
+  }
+
+  async deactivateHubSpotConnection(connectionId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deactivateHubSpotConnection', { connectionId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('hubspot_connections')
+      .update({
+        is_active: false
+      })
+      .eq('id', connectionId)
+
+    if (error) throw error
+  }
+
+  async addDomainToConnection(connectionId: string, domain: string): Promise<boolean> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: addDomainToConnection', { connectionId, domain })
+      return true
+    }
+
+    const { data, error } = await this.supabase
+      .rpc('add_domain_to_hubspot_connection', {
+        p_connection_id: connectionId,
+        p_domain: domain
+      })
+
+    if (error) throw error
+    return data as boolean
+  }
+
+  async removeDomainFromConnection(connectionId: string, domain: string): Promise<boolean> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: removeDomainFromConnection', { connectionId, domain })
+      return true
+    }
+
+    const { data, error } = await this.supabase
+      .rpc('remove_domain_from_hubspot_connection', {
+        p_connection_id: connectionId,
+        p_domain: domain
+      })
+
+    if (error) throw error
+    return data as boolean
+  }
+
+  async findConnectionByDomain(userId: string, domain: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: findConnectionByDomain', { userId, domain })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .rpc('find_hubspot_connection_by_domain', {
+        p_user_id: userId,
+        p_domain: domain
+      })
+      .single()
+
+    if (error) {
+      // No match found is not an error
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+
+    if (!data) return null
+
+    return {
+      id: data.id,
+      userId,
+      hubspotPortalId: data.portal_id,
+      portalName: data.portal_name,
+      scopes: data.scopes,
+      associatedDomains: data.associated_domains || [],
+      createdAt: data.created_at
+    }
+  }
+
+  async createHubSpotSyncJob(params: {
+    userId: string
+    connectionId: string
+    schemaGenerationId?: string
+    hubspotContentId: string
+    hubspotContentType: 'blog_post' | 'page' | 'landing_page'
+    hubspotContentTitle?: string
+    hubspotContentUrl?: string
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createHubSpotSyncJob', params)
+      return 'mock-sync-job-id'
+    }
+
+    const { data, error } = await this.supabase
+      .from('hubspot_sync_jobs')
+      .insert({
+        user_id: params.userId,
+        connection_id: params.connectionId,
+        schema_generation_id: params.schemaGenerationId,
+        hubspot_content_id: params.hubspotContentId,
+        hubspot_content_type: params.hubspotContentType,
+        hubspot_content_title: params.hubspotContentTitle,
+        hubspot_content_url: params.hubspotContentUrl,
+        status: 'pending',
+        retry_count: 0
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  async updateHubSpotSyncJobSuccess(syncJobId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateHubSpotSyncJobSuccess', { syncJobId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('hubspot_sync_jobs')
+      .update({
+        status: 'success',
+        synced_at: new Date().toISOString()
+      })
+      .eq('id', syncJobId)
+
+    if (error) throw error
+  }
+
+  async updateHubSpotSyncJobFailure(syncJobId: string, errorMessage: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateHubSpotSyncJobFailure', { syncJobId, errorMessage })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('hubspot_sync_jobs')
+      .update({
+        status: 'failed',
+        error_message: errorMessage
+      })
+      .eq('id', syncJobId)
+
+    if (error) throw error
+  }
+
+  async getHubSpotSyncHistory(userId: string, limit: number = 50, offset: number = 0) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getHubSpotSyncHistory', { userId, limit, offset })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .rpc('get_hubspot_sync_history', {
+        p_user_id: userId,
+        p_limit: limit,
+        p_offset: offset
+      })
+
+    if (error) throw error
+
+    return data.map((row: any) => ({
+      id: row.id,
+      hubspotContentType: row.hubspot_content_type,
+      hubspotContentTitle: row.hubspot_content_title,
+      hubspotContentUrl: row.hubspot_content_url,
+      status: row.status,
+      errorMessage: row.error_message,
+      syncedAt: row.synced_at,
+      createdAt: row.created_at,
+      portalName: row.portal_name
+    }))
+  }
 }
 
 export const db = new DatabaseService()

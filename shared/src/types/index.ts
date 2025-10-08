@@ -197,6 +197,93 @@ export interface CreateSupportTicketRequest {
   message: string
 }
 
+// HubSpot Integration Types
+export interface HubSpotConnection {
+  id: string
+  userId: string
+  hubspotPortalId: string
+  portalName?: string
+  scopes: string[]
+  associatedDomains?: string[]
+  isActive: boolean
+  lastValidatedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface HubSpotSyncJob {
+  id: string
+  userId: string
+  connectionId: string
+  schemaGenerationId?: string
+  hubspotContentId: string
+  hubspotContentType: 'blog_post' | 'page' | 'landing_page'
+  hubspotContentTitle?: string
+  hubspotContentUrl?: string
+  status: 'pending' | 'success' | 'failed' | 'retrying'
+  errorMessage?: string
+  retryCount: number
+  syncedAt?: string
+  createdAt: string
+}
+
+export interface HubSpotBlogPost {
+  id: string
+  name: string
+  slug: string
+  url: string
+  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  publicAccessRulesEnabled: boolean
+  publishDate?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface HubSpotPage {
+  id: string
+  name: string
+  slug: string
+  url: string
+  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  publicAccessRulesEnabled: boolean
+  publishDate?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface HubSpotContentMatchResult {
+  contentId: string
+  contentType: 'blog_post' | 'page' | 'landing_page'
+  title: string
+  url: string
+  confidence: number // 0-1, how confident the match is
+}
+
+export interface PushSchemaToHubSpotRequest {
+  connectionId: string
+  contentId: string
+  contentType: 'blog_post' | 'page' | 'landing_page'
+  schemaHtml: string
+  schemaGenerationId?: string
+}
+
+export interface HubSpotOAuthCallbackData {
+  code: string
+  state?: string
+}
+
+export interface AddDomainToConnectionRequest {
+  domain: string
+}
+
+export interface RemoveDomainFromConnectionRequest {
+  domain: string
+}
+
+export interface FindConnectionByDomainRequest {
+  domain: string
+}
+
 // Configuration Types
 export interface AppConfig {
   creditPacks: CreditPack[]

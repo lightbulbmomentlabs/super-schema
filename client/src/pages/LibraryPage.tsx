@@ -2,22 +2,28 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles } from 'lucide-react'
 import { apiService } from '@/services/api'
-import type { DiscoveredUrl } from '@shared/types'
+import type { DiscoveredUrl, HubSpotContentMatchResult } from '@shared/types'
 import { cn } from '@/utils/cn'
 import SchemaEditor from '@/components/SchemaEditor'
 import SchemaScoreCompact from '@/components/SchemaScoreCompact'
 import RichResultsPreview from '@/components/RichResultsPreview'
 import ConfirmModal from '@/components/ConfirmModal'
+import HubSpotContentMatcher from '@/components/HubSpotContentMatcher'
+import UnassociatedDomainModal from '@/components/UnassociatedDomainModal'
 import { toast } from 'react-hot-toast'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import LightningBoltIcon from '@/components/icons/LightningBoltIcon'
 import SuperSchemaBoltSolid from '@/components/icons/SuperSchemaBoltSolid'
 import { calculateSchemaScore } from '@/utils/calculateSchemaScore'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
+import { hubspotApi } from '@/services/hubspot'
+import { findConnectionByDomain } from '@/utils/domain'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 export default function LibraryPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const isAdmin = useIsAdmin()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
   const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
@@ -29,6 +35,9 @@ export default function LibraryPage() {
   const [isRefining, setIsRefining] = useState(false)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
   const [showChangesBanner, setShowChangesBanner] = useState(false)
+  const [showHubSpotMatcher, setShowHubSpotMatcher] = useState(false)
+  const [selectedHubSpotConnection, setSelectedHubSpotConnection] = useState<string | null>(null)
+  const [showUnassociatedDomainModal, setShowUnassociatedDomainModal] = useState(false)
   const queryClient = useQueryClient()
 
   // Set page title
@@ -76,6 +85,16 @@ export default function LibraryPage() {
     queryFn: () => selectedUrlId ? apiService.getUrlSchema(selectedUrlId) : null,
     enabled: !!selectedUrlId
   })
+
+  // Fetch HubSpot connections
+  const { data: hubspotConnectionsResponse } = useQuery({
+    queryKey: ['hubspot-connections'],
+    queryFn: () => hubspotApi.getConnections(),
+    refetchOnMount: 'always'
+  })
+
+  const hubspotConnections = hubspotConnectionsResponse?.data || []
+  const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
 
   // Log schema response for debugging
   console.log('📊 Schema query state:', {
@@ -334,6 +353,83 @@ export default function LibraryPage() {
     } finally {
       setIsRefining(false)
     }
+  }
+
+  // Push to HubSpot mutation
+  const pushToHubSpotMutation = useMutation({
+    mutationFn: (data: {
+      connectionId: string
+      contentId: string
+      contentType: 'blog_post' | 'page' | 'landing_page'
+      schemaHtml: string
+      contentTitle?: string
+      contentUrl?: string
+    }) => hubspotApi.pushSchema(data),
+    onSuccess: () => {
+      toast.success('Schema successfully pushed to HubSpot!')
+      setShowHubSpotMatcher(false)
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Failed to push schema to HubSpot'
+      toast.error(message)
+      console.error('HubSpot push error:', error)
+    }
+  })
+
+  const handlePushToHubSpot = () => {
+    if (!hasActiveHubSpotConnection) {
+      toast.error('Please connect a HubSpot account first')
+      navigate('/hubspot')
+      return
+    }
+
+    // Get selected URL data
+    const selectedUrl = urls.find(u => u.id === selectedUrlId)
+    if (!selectedUrl) {
+      toast.error('No URL selected')
+      return
+    }
+
+    // Try to find connection by domain first (smart detection)
+    const matchedConnection = findConnectionByDomain(hubspotConnections, selectedUrl.url)
+    const activeConnections = hubspotConnections.filter(conn => conn.isActive)
+
+    if (matchedConnection) {
+      // Auto-detected connection based on domain
+      setSelectedHubSpotConnection(matchedConnection.id)
+      setTimeout(() => setShowHubSpotMatcher(true), 0)
+      toast.success(`Auto-selected HubSpot portal based on domain`, { duration: 2000 })
+    } else if (activeConnections.length === 1) {
+      // Only one portal - use it directly (no need for domain association)
+      setSelectedHubSpotConnection(activeConnections[0].id)
+      setTimeout(() => setShowHubSpotMatcher(true), 0)
+    } else if (activeConnections.length > 1) {
+      // Multiple portals and no domain match - show warning modal to encourage domain association
+      setShowUnassociatedDomainModal(true)
+    } else {
+      toast.error('No active HubSpot connection found')
+    }
+  }
+
+  const handleSelectHubSpotContent = (match: HubSpotContentMatchResult) => {
+    if (!selectedHubSpotConnection || !schemasArray || schemasArray.length === 0) {
+      toast.error('Missing connection or schema data')
+      return
+    }
+
+    // Generate HTML script tags from schemas
+    const schemaHtml = schemasArray
+      .map(schema => `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`)
+      .join('\n')
+
+    pushToHubSpotMutation.mutate({
+      connectionId: selectedHubSpotConnection,
+      contentId: match.contentId,
+      contentType: match.contentType as 'blog_post' | 'page' | 'landing_page',
+      schemaHtml,
+      contentTitle: match.title,
+      contentUrl: match.url
+    })
   }
 
   // Calculate counts for tabs from unfiltered URLs
@@ -769,16 +865,46 @@ export default function LibraryPage() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Schema Editor</h2>
-                  <a
-                    href={urls.find(u => u.id === selectedUrlId)?.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-                    title="Open URL in new tab"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>View Page</span>
-                  </a>
+                  <div className="flex items-center gap-2">
+                    {/* Push to HubSpot Button - Only show for admins with HubSpot connections */}
+                    {isAdmin && hubspotConnections.length > 0 && (
+                      <button
+                        onClick={handlePushToHubSpot}
+                        disabled={pushToHubSpotMutation.isPending || !hasActiveHubSpotConnection}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors',
+                          hasActiveHubSpotConnection
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-muted text-muted-foreground cursor-not-allowed'
+                        )}
+                        title={hasActiveHubSpotConnection ? 'Push schema to HubSpot' : 'Connect HubSpot account first'}
+                      >
+                        {pushToHubSpotMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Pushing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" viewBox="6.20856283 .64498824 244.26943717 251.24701176" xmlns="http://www.w3.org/2000/svg">
+                              <path d="m191.385 85.694v-29.506a22.722 22.722 0 0 0 13.101-20.48v-.677c0-12.549-10.173-22.722-22.721-22.722h-.678c-12.549 0-22.722 10.173-22.722 22.722v.677a22.722 22.722 0 0 0 13.101 20.48v29.506a64.342 64.342 0 0 0 -30.594 13.47l-80.922-63.03c.577-2.083.878-4.225.912-6.375a25.6 25.6 0 1 0 -25.633 25.55 25.323 25.323 0 0 0 12.607-3.43l79.685 62.007c-14.65 22.131-14.258 50.974.987 72.7l-24.236 24.243c-1.96-.626-4-.959-6.057-.987-11.607.01-21.01 9.423-21.007 21.03.003 11.606 9.412 21.014 21.018 21.017 11.607.003 21.02-9.4 21.03-21.007a20.747 20.747 0 0 0 -.988-6.056l23.976-23.985c21.423 16.492 50.846 17.913 73.759 3.562 22.912-14.352 34.475-41.446 28.985-67.918-5.49-26.473-26.873-46.734-53.603-50.792m-9.938 97.044a33.17 33.17 0 1 1 0-66.316c17.85.625 32 15.272 32.01 33.134.008 17.86-14.127 32.522-31.977 33.165" fill="currentColor"/>
+                            </svg>
+                            Push to HubSpot
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <a
+                      href={urls.find(u => u.id === selectedUrlId)?.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+                      title="Open URL in new tab"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      <span>View Page</span>
+                    </a>
+                  </div>
                 </div>
                 <SchemaEditor
                   schemas={schemasArray}
@@ -879,6 +1005,30 @@ export default function LibraryPage() {
         cancelText="Cancel"
         variant="danger"
       />
+
+      {/* HubSpot Content Matcher Modal */}
+      {selectedHubSpotConnection && selectedUrlId && (
+        <HubSpotContentMatcher
+          isOpen={showHubSpotMatcher}
+          onClose={() => setShowHubSpotMatcher(false)}
+          onSelectContent={handleSelectHubSpotContent}
+          connectionId={selectedHubSpotConnection}
+          targetUrl={urls.find(u => u.id === selectedUrlId)?.url || ''}
+        />
+      )}
+
+      {/* Unassociated Domain Warning Modal */}
+      {selectedUrlId && (
+        <UnassociatedDomainModal
+          isOpen={showUnassociatedDomainModal}
+          onClose={() => setShowUnassociatedDomainModal(false)}
+          url={urls.find(u => u.id === selectedUrlId)?.url || ''}
+          onGoToSettings={() => {
+            setShowUnassociatedDomainModal(false)
+            navigate('/hubspot')
+          }}
+        />
+      )}
     </div>
   )
 }

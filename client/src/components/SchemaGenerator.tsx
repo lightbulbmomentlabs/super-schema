@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUser } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
+import { findConnectionByDomain } from '@/utils/domain'
 import {
   AlertCircle,
   CheckCircle,
@@ -9,7 +10,8 @@ import {
   CreditCard,
   Settings,
   ExternalLink,
-  Loader2
+  Loader2,
+  Upload
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import LightningBoltIcon from './icons/LightningBoltIcon'
@@ -18,10 +20,14 @@ import SchemaScore from './SchemaScore'
 import RichResultsPreview from './RichResultsPreview'
 import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
+import HubSpotContentMatcher from './HubSpotContentMatcher'
+import UnassociatedDomainModal from './UnassociatedDomainModal'
 import { apiService } from '@/services/api'
+import { hubspotApi } from '@/services/hubspot'
 import { cn } from '@/utils/cn'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
-import type { JsonLdSchema, SchemaScore as SchemaScoreType } from '@shared/types'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
+import type { JsonLdSchema, SchemaScore as SchemaScoreType, HubSpotContentMatchResult } from '@shared/types'
 
 interface SchemaGeneratorProps {
   selectedUrl?: string
@@ -70,6 +76,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const { user } = useUser()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const isAdmin = useIsAdmin()
   const [url, setUrl] = useState('')
   const [options, setOptions] = useState<GenerationOptions>(defaultOptions)
   const [showOptions, setShowOptions] = useState(false)
@@ -92,6 +99,21 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     urlId?: string
     createdAt?: string
   } | null>(null)
+
+  // HubSpot integration state
+  const [showHubSpotMatcher, setShowHubSpotMatcher] = useState(false)
+  const [selectedHubSpotConnection, setSelectedHubSpotConnection] = useState<string | null>(null)
+  const [showUnassociatedDomainModal, setShowUnassociatedDomainModal] = useState(false)
+
+  // Get HubSpot connections
+  const { data: hubspotConnectionsResponse } = useQuery({
+    queryKey: ['hubspot-connections'],
+    queryFn: () => hubspotApi.getConnections(),
+    enabled: !!user
+  })
+
+  const hubspotConnections = hubspotConnectionsResponse?.data || []
+  const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
 
   // Get user credits
   const { data: creditsData, refetch: refetchCredits } = useQuery({
@@ -214,6 +236,71 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       console.error('Validation error:', error)
     }
   })
+
+  // Push schema to HubSpot mutation
+  const pushToHubSpotMutation = useMutation({
+    mutationFn: (params: {
+      connectionId: string
+      contentId: string
+      contentType: 'blog_post' | 'page' | 'landing_page'
+      schemaHtml: string
+      contentTitle?: string
+      contentUrl?: string
+    }) => hubspotApi.pushSchema(params),
+    onSuccess: () => {
+      toast.success('Schema successfully pushed to HubSpot!')
+      setShowHubSpotMatcher(false)
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Failed to push schema to HubSpot'
+      toast.error(message)
+      console.error('HubSpot push error:', error)
+    }
+  })
+
+  const handlePushToHubSpot = () => {
+    if (!hasActiveHubSpotConnection) {
+      toast.error('Please connect a HubSpot account first')
+      navigate('/hubspot')
+      return
+    }
+
+    // Try to find connection by domain first (smart detection)
+    const matchedConnection = findConnectionByDomain(hubspotConnections, url)
+    const activeConnections = hubspotConnections.filter(conn => conn.isActive)
+
+    if (matchedConnection) {
+      // Auto-detected connection based on domain
+      setSelectedHubSpotConnection(matchedConnection.id)
+      setTimeout(() => setShowHubSpotMatcher(true), 0)
+      toast.success(`Auto-selected HubSpot portal based on domain`, { duration: 2000 })
+    } else if (activeConnections.length === 1) {
+      // Only one portal - use it directly (no need for domain association)
+      setSelectedHubSpotConnection(activeConnections[0].id)
+      setTimeout(() => setShowHubSpotMatcher(true), 0)
+    } else if (activeConnections.length > 1) {
+      // Multiple portals and no domain match - show warning modal to encourage domain association
+      setShowUnassociatedDomainModal(true)
+    } else {
+      toast.error('No active HubSpot connection found')
+    }
+  }
+
+  const handleSelectHubSpotContent = (match: HubSpotContentMatchResult) => {
+    if (!selectedHubSpotConnection || !htmlScriptTags) {
+      toast.error('Missing connection or schema data')
+      return
+    }
+
+    pushToHubSpotMutation.mutate({
+      connectionId: selectedHubSpotConnection,
+      contentId: match.contentId,
+      contentType: match.contentType as 'blog_post' | 'page' | 'landing_page',
+      schemaHtml: htmlScriptTags,
+      contentTitle: match.title,
+      contentUrl: match.url
+    })
+  }
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -635,6 +722,44 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             highlightedChanges={highlightedChanges}
           />
 
+          {/* Push to HubSpot Button - Only show for admins with HubSpot connections */}
+          {htmlScriptTags && isAdmin && hubspotConnections.length > 0 && (
+            <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-4">
+              <div className="flex-1">
+                <h3 className="font-medium mb-1">Push to HubSpot</h3>
+                <p className="text-sm text-muted-foreground">
+                  {hasActiveHubSpotConnection
+                    ? 'Automatically inject this schema into your HubSpot content'
+                    : 'Connect your HubSpot account to push schema directly'}
+                </p>
+              </div>
+              <button
+                onClick={handlePushToHubSpot}
+                disabled={pushToHubSpotMutation.isPending}
+                className={cn(
+                  'px-4 py-2 rounded-md font-medium transition-colors flex items-center space-x-2',
+                  hasActiveHubSpotConnection
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                )}
+              >
+                {pushToHubSpotMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Pushing...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" viewBox="6.20856283 .64498824 244.26943717 251.24701176" xmlns="http://www.w3.org/2000/svg">
+                      <path d="m191.385 85.694v-29.506a22.722 22.722 0 0 0 13.101-20.48v-.677c0-12.549-10.173-22.722-22.721-22.722h-.678c-12.549 0-22.722 10.173-22.722 22.722v.677a22.722 22.722 0 0 0 13.101 20.48v29.506a64.342 64.342 0 0 0 -30.594 13.47l-80.922-63.03c.577-2.083.878-4.225.912-6.375a25.6 25.6 0 1 0 -25.633 25.55 25.323 25.323 0 0 0 12.607-3.43l79.685 62.007c-14.65 22.131-14.258 50.974.987 72.7l-24.236 24.243c-1.96-.626-4-.959-6.057-.987-11.607.01-21.01 9.423-21.007 21.03.003 11.606 9.412 21.014 21.018 21.017 11.607.003 21.02-9.4 21.03-21.007a20.747 20.747 0 0 0 -.988-6.056l23.976-23.985c21.423 16.492 50.846 17.913 73.759 3.562 22.912-14.352 34.475-41.446 28.985-67.918-5.49-26.473-26.873-46.734-53.603-50.792m-9.938 97.044a33.17 33.17 0 1 1 0-66.316c17.85.625 32 15.272 32.01 33.134.008 17.86-14.127 32.522-31.977 33.165" fill="currentColor"/>
+                    </svg>
+                    <span>{hasActiveHubSpotConnection ? 'Push to HubSpot' : 'Connect HubSpot'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
           {/* Rich Results Preview */}
           <RichResultsPreview schemas={generatedSchemas} />
 
@@ -686,6 +811,28 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         createdAt={duplicateUrlData?.createdAt}
         onViewExisting={handleViewExisting}
         onGenerateAnyway={handleGenerateAnyway}
+      />
+
+      {/* HubSpot Content Matcher Modal */}
+      {selectedHubSpotConnection && (
+        <HubSpotContentMatcher
+          isOpen={showHubSpotMatcher}
+          onClose={() => setShowHubSpotMatcher(false)}
+          onSelectContent={handleSelectHubSpotContent}
+          connectionId={selectedHubSpotConnection}
+          targetUrl={url}
+        />
+      )}
+
+      {/* Unassociated Domain Warning Modal */}
+      <UnassociatedDomainModal
+        isOpen={showUnassociatedDomainModal}
+        onClose={() => setShowUnassociatedDomainModal(false)}
+        url={url}
+        onGoToSettings={() => {
+          setShowUnassociatedDomainModal(false)
+          navigate('/hubspot')
+        }}
       />
     </div>
   )

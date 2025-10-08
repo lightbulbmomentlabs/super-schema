@@ -15,6 +15,12 @@ export default function Footer() {
               © {currentYear} Super Schema. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
+              <Link
+                to="/docs"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Help
+              </Link>
               <button
                 onClick={() => setShowSupportModal(true)}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"

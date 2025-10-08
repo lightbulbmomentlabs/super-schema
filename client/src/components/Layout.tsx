@@ -5,13 +5,15 @@ import {
   LayoutDashboard,
   Library,
   Settings,
-  Shield
+  Shield,
+  ExternalLink
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
 import LightningBoltIcon from './icons/LightningBoltIcon'
 import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 interface LayoutProps {
   children: ReactNode
@@ -21,19 +23,13 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Generate', href: '/generate', icon: LightningBoltIcon },
   { name: 'Library', href: '/library', icon: Library },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { user } = useUser()
-
-  // Admin email whitelist - should match server-side configuration
-  const ADMIN_EMAILS = ['kevinfremon@gmail.com']
-
-  // Check if current user is an admin based on their email
-  const userEmail = user?.emailAddresses?.[0]?.emailAddress?.toLowerCase()
-  const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false
+  const isAdmin = useIsAdmin()
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,12 +91,29 @@ export default function Layout({ children }: LayoutProps) {
                     )
                   })}
 
-                  {/* Admin Link - Only show for admin users */}
+                  {/* Admin-Only Links */}
                   {isAdmin && (
                     <>
                       <div className="pt-4 pb-2">
                         <div className="h-px bg-border" />
                       </div>
+                      <Link
+                        to="/hubspot"
+                        className={cn(
+                          'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                          location.pathname === '/hubspot'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                        )}
+                      >
+                        <ExternalLink
+                          className={cn(
+                            'mr-3 flex-shrink-0 h-5 w-5',
+                            location.pathname === '/hubspot' ? 'text-primary-foreground' : 'text-muted-foreground'
+                          )}
+                        />
+                        HubSpot
+                      </Link>
                       <Link
                         to="/admin"
                         className={cn(

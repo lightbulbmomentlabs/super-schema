@@ -45,6 +45,9 @@ export const env = {
   CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY,
   CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  HUBSPOT_CLIENT_ID: process.env.HUBSPOT_CLIENT_ID,
+  HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET,
+  HUBSPOT_ENCRYPTION_KEY: process.env.HUBSPOT_ENCRYPTION_KEY,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || '3001',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000'
