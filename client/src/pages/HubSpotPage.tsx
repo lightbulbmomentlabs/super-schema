@@ -267,8 +267,8 @@ export default function HubSpotPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="mb-3 p-3 bg-warning/10 border border-warning/20 rounded-md">
-                        <p className="text-sm text-warning-foreground">
+                      <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
                           ⚠️ No domains associated yet. Add domains to enable automatic portal selection.
                         </p>
                       </div>
