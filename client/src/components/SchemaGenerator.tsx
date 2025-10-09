@@ -725,8 +725,8 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             highlightedChanges={highlightedChanges}
           />
 
-          {/* Push to HubSpot Button - Only show for admins with HubSpot connections */}
-          {htmlScriptTags && isAdmin && hubspotConnections.length > 0 && (
+          {/* Push to HubSpot Button - Show for all users with HubSpot connections */}
+          {htmlScriptTags && hubspotConnections.length > 0 && (
             <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-4">
               <div className="flex-1">
                 <h3 className="font-medium mb-1">Push to HubSpot</h3>
