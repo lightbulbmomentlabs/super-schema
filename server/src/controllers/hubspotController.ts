@@ -316,13 +316,27 @@ export const addDomainToConnection = asyncHandler(
       throw createError('Domain is required', 400)
     }
 
+    // Normalize domain - strip protocol, path, trailing slash
+    let normalizedDomain = domain.trim()
+    try {
+      // Try to parse as URL first
+      const url = new URL(normalizedDomain.includes('://') ? normalizedDomain : `https://${normalizedDomain}`)
+      normalizedDomain = url.hostname
+    } catch {
+      // If URL parsing fails, treat as plain domain and clean it
+      normalizedDomain = normalizedDomain
+        .replace(/^https?:\/\//, '')  // Remove protocol
+        .replace(/\/.*$/, '')          // Remove path
+        .toLowerCase()                 // Lowercase
+    }
+
     // Verify connection belongs to user
     const connection = await db.getHubSpotConnection(connectionId)
     if (!connection || connection.userId !== userId) {
       throw createError('Connection not found', 404)
     }
 
-    const success = await db.addDomainToConnection(connectionId, domain)
+    const success = await db.addDomainToConnection(connectionId, normalizedDomain)
 
     if (!success) {
       throw createError('Domain already associated with this connection', 400)

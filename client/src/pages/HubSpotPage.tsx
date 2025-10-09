@@ -141,7 +141,7 @@ export default function HubSpotPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">HubSpot Integration</h1>
           <p className="text-muted-foreground">
-            Connect your HubSpot account to automatically push schema markup to your blog posts and pages.
+            Connect your HubSpot account to automatically push schema markup to your blog posts and website pages.
           </p>
         </div>
 
@@ -354,7 +354,7 @@ export default function HubSpotPage() {
               2. <strong>Generate:</strong> Create schema markup for your content as usual
             </p>
             <p>
-              3. <strong>Push:</strong> Click "Push to HubSpot" to automatically add schema to your blog posts
+              3. <strong>Push:</strong> Click "Push to HubSpot" to automatically add schema to your blog posts and website pages
             </p>
             <p>
               4. <strong>Done:</strong> Schema is instantly added to your HubSpot content's head HTML
@@ -363,7 +363,7 @@ export default function HubSpotPage() {
 
           <div className="mt-4 pt-4 border-t border-info-foreground/20">
             <p className="text-xs text-info-foreground">
-              <strong>Note:</strong> This feature requires HubSpot Marketing Hub Professional/Enterprise or CMS Hub Professional/Enterprise.
+              <strong>Note:</strong> This feature requires HubSpot Marketing Hub Professional/Enterprise or Content Hub Professional/Enterprise.
               {' '}
               <a
                 href="https://developers.hubspot.com/docs/api/cms/blog-post"
