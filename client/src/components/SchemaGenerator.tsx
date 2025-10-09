@@ -45,6 +45,7 @@ interface GenerationOptions {
 }
 
 const SCHEMA_TYPES = [
+  { value: 'Auto', label: 'Auto-Detect', description: 'AI automatically determines the best schema type(s) for your content' },
   { value: 'Article', label: 'Article', description: 'Blog posts, news articles, and editorial content' },
   { value: 'BlogPosting', label: 'Blog Post', description: 'Specific type of article for blog content' },
   { value: 'NewsArticle', label: 'News Article', description: 'News stories and press releases' },
@@ -80,7 +81,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [url, setUrl] = useState('')
   const [options, setOptions] = useState<GenerationOptions>(defaultOptions)
   const [showOptions, setShowOptions] = useState(false)
-  const [selectedSchemaType, setSelectedSchemaType] = useState<string>('Article')
+  const [selectedSchemaType, setSelectedSchemaType] = useState<string>('Auto')
   const [showSchemaSelector, setShowSchemaSelector] = useState(false)
   const [generatedSchemas, setGeneratedSchemas] = useState<JsonLdSchema[]>([])
   const [htmlScriptTags, setHtmlScriptTags] = useState<string>('')
@@ -155,7 +156,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
               url: selectedUrl,
               options: {
                 ...options,
-                requestedSchemaTypes: [selectedSchemaType]
+                ...(selectedSchemaType !== 'Auto' && { requestedSchemaTypes: [selectedSchemaType] })
               }
             })
           } else if (creditsData) {
@@ -346,7 +347,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       url,
       options: {
         ...options,
-        requestedSchemaTypes: [selectedSchemaType]
+        ...(selectedSchemaType !== 'Auto' && { requestedSchemaTypes: [selectedSchemaType] })
       }
     })
   }
@@ -385,7 +386,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         url,
         options: {
           ...options,
-          requestedSchemaTypes: [selectedSchemaType]
+          ...(selectedSchemaType !== 'Auto' && { requestedSchemaTypes: [selectedSchemaType] })
         }
       })
     }
@@ -400,7 +401,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     try {
       const response = await apiService.refineSchema(generatedSchemas, url, {
         ...options,
-        requestedSchemaTypes: [selectedSchemaType]
+        ...(selectedSchemaType !== 'Auto' && { requestedSchemaTypes: [selectedSchemaType] })
       }, generationMetadata?.schemaId)
 
       if (response.success && response.data) {
