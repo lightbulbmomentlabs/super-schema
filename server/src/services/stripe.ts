@@ -206,6 +206,91 @@ class StripeService {
     return await db.getCreditPacks()
   }
 
+  async confirmAndAllocateCredits(userId: string, paymentIntentId: string): Promise<{
+    success: boolean
+    message: string
+    creditsAdded?: number
+  }> {
+    if (!this.isStripeAvailable()) {
+      console.log('Mock: confirmAndAllocateCredits', { userId, paymentIntentId })
+      return {
+        success: true,
+        message: 'Mock payment confirmed',
+        creditsAdded: 20
+      }
+    }
+
+    try {
+      // Retrieve the payment intent from Stripe to verify status
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId)
+
+      if (paymentIntent.status !== 'succeeded') {
+        return {
+          success: false,
+          message: `Payment not completed. Status: ${paymentIntent.status}`
+        }
+      }
+
+      // Verify the payment belongs to this user
+      if (paymentIntent.metadata.userId !== userId) {
+        throw new Error('Payment intent does not belong to this user')
+      }
+
+      // Check if credits have already been allocated
+      const existingPayment = await db.getPaymentByStripeId(paymentIntentId)
+
+      if (existingPayment && existingPayment.status === 'succeeded') {
+        return {
+          success: true,
+          message: 'Credits already allocated',
+          creditsAdded: parseInt(paymentIntent.metadata.credits || '0')
+        }
+      }
+
+      // Allocate credits
+      const credits = parseInt(paymentIntent.metadata.credits || '0')
+      const creditPackId = paymentIntent.metadata.creditPackId
+
+      if (!credits || !creditPackId) {
+        throw new Error('Invalid payment metadata')
+      }
+
+      // Update payment status
+      await db.updatePaymentIntent(paymentIntentId, 'succeeded')
+
+      // Add credits to user account
+      await db.addCredits(
+        userId,
+        credits,
+        `Credit purchase: ${creditPackId}`,
+        paymentIntentId
+      )
+
+      // Track analytics
+      await db.trackUsage(
+        userId,
+        'credit_purchase',
+        {
+          creditPackId,
+          credits,
+          amountInCents: paymentIntent.amount,
+          paymentIntentId
+        }
+      )
+
+      console.log(`Credits allocated via confirmation: ${paymentIntentId} - ${credits} credits added to user ${userId}`)
+
+      return {
+        success: true,
+        message: 'Credits successfully added to your account',
+        creditsAdded: credits
+      }
+    } catch (error) {
+      console.error('Failed to confirm and allocate credits:', error)
+      throw error
+    }
+  }
+
   // Utility method to format amounts
   formatAmount(cents: number): string {
     return new Intl.NumberFormat('en-US', {

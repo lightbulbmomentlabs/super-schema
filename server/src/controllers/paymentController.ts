@@ -109,3 +109,27 @@ export const getPaymentConfig = asyncHandler(async (req: AuthenticatedRequest, r
     }
   })
 })
+
+export const confirmPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+  const { paymentIntentId } = req.body
+
+  if (!paymentIntentId) {
+    throw createError('Payment intent ID is required', 400)
+  }
+
+  try {
+    const result = await stripeService.confirmAndAllocateCredits(userId, paymentIntentId)
+
+    res.json({
+      success: true,
+      data: result,
+      message: result.message
+    })
+  } catch (error) {
+    throw createError(
+      error instanceof Error ? error.message : 'Failed to confirm payment',
+      400
+    )
+  }
+})

@@ -744,6 +744,24 @@ class DatabaseService {
     if (error) throw error
   }
 
+  async getPaymentByStripeId(stripePaymentIntentId: string): Promise<any | null> {
+    const { data, error } = await this.supabase
+      .from('payment_intents')
+      .select('*')
+      .eq('stripe_payment_intent_id', stripePaymentIntentId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Not found
+        return null
+      }
+      throw error
+    }
+
+    return data
+  }
+
   async getPaymentHistory(
     userId: string,
     page: number = 1,

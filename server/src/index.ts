@@ -58,9 +58,15 @@ const schemaLimiter = rateLimit({
 })
 app.use('/api/schema/generate', schemaLimiter)
 
+// Webhook routes MUST come before express.json() to receive raw body for Stripe signature verification
+app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRoutes)
+
 // Request parsing
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Other webhook routes (after JSON parsing)
+app.use('/webhooks', webhookRoutes)
 
 // Logging
 app.use(morgan('combined'))
@@ -73,9 +79,6 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV
   })
 })
-
-// Webhook routes (no auth required)
-app.use('/webhooks', webhookRoutes)
 
 // API Routes
 app.use('/api/admin', adminRoutes) // Admin routes include their own auth middleware

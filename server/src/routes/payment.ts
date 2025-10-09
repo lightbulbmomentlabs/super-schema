@@ -4,7 +4,8 @@ import {
   createPaymentIntent,
   getPaymentHistory,
   handleStripeWebhook,
-  getPaymentConfig
+  getPaymentConfig,
+  confirmPayment
 } from '../controllers/paymentController.js'
 
 const router = Router()
@@ -17,6 +18,9 @@ router.get('/credit-packs', getCreditPacks)
 
 // POST /api/payment/create-intent
 router.post('/create-intent', createPaymentIntent)
+
+// POST /api/payment/confirm
+router.post('/confirm', confirmPayment)
 
 // GET /api/payment/history
 router.get('/history', getPaymentHistory)

@@ -188,6 +188,17 @@ class ApiService {
     return response.data
   }
 
+  async confirmPayment(paymentIntentId: string): Promise<ApiResponse<{
+    success: boolean
+    message: string
+    creditsAdded?: number
+  }>> {
+    const response = await api.post('/payment/confirm', {
+      paymentIntentId
+    })
+    return response.data
+  }
+
   async getPaymentHistory(page = 1, limit = 10): Promise<ApiResponse<PaginatedResponse<any>>> {
     const response = await api.get('/payment/history', {
       params: { page, limit }

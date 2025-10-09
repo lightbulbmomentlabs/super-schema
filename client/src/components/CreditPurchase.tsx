@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   Elements,
@@ -42,12 +42,20 @@ function PaymentForm({
 }) {
   const stripe = useStripe()
   const elements = useElements()
+  const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState(false)
 
   const createPaymentMutation = useMutation({
     mutationFn: (creditPackId: string) => apiService.createPaymentIntent(creditPackId),
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to create payment')
+    }
+  })
+
+  const confirmPaymentMutation = useMutation({
+    mutationFn: (paymentIntentId: string) => apiService.confirmPayment(paymentIntentId),
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to confirm payment')
     }
   })
 
@@ -65,7 +73,7 @@ function PaymentForm({
       // Create payment intent
       const response = await createPaymentMutation.mutateAsync(selectedPack.id)
 
-      if (!response.success || !response.data.clientSecret) {
+      if (!response.success || !response.data?.clientSecret) {
         throw new Error('Failed to create payment intent')
       }
 
@@ -74,9 +82,9 @@ function PaymentForm({
         throw new Error('Card element not found')
       }
 
-      // Confirm payment
+      // Confirm payment with Stripe
       const { error, paymentIntent } = await stripe.confirmCardPayment(
-        response.data.clientSecret,
+        response.data?.clientSecret,
         {
           payment_method: {
             card: cardElement,
@@ -87,8 +95,27 @@ function PaymentForm({
       if (error) {
         toast.error(error.message || 'Payment failed')
       } else if (paymentIntent.status === 'succeeded') {
-        toast.success(`Successfully purchased ${selectedPack.credits} credits!`)
-        onSuccess?.()
+        // Confirm payment on backend and allocate credits immediately
+        try {
+          const confirmResult = await confirmPaymentMutation.mutateAsync(paymentIntent.id)
+
+          if (confirmResult.success) {
+            // Invalidate queries to refresh user data
+            queryClient.invalidateQueries({ queryKey: ['user-credits'] })
+            queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['payment-history'] })
+
+            toast.success(`Successfully purchased ${selectedPack.credits} credits!`)
+            onSuccess?.()
+          } else {
+            toast.error(confirmResult.data?.message || 'Payment succeeded but failed to allocate credits. Please contact support.')
+          }
+        } catch (confirmError: any) {
+          // Payment succeeded but confirmation failed - this is recoverable via webhook
+          console.error('Confirmation error:', confirmError)
+          toast.error('Payment succeeded! Your credits will be added shortly.')
+          onSuccess?.()
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Payment failed')
@@ -103,7 +130,7 @@ function PaymentForm({
         fontSize: '16px',
         color: 'hsl(var(--foreground))',
         '::placeholder': {
-          color: 'hsl(var(--muted-foreground))',
+          color: '#9ca3af',
         },
       },
     },
