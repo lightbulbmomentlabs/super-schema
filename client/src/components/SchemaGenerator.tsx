@@ -401,16 +401,19 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       const response = await apiService.refineSchema(generatedSchemas, url, {
         ...options,
         requestedSchemaTypes: [selectedSchemaType]
-      })
+      }, generationMetadata?.schemaId)
 
       if (response.success && response.data) {
         setGeneratedSchemas(response.data.schemas)
         setHtmlScriptTags(response.data.htmlScriptTags || '')
         setSchemaScore(response.data.schemaScore || null)
         setHighlightedChanges(response.data.highlightedChanges || [])
-        setRefinementCount(prev => prev + 1)
 
-        const remaining = MAX_REFINEMENTS - (refinementCount + 1)
+        // Update refinement count from server response if available
+        const newRefinementCount = response.data.refinementCount ?? (refinementCount + 1)
+        setRefinementCount(newRefinementCount)
+
+        const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
         toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
       }
     } catch (error: any) {

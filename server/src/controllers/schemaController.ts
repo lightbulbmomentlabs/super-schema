@@ -114,7 +114,7 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
 
 export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.auth!.userId
-  const { schemas, url, options } = req.body
+  const { schemas, url, options, schemaId } = req.body
 
   if (!Array.isArray(schemas) || schemas.length === 0) {
     throw createError('Request body must contain an array of schemas', 400)
@@ -125,6 +125,24 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
   }
 
   try {
+    // If schemaId is provided, check refinement count
+    let currentRefinements = 0
+    let schemaRecord = null
+
+    if (schemaId) {
+      schemaRecord = await db.getSchemaByDiscoveredUrlId(schemaId)
+      if (schemaRecord) {
+        currentRefinements = schemaRecord.refinementCount || 0
+
+        // Check if refinement limit has been reached
+        if (currentRefinements >= MAX_REFINEMENTS) {
+          throw createError(`Maximum of ${MAX_REFINEMENTS} refinements reached for this schema`, 400)
+        }
+
+        console.log(`✅ Refinement allowed: ${currentRefinements}/${MAX_REFINEMENTS}`)
+      }
+    }
+
     const result = await schemaGeneratorService.refineSchemas({
       schemas,
       url,
@@ -135,6 +153,23 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
     })
 
     if (result.success) {
+      // If we have a schema record, update it with refined version and increment refinement count
+      if (schemaRecord) {
+        await db.updateSchemaGeneration(schemaRecord.id, result.schemas)
+        await db.incrementRefinementCount(schemaRecord.id)
+        currentRefinements++
+
+        // Also update the schema score
+        if (result.schemaScore) {
+          await db.updateSchemaGeneration(schemaRecord.id, {
+            schemas: result.schemas,
+            schemaScore: result.schemaScore
+          })
+        }
+
+        console.log(`💾 Schema updated in database with ${currentRefinements} refinements`)
+      }
+
       // Update URL in library (updates timestamp via UPSERT)
       try {
         const path = extractPath(url)
@@ -146,8 +181,6 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
           path,
           depth
         )
-        // Note: Schema refinement doesn't create a new generation record,
-        // so we don't link a schemaId here. The UPSERT will update the timestamp.
       } catch (error) {
         console.error('Failed to update URL in library:', error)
         // Don't fail the request if library update fails
@@ -160,7 +193,9 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
           htmlScriptTags: result.htmlScriptTags,
           metadata: result.metadata,
           schemaScore: result.schemaScore,
-          highlightedChanges: result.highlightedChanges
+          highlightedChanges: result.highlightedChanges,
+          refinementCount: currentRefinements,
+          remainingRefinements: MAX_REFINEMENTS - currentRefinements
         },
         message: `Successfully refined schema with score: ${result.schemaScore?.overallScore || 0}`
       })

@@ -121,16 +121,19 @@ class ApiService {
     return response.data
   }
 
-  async refineSchema(schemas: JsonLdSchema[], url: string, options?: any): Promise<ApiResponse<{
+  async refineSchema(schemas: JsonLdSchema[], url: string, options?: any, schemaId?: string): Promise<ApiResponse<{
     schemas: JsonLdSchema[]
     htmlScriptTags?: string
     schemaScore: any
     metadata: any
+    refinementCount?: number
+    remainingRefinements?: number
   }>> {
     const response = await api.post('/schema/refine', {
       schemas,
       url,
-      options
+      options,
+      schemaId
     })
     return response.data
   }
