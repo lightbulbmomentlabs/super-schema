@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, Book, Zap, Compass, Library, Award, CreditCard, Code, HelpCircle, CheckCircle, AlertTriangle, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import SuperSchemaLogo from '@/components/SuperSchemaLogo'
+import Footer from '@/components/Footer'
 
 interface DocSection {
   id: string
@@ -707,15 +710,35 @@ export default function DocsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-3">Documentation</h1>
-          <p className="text-lg text-muted-foreground">
-            Everything you need to know about using SuperSchema
-          </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Navigation Header */}
+      <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center space-x-2">
+            <SuperSchemaLogo className="h-8 w-8" />
+            <span className="font-bold text-xl">SuperSchema</span>
+          </Link>
+          <nav className="flex items-center gap-6">
+            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Home
+            </Link>
+            <Link to="/sign-in" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Sign In
+            </Link>
+          </nav>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-3">Documentation</h1>
+            <p className="text-lg text-muted-foreground">
+              Everything you need to know about using SuperSchema
+            </p>
+          </div>
 
         {/* Search */}
         <div className="mb-8">
@@ -796,5 +819,9 @@ export default function DocsPage() {
         </div>
       </div>
     </div>
+
+    {/* Footer */}
+    <Footer />
+  </div>
   )
 }

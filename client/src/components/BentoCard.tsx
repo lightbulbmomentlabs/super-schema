@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { cn } from '@/utils/cn'
 
 interface BentoCardProps {
-  icon: LucideIcon
+  icon: LucideIcon | React.ComponentType<{ className?: string }>
   title: string
   description: string
   index: number

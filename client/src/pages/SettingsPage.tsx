@@ -210,7 +210,7 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold">Integrations</h2>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-border">
@@ -234,6 +234,17 @@ export default function SettingsPage() {
                 {hasHubSpotConnection ? 'Manage' : 'Connect'}
                 <ExternalLink className="h-3 w-3" />
               </button>
+            </div>
+
+            {/* Beta Notice */}
+            <div className="flex items-start gap-2 p-3 bg-info/10 border border-info/20 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-info mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-foreground">Private Beta</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This feature is currently in private beta. Contact support to request access if you encounter any issues.
+                </p>
+              </div>
             </div>
           </div>
         </div>

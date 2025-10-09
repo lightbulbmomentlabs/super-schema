@@ -54,11 +54,7 @@ function App() {
           <Route path="/sign-up/*" element={<SignUpPage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
-          <Route path="/docs" element={
-            <Layout>
-              <DocsPage />
-            </Layout>
-          } />
+          <Route path="/docs" element={<DocsPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={

@@ -91,29 +91,31 @@ export default function Layout({ children }: LayoutProps) {
                     )
                   })}
 
+                  {/* HubSpot Integration - Available to all users */}
+                  <div className="pt-4 pb-2">
+                    <div className="h-px bg-border" />
+                  </div>
+                  <Link
+                    to="/hubspot"
+                    className={cn(
+                      'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                      location.pathname === '/hubspot'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <ExternalLink
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        location.pathname === '/hubspot' ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    />
+                    HubSpot
+                  </Link>
+
                   {/* Admin-Only Links */}
                   {isAdmin && (
                     <>
-                      <div className="pt-4 pb-2">
-                        <div className="h-px bg-border" />
-                      </div>
-                      <Link
-                        to="/hubspot"
-                        className={cn(
-                          'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                          location.pathname === '/hubspot'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        )}
-                      >
-                        <ExternalLink
-                          className={cn(
-                            'mr-3 flex-shrink-0 h-5 w-5',
-                            location.pathname === '/hubspot' ? 'text-primary-foreground' : 'text-muted-foreground'
-                          )}
-                        />
-                        HubSpot
-                      </Link>
                       <Link
                         to="/admin"
                         className={cn(

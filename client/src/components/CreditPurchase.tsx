@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -44,6 +44,26 @@ function PaymentForm({
   const elements = useElements()
   const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Detect theme changes
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+    }
+
+    checkTheme()
+
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   const createPaymentMutation = useMutation({
     mutationFn: (creditPackId: string) => apiService.createPaymentIntent(creditPackId),
@@ -128,10 +148,13 @@ function PaymentForm({
     style: {
       base: {
         fontSize: '16px',
-        color: 'hsl(var(--foreground))',
+        color: isDarkMode ? '#f3f4f6' : '#111827', // Light text for dark mode, dark text for light mode
         '::placeholder': {
           color: '#9ca3af',
         },
+      },
+      invalid: {
+        color: '#ef4444',
       },
     },
   }

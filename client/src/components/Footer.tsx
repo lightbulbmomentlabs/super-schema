@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              © {currentYear} Super Schema. All rights reserved.
+              © {currentYear} Lightbulb Moment Labs. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
               <Link

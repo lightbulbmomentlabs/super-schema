@@ -10,6 +10,7 @@ import FloatingBadge from '@/components/FloatingBadge'
 import BentoCard from '@/components/BentoCard'
 import FAQItem from '@/components/FAQItem'
 import TestimonialScroller from '@/components/TestimonialScroller'
+import HubSpotIcon from '@/components/icons/HubSpotIcon'
 import { useKonamiCode } from '@/hooks/useKonamiCode'
 
 export default function LandingPage() {
@@ -82,6 +83,11 @@ export default function LandingPage() {
       featured: true
     },
     {
+      icon: HubSpotIcon,
+      title: 'HubSpot Integration',
+      description: 'Connect your HubSpot account and push schema markup directly to your blog posts and pages with one click. No copy-paste, no technical headaches.'
+    },
+    {
       icon: Compass,
       title: 'Discover Your Site in Seconds',
       description: 'Drop in your domain and watch us crawl, discover, and map every URL. Your entire sitemap, ready for schema superpowers.'
@@ -133,7 +139,7 @@ export default function LandingPage() {
     },
     {
       question: 'How much does it cost?',
-      answer: 'We use a credit system. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable—way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO. Check out our pricing page for current rates.'
+      answer: 'We use a credit system. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable, way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO.'
     },
     {
       question: 'Will this work with my [insert platform here]?',
@@ -392,26 +398,71 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          {/* Bento Grid */}
-          <div className="grid md:grid-cols-4 gap-6">
-            {bentoFeatures.map((feature, index) => (
-              <BentoCard
-                key={index}
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-                index={index}
-                featured={feature.featured}
-              />
-            ))}
+          {/* Bento Grid - Optimized layout for 7 features + testimonials */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+            {/* First row: Featured card (2x2) + 2 regular cards */}
+            <BentoCard
+              icon={bentoFeatures[0].icon}
+              title={bentoFeatures[0].title}
+              description={bentoFeatures[0].description}
+              index={0}
+              featured={true}
+              className="md:col-span-3 md:row-span-2"
+            />
+            <BentoCard
+              icon={bentoFeatures[1].icon}
+              title={bentoFeatures[1].title}
+              description={bentoFeatures[1].description}
+              index={1}
+              className="md:col-span-3"
+            />
+            <BentoCard
+              icon={bentoFeatures[2].icon}
+              title={bentoFeatures[2].title}
+              description={bentoFeatures[2].description}
+              index={2}
+              className="md:col-span-3"
+            />
 
-            {/* Testimonial Scroller - Spans 2 columns on the right */}
+            {/* Second row: 3 cards */}
+            <BentoCard
+              icon={bentoFeatures[3].icon}
+              title={bentoFeatures[3].title}
+              description={bentoFeatures[3].description}
+              index={3}
+              className="md:col-span-2"
+            />
+            <BentoCard
+              icon={bentoFeatures[4].icon}
+              title={bentoFeatures[4].title}
+              description={bentoFeatures[4].description}
+              index={4}
+              className="md:col-span-2"
+            />
+            <BentoCard
+              icon={bentoFeatures[5].icon}
+              title={bentoFeatures[5].title}
+              description={bentoFeatures[5].description}
+              index={5}
+              className="md:col-span-2"
+            />
+
+            {/* Third row: 1 card + Testimonials */}
+            <BentoCard
+              icon={bentoFeatures[6].icon}
+              title={bentoFeatures[6].title}
+              description={bentoFeatures[6].description}
+              index={6}
+              className="md:col-span-2"
+            />
+
+            {/* Testimonial Scroller - Spans 4 columns */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="md:col-span-2"
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="md:col-span-4"
             >
               <TestimonialScroller />
             </motion.div>
@@ -616,7 +667,7 @@ export default function LandingPage() {
       <footer className="border-t border-border py-8 px-4">
         <div className="container mx-auto text-center">
           <p className="text-muted-foreground">
-            © 2024 SuperSchema. Making schema markup super since... well, recently. All rights reserved.
+            © 2025 Lightbulb Moment Labs. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground mt-2">
             <Link to="/docs" className="hover:text-foreground transition-colors">
