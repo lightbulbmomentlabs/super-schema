@@ -130,7 +130,7 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
     let schemaRecord = null
 
     if (schemaId) {
-      schemaRecord = await db.getSchemaByDiscoveredUrlId(schemaId)
+      schemaRecord = await db.getSchemaById(schemaId)
       if (schemaRecord) {
         currentRefinements = schemaRecord.refinementCount || 0
 

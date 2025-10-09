@@ -1022,6 +1022,35 @@ class DatabaseService {
     }
   }
 
+  async getSchemaById(schemaId: string): Promise<any | null> {
+    const { data, error } = await this.supabase
+      .from('schema_generations')
+      .select('*')
+      .eq('id', schemaId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // Not found
+      throw error
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      url: data.url,
+      schemas: data.schemas,
+      schemaScore: data.schema_score,
+      refinementCount: data.refinement_count,
+      status: data.status,
+      creditsCost: data.credits_cost,
+      processingTimeMs: data.processing_time_ms,
+      errorMessage: data.error_message,
+      discoveredUrlId: data.discovered_url_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+
   async updateSchemaGeneration(schemaId: string, schemas: any[]): Promise<void> {
     const { error } = await this.supabase
       .from('schema_generations')
