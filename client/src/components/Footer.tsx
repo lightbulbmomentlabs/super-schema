@@ -27,12 +27,6 @@ export default function Footer() {
               >
                 Support
               </button>
-              <Link
-                to="/tips"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Tips & Tricks
-              </Link>
             </div>
           </div>
         </div>
