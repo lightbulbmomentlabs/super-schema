@@ -16,6 +16,12 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-4">
               <Link
+                to="/aeo"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Resources
+              </Link>
+              <Link
                 to="/docs"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >

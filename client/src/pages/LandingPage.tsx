@@ -11,6 +11,7 @@ import BentoCard from '@/components/BentoCard'
 import FAQItem from '@/components/FAQItem'
 import TestimonialScroller from '@/components/TestimonialScroller'
 import HubSpotIcon from '@/components/icons/HubSpotIcon'
+import ResourcesDropdown from '@/components/ResourcesDropdown'
 import { useKonamiCode } from '@/hooks/useKonamiCode'
 
 export default function LandingPage() {
@@ -210,7 +211,8 @@ export default function LandingPage() {
             <SuperSchemaLogo className="h-8 w-8" />
             <span className="font-bold text-xl">SuperSchema</span>
           </motion.div>
-          <div className="space-x-4">
+          <div className="flex items-center space-x-6">
+            <ResourcesDropdown />
             {isSignedIn ? (
               <Link
                 to="/dashboard"

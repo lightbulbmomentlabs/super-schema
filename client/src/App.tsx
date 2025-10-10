@@ -27,6 +27,7 @@ import OrganizationSchemaGeneratorPage from './pages/OrganizationSchemaGenerator
 import EventSchemaGeneratorPage from './pages/EventSchemaGeneratorPage'
 import ReviewSchemaGeneratorPage from './pages/ReviewSchemaGeneratorPage'
 import BreadcrumbSchemaGeneratorPage from './pages/BreadcrumbSchemaGeneratorPage'
+import AEOPillarPage from './pages/AEOPillarPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -75,6 +76,9 @@ function App() {
           <Route path="/event-schema-generator" element={<EventSchemaGeneratorPage />} />
           <Route path="/review-schema-generator" element={<ReviewSchemaGeneratorPage />} />
           <Route path="/breadcrumb-schema-generator" element={<BreadcrumbSchemaGeneratorPage />} />
+
+          {/* Resources - Public pillar pages */}
+          <Route path="/aeo" element={<AEOPillarPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={

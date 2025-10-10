@@ -13,6 +13,7 @@ import SuperSchemaLogo from './SuperSchemaLogo'
 import LightningBoltIcon from './icons/LightningBoltIcon'
 import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
+import ResourcesDropdown from './ResourcesDropdown'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 interface LayoutProps {
@@ -44,6 +45,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center space-x-4">
+            <ResourcesDropdown />
             <span className="text-sm text-muted-foreground">
               Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
             </span>

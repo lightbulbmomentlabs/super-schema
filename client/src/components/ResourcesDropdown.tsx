@@ -1,0 +1,136 @@
+import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronDown, BookOpen, Zap, Library as LibraryIcon } from 'lucide-react'
+import { cn } from '@/utils/cn'
+
+interface ResourcesDropdownProps {
+  className?: string
+}
+
+export default function ResourcesDropdown({ className }: ResourcesDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  const learningResources = [
+    { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' }
+  ]
+
+  const schemaGenerators = [
+    { name: 'FAQ Schema', path: '/faq-schema-generator' },
+    { name: 'Article Schema', path: '/article-schema-generator' },
+    { name: 'BlogPosting Schema', path: '/blogposting-schema-generator' },
+    { name: 'HowTo Schema', path: '/howto-schema-generator' },
+    { name: 'Product Schema', path: '/product-schema-generator' },
+    { name: 'LocalBusiness Schema', path: '/localbusiness-schema-generator' },
+    { name: 'Organization Schema', path: '/organization-schema-generator' },
+    { name: 'Event Schema', path: '/event-schema-generator' },
+    { name: 'Review Schema', path: '/review-schema-generator' },
+    { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator' }
+  ]
+
+  const tools = [
+    { name: 'Generate Schema', path: '/generate', icon: Zap },
+    { name: 'Schema Library', path: '/library', icon: LibraryIcon }
+  ]
+
+  return (
+    <div ref={dropdownRef} className={cn('relative', className)}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Resources
+        <ChevronDown className={cn('ml-1 h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 mt-2 w-[600px] bg-background border border-border rounded-lg shadow-lg z-50 p-6">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Learning Hub */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm text-foreground">Learning Hub</h3>
+              </div>
+              <div className="space-y-2">
+                {learningResources.map((resource, index) => (
+                  <Link
+                    key={index}
+                    to={resource.path}
+                    onClick={() => setIsOpen(false)}
+                    className="block p-2 rounded hover:bg-accent transition-colors group"
+                  >
+                    <div className="font-medium text-sm group-hover:text-primary transition-colors">
+                      {resource.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {resource.description}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Schema Generators */}
+            <div>
+              <div className="flex items-center space-x-2 mb-3">
+                <Zap className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm text-foreground">Schema Generators</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-1 max-h-[300px] overflow-y-auto">
+                {schemaGenerators.map((generator, index) => (
+                  <Link
+                    key={index}
+                    to={generator.path}
+                    onClick={() => setIsOpen(false)}
+                    className="block p-2 rounded hover:bg-accent transition-colors text-sm hover:text-primary"
+                  >
+                    {generator.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tools Section */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="grid grid-cols-2 gap-3">
+              {tools.map((tool, index) => {
+                const Icon = tool.icon
+                return (
+                  <Link
+                    key={index}
+                    to={tool.path}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group"
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm group-hover:text-primary transition-colors">
+                      {tool.name}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
