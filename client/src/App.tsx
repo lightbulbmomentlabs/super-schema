@@ -26,6 +26,7 @@ import LocalBusinessSchemaGeneratorPage from './pages/LocalBusinessSchemaGenerat
 import OrganizationSchemaGeneratorPage from './pages/OrganizationSchemaGeneratorPage'
 import EventSchemaGeneratorPage from './pages/EventSchemaGeneratorPage'
 import ReviewSchemaGeneratorPage from './pages/ReviewSchemaGeneratorPage'
+import BreadcrumbSchemaGeneratorPage from './pages/BreadcrumbSchemaGeneratorPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -73,6 +74,7 @@ function App() {
           <Route path="/organization-schema-generator" element={<OrganizationSchemaGeneratorPage />} />
           <Route path="/event-schema-generator" element={<EventSchemaGeneratorPage />} />
           <Route path="/review-schema-generator" element={<ReviewSchemaGeneratorPage />} />
+          <Route path="/breadcrumb-schema-generator" element={<BreadcrumbSchemaGeneratorPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={
