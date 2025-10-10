@@ -21,6 +21,7 @@ import FAQSchemaGeneratorPage from './pages/FAQSchemaGeneratorPage'
 import ArticleSchemaGeneratorPage from './pages/ArticleSchemaGeneratorPage'
 import BlogPostingSchemaGeneratorPage from './pages/BlogPostingSchemaGeneratorPage'
 import HowToSchemaGeneratorPage from './pages/HowToSchemaGeneratorPage'
+import ProductSchemaGeneratorPage from './pages/ProductSchemaGeneratorPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -63,6 +64,7 @@ function App() {
           <Route path="/article-schema-generator" element={<ArticleSchemaGeneratorPage />} />
           <Route path="/blogposting-schema-generator" element={<BlogPostingSchemaGeneratorPage />} />
           <Route path="/howto-schema-generator" element={<HowToSchemaGeneratorPage />} />
+          <Route path="/product-schema-generator" element={<ProductSchemaGeneratorPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={
