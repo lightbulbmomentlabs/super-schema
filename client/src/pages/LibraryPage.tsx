@@ -18,12 +18,10 @@ import { calculateSchemaScore } from '@/utils/calculateSchemaScore'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
 import { hubspotApi } from '@/services/hubspot'
 import { findConnectionByDomain } from '@/utils/domain'
-import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 export default function LibraryPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const isAdmin = useIsAdmin()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
   const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
@@ -865,46 +863,16 @@ export default function LibraryPage() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Schema Editor</h2>
-                  <div className="flex items-center gap-2">
-                    {/* Push to HubSpot Button - Only show for admins with HubSpot connections */}
-                    {isAdmin && hubspotConnections.length > 0 && (
-                      <button
-                        onClick={handlePushToHubSpot}
-                        disabled={pushToHubSpotMutation.isPending || !hasActiveHubSpotConnection}
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors',
-                          hasActiveHubSpotConnection
-                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                            : 'bg-muted text-muted-foreground cursor-not-allowed'
-                        )}
-                        title={hasActiveHubSpotConnection ? 'Push schema to HubSpot' : 'Connect HubSpot account first'}
-                      >
-                        {pushToHubSpotMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Pushing...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-4 w-4" viewBox="6.20856283 .64498824 244.26943717 251.24701176" xmlns="http://www.w3.org/2000/svg">
-                              <path d="m191.385 85.694v-29.506a22.722 22.722 0 0 0 13.101-20.48v-.677c0-12.549-10.173-22.722-22.721-22.722h-.678c-12.549 0-22.722 10.173-22.722 22.722v.677a22.722 22.722 0 0 0 13.101 20.48v29.506a64.342 64.342 0 0 0 -30.594 13.47l-80.922-63.03c.577-2.083.878-4.225.912-6.375a25.6 25.6 0 1 0 -25.633 25.55 25.323 25.323 0 0 0 12.607-3.43l79.685 62.007c-14.65 22.131-14.258 50.974.987 72.7l-24.236 24.243c-1.96-.626-4-.959-6.057-.987-11.607.01-21.01 9.423-21.007 21.03.003 11.606 9.412 21.014 21.018 21.017 11.607.003 21.02-9.4 21.03-21.007a20.747 20.747 0 0 0 -.988-6.056l23.976-23.985c21.423 16.492 50.846 17.913 73.759 3.562 22.912-14.352 34.475-41.446 28.985-67.918-5.49-26.473-26.873-46.734-53.603-50.792m-9.938 97.044a33.17 33.17 0 1 1 0-66.316c17.85.625 32 15.272 32.01 33.134.008 17.86-14.127 32.522-31.977 33.165" fill="currentColor"/>
-                            </svg>
-                            Push to HubSpot
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <a
-                      href={urls.find(u => u.id === selectedUrlId)?.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-                      title="Open URL in new tab"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span>View Page</span>
-                    </a>
-                  </div>
+                  <a
+                    href={urls.find(u => u.id === selectedUrlId)?.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+                    title="Open URL in new tab"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    <span>View Page</span>
+                  </a>
                 </div>
                 <SchemaEditor
                   schemas={schemasArray}
@@ -912,6 +880,44 @@ export default function LibraryPage() {
                   height="500px"
                 />
               </div>
+
+              {/* Push to HubSpot Button - Show for all users with HubSpot connections */}
+              {hubspotConnections.length > 0 && (
+                <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-4">
+                  <div className="flex-1">
+                    <h3 className="font-medium mb-1">Push to HubSpot</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {hasActiveHubSpotConnection
+                        ? 'Automatically inject this schema into your HubSpot content'
+                        : 'Connect your HubSpot account to push schema directly'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePushToHubSpot}
+                    disabled={pushToHubSpotMutation.isPending}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-md transition-colors flex-shrink-0',
+                      hasActiveHubSpotConnection
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : 'bg-muted text-muted-foreground cursor-not-allowed'
+                    )}
+                  >
+                    {pushToHubSpotMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Pushing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4" viewBox="6.20856283 .64498824 244.26943717 251.24701176" xmlns="http://www.w3.org/2000/svg">
+                          <path d="m191.385 85.694v-29.506a22.722 22.722 0 0 0 13.101-20.48v-.677c0-12.549-10.173-22.722-22.721-22.722h-.678c-12.549 0-22.722 10.173-22.722 22.722v.677a22.722 22.722 0 0 0 13.101 20.48v29.506a64.342 64.342 0 0 0 -30.594 13.47l-80.922-63.03c.577-2.083.878-4.225.912-6.375a25.6 25.6 0 1 0 -25.633 25.55 25.323 25.323 0 0 0 12.607-3.43l79.685 62.007c-14.65 22.131-14.258 50.974.987 72.7l-24.236 24.243c-1.96-.626-4-.959-6.057-.987-11.607.01-21.01 9.423-21.007 21.03.003 11.606 9.412 21.014 21.018 21.017 11.607.003 21.02-9.4 21.03-21.007a20.747 20.747 0 0 0 -.988-6.056l23.976-23.985c21.423 16.492 50.846 17.913 73.759 3.562 22.912-14.352 34.475-41.446 28.985-67.918-5.49-26.473-26.873-46.734-53.603-50.792m-9.938 97.044a33.17 33.17 0 1 1 0-66.316c17.85.625 32 15.272 32.01 33.134.008 17.86-14.127 32.522-31.977 33.165" fill="currentColor"/>
+                        </svg>
+                        <span>{hasActiveHubSpotConnection ? 'Push to HubSpot' : 'Connect HubSpot'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Schema Quality Score */}
               {displayScore && (

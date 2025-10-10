@@ -49,7 +49,7 @@ export default function SignInPage() {
       <div className="hidden lg:block relative w-0 flex-1">
         <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
           <div className="text-center text-primary-foreground max-w-md p-8">
-            <SuperSchemaLogo className="h-16 w-16 mx-auto mb-6 opacity-90" animate={false} />
+            <img src="/super-schema-man.png" alt="SuperSchema" className="max-w-[150px] h-auto mx-auto mb-6 opacity-90" />
             <h2 className="text-2xl font-bold mb-4">
               AI-Powered Schema Generation
             </h2>
