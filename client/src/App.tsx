@@ -17,6 +17,7 @@ import SignUpPage from './pages/SignUpPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import DocsPage from './pages/DocsPage'
+import FAQSchemaGeneratorPage from './pages/FAQSchemaGeneratorPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -55,6 +56,7 @@ function App() {
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/docs" element={<DocsPage />} />
+          <Route path="/faq-schema-generator" element={<FAQSchemaGeneratorPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={
