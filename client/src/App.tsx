@@ -35,6 +35,7 @@ import GEOPillarPage from './pages/GEOPillarPage'
 import HowToWinFeaturedSnippetsPage from './pages/HowToWinFeaturedSnippetsPage'
 import JsonLdVsMicrodataPage from './pages/JsonLdVsMicrodataPage'
 import HowAIEnginesRankSourcesPage from './pages/HowAIEnginesRankSourcesPage'
+import EntityBasedSeoStrategiesPage from './pages/EntityBasedSeoStrategiesPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -88,6 +89,7 @@ function App() {
           <Route path="/aeo" element={<AEOPillarPage />} />
           <Route path="/aeo/how-to-win-featured-snippets" element={<HowToWinFeaturedSnippetsPage />} />
           <Route path="/geo" element={<GEOPillarPage />} />
+          <Route path="/geo/entity-based-seo-strategies" element={<EntityBasedSeoStrategiesPage />} />
           <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
           <Route path="/ai-search-optimization/how-ai-engines-rank-sources" element={<HowAIEnginesRankSourcesPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />

@@ -620,6 +620,30 @@ export default function GEOPillarPage() {
           </div>
         </section>
 
+        {/* Deep Dive Guides */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            Expert guides to master specific GEO strategies and technical implementation.
+          </p>
+          <div className="grid gap-6">
+            <Link
+              to="/geo/entity-based-seo-strategies"
+              className="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 text-foreground">Entity-Based SEO Strategies</h3>
+                  <p className="text-muted-foreground mb-3">
+                    Comprehensive guide to implementing entity-based SEO as the foundation for GEO, covering knowledge graphs, schema markup, and entity signals
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* FAQ Section */}
         <section>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
