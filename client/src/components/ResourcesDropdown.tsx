@@ -31,6 +31,7 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
 
   const learningResources = [
     { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' },
+    { name: 'GEO Guide', path: '/geo', description: 'Generative Engine Optimization - be the source AI chooses' },
     { name: 'AI Search Optimization', path: '/ai-search-optimization', description: 'Get cited by AI engines (SGE, Copilot, Perplexity)' },
     { name: 'Schema Markup Guide', path: '/schema-markup', description: 'What, why, and how of structured data' }
   ]

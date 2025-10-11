@@ -31,6 +31,7 @@ import AEOPillarPage from './pages/AEOPillarPage'
 import AISearchOptimizationPillarPage from './pages/AISearchOptimizationPillarPage'
 import SchemaMarkupPillarPage from './pages/SchemaMarkupPillarPage'
 import SchemaMarkupGraderPage from './pages/SchemaMarkupGraderPage'
+import GEOPillarPage from './pages/GEOPillarPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -82,6 +83,7 @@ function App() {
 
           {/* Resources - Public pillar pages */}
           <Route path="/aeo" element={<AEOPillarPage />} />
+          <Route path="/geo" element={<GEOPillarPage />} />
           <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />
 
