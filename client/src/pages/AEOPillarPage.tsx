@@ -626,6 +626,30 @@ export default function AEOPillarPage() {
           </div>
         </section>
 
+        {/* Deep Dive Guides */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            Tactical guides to master specific AEO techniques and dominate AI search results.
+          </p>
+          <div className="grid gap-6">
+            <Link
+              to="/aeo/how-to-win-featured-snippets"
+              className="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 text-foreground">How to Win Featured Snippets</h3>
+                  <p className="text-muted-foreground mb-3">
+                    Learn tactical strategies for winning featured snippets and dominating Position 0
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* FAQ Section */}
         <section>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
