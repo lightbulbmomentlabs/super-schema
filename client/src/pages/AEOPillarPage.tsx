@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import {
   ArrowRight,
   CheckCircle,
@@ -18,6 +19,8 @@ import FAQItem from '@/components/FAQItem'
 import PillarPageNav from '@/components/PillarPageNav'
 
 export default function AEOPillarPage() {
+  const { isSignedIn } = useUser()
+
   useEffect(() => {
     document.title = 'Answer Engine Optimization (AEO): The Complete Guide | SuperSchema'
 
@@ -598,7 +601,7 @@ export default function AEOPillarPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 my-8">
               <Link
-                to="/generate"
+                to={isSignedIn ? "/generate" : "/sign-up"}
                 className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
               >
                 <Zap className="h-8 w-8 text-primary mb-3" />
@@ -609,7 +612,7 @@ export default function AEOPillarPage() {
                 </div>
               </Link>
               <Link
-                to="/library"
+                to={isSignedIn ? "/library" : "/sign-up"}
                 className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
               >
                 <Search className="h-8 w-8 text-primary mb-3" />
