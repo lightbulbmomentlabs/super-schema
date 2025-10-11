@@ -1,7 +1,22 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Bot, Sparkles, TrendingUp, Zap } from 'lucide-react'
-import { Helmet } from 'react-helmet-async'
+import {
+  ArrowRight,
+  CheckCircle,
+  AlertTriangle,
+  TrendingUp,
+  Target,
+  Zap,
+  Search,
+  Brain,
+  Bot,
+  Sparkles,
+  ChevronRight
+} from 'lucide-react'
+import { motion } from 'framer-motion'
+import Footer from '@/components/Footer'
+import FAQItem from '@/components/FAQItem'
+import PillarPageNav from '@/components/PillarPageNav'
 
 export default function AISearchOptimizationPillarPage() {
   useEffect(() => {
@@ -9,711 +24,655 @@ export default function AISearchOptimizationPillarPage() {
     window.scrollTo(0, 0)
   }, [])
 
-  const schemaData = {
-    faqPage: {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "What is AI Search Optimization?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "AI Search Optimization is the process of structuring your content so AI-powered search engines like Google's SGE, Microsoft Copilot, Perplexity, and ChatGPT can understand, cite, and recommend it. Unlike traditional SEO which focuses on ranking web pages, AI search optimization ensures your content becomes a trusted source for AI-generated answers."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How is AI search different from traditional Google search?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Traditional Google search returns a list of blue links ranked by relevance. AI search engines synthesize information from multiple sources to generate a single conversational answer. Instead of competing for position #1, you're competing to be cited as a source within that AI-generated response."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Which schema types help with AI search optimization?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "The most effective schema types for AI search are FAQ, Article, HowTo, Product, and Organization schema. These provide structured, unambiguous data that AI engines can easily parse and cite. Schema tells AI exactly what your content means, not just what it says."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How do I get cited by Google's SGE?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "To get cited by Google's Search Generative Experience (SGE), focus on comprehensive answers with proper schema markup, high E-E-A-T signals, and structured content. Use FAQ and Article schema, answer questions directly, include expert credentials, and provide clear, factual information that AI can confidently cite."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Does schema guarantee I'll be cited by AI search engines?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No, schema doesn't guarantee citations, but it dramatically increases your chances. Schema provides machine-readable context about your content. Combined with quality content, authoritative sources, and proper formatting, schema helps AI engines understand and trust your information enough to cite it."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How can I track if AI engines are citing my content?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Monitor AI citations by regularly searching relevant queries in SGE, Copilot, Perplexity, and ChatGPT (with browsing enabled). Use tools like BrightEdge for SGE tracking, or manually document when your domain appears as a cited source. Track patterns in which content types and schema implementations get cited most often."
-          }
-        }
+  const schemaGenerators = [
+    { name: 'FAQ Schema', path: '/faq-schema-generator', description: 'Perfect for Q&A content and AI citations' },
+    { name: 'Article Schema', path: '/article-schema-generator', description: 'News articles, blog posts, guides' },
+    { name: 'HowTo Schema', path: '/howto-schema-generator', description: 'Step-by-step instructions' },
+    { name: 'Product Schema', path: '/product-schema-generator', description: 'E-commerce products with reviews' },
+    { name: 'Organization Schema', path: '/organization-schema-generator', description: 'Company information and authority' },
+    { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator', description: 'Site navigation hierarchy' }
+  ]
+
+  const optimizationSteps = [
+    {
+      number: 1,
+      title: 'Create Comprehensive, Answer-First Content',
+      description: 'AI engines prioritize content that directly answers queries. Front-load your answers, use clear headings, and provide depth.',
+      tips: [
+        'Answer the query in the first 100-200 words',
+        'Use question-based headings (H2/H3)',
+        'Provide 1,500-3,000+ word comprehensive guides',
+        'Include examples, data, and expert insights'
       ]
     },
-    article: {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "headline": "AI Search Optimization: Get Cited by AI Engines (SGE, Copilot, Perplexity)",
-      "description": "Learn how to optimize your content to get cited by AI search engines including Google SGE, Microsoft Copilot, Perplexity, and ChatGPT. Complete guide with schema strategies.",
-      "author": {
-        "@type": "Organization",
-        "name": "SuperSchema"
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "SuperSchema",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://superschema.ai/logo.png"
-        }
-      },
-      "datePublished": "2025-10-10",
-      "dateModified": "2025-10-10"
+    {
+      number: 2,
+      title: 'Implement Essential Schema Markup',
+      description: 'Schema tells AI exactly what your content means. FAQ, Article, and HowTo schema are citation magnets.',
+      tips: [
+        'Add Article schema to all blog posts and guides',
+        'Use FAQ schema for Q&A sections (3-8 questions)',
+        'Implement HowTo schema for tutorials',
+        'Include Organization schema for E-E-A-T signals'
+      ]
     },
-    breadcrumb: {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Home",
-          "item": "https://superschema.ai/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Resources",
-          "item": "https://superschema.ai/resources"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "AI Search Optimization",
-          "item": "https://superschema.ai/ai-search-optimization"
-        }
+    {
+      number: 3,
+      title: 'Optimize for E-E-A-T Signals',
+      description: 'Experience, Expertise, Authoritativeness, Trust—AI engines assess these before citing sources.',
+      tips: [
+        'Add author bios with credentials',
+        'Link to authoritative sources',
+        'Display publication and update dates',
+        'Show trust signals (reviews, case studies, credentials)'
+      ]
+    },
+    {
+      number: 4,
+      title: 'Monitor Your AI Citations',
+      description: 'Track where your content appears in AI-generated answers across platforms.',
+      tips: [
+        'Search target queries in ChatGPT, Perplexity, and SGE',
+        'Document when your domain gets cited',
+        'Track patterns in cited content types',
+        'Monitor referral traffic from AI platforms'
       ]
     }
-  }
+  ]
+
+  const platformStrategies = [
+    {
+      platform: 'Google SGE (Search Generative Experience)',
+      icon: Search,
+      description: 'Google\'s AI-powered search experience synthesizes answers from high-quality, schema-rich sources.',
+      strategies: [
+        'Maintain strong traditional SEO (SGE favors already-ranking content)',
+        'Implement comprehensive FAQ and Article schema',
+        'Focus on E-E-A-T signals (Google\'s core ranking factor)',
+        'Create in-depth content (1,500+ words for pillar topics)',
+        'Optimize Core Web Vitals and mobile experience'
+      ],
+      tip: 'SGE shows conversational follow-ups. Structure content to answer both primary and related questions.'
+    },
+    {
+      platform: 'Microsoft Copilot',
+      icon: Bot,
+      description: 'Powered by GPT-4 with Bing integration. Prefers precision, authority, and recent content.',
+      strategies: [
+        'Optimize for Bing Webmaster Tools (often overlooked)',
+        'Use precise, factual statements (GPT-4 values accuracy)',
+        'Add "last updated" dates prominently',
+        'Implement schema for all structured content',
+        'Submit sitemaps to Bing and verify schema'
+      ],
+      tip: 'Copilot loves numbered lists and step-by-step instructions. Combine HowTo schema with formatted lists.'
+    },
+    {
+      platform: 'Perplexity',
+      icon: Brain,
+      description: 'Research-focused AI search that values depth, precision, and expert sources.',
+      strategies: [
+        'Provide comprehensive, research-backed answers',
+        'Cite your own sources (studies, data, experts)',
+        'Use academic-style precision in language',
+        'Include statistics and specific examples',
+        'Implement schema to clarify content structure'
+      ],
+      tip: 'Perplexity shows source previews. Your meta description and opening paragraph appear in those previews.'
+    },
+    {
+      platform: 'ChatGPT (Browsing Mode)',
+      icon: Sparkles,
+      description: 'Browses the web for current information. Prioritizes authoritative, well-structured content.',
+      strategies: [
+        'Target conversational, long-tail queries',
+        'Structure content with clear H2/H3 hierarchy',
+        'Answer comprehensively in opening paragraphs',
+        'Avoid gating key information behind CTAs',
+        'Make content easily crawlable (no paywalls for main info)'
+      ],
+      tip: 'ChatGPT cites sources that provide complete answers. Don\'t force email signups to access core information.'
+    }
+  ]
+
+  const commonMistakes = [
+    {
+      mistake: 'Thin, Surface-Level Content',
+      problem: 'AI engines favor comprehensive, authoritative answers. 300-word blog posts don\'t cut it.',
+      fix: 'Create in-depth content (1,500-3,000+ words for pillar topics). Answer the full spectrum of related questions, not just one narrow query.',
+      severity: 'high'
+    },
+    {
+      mistake: 'Missing or Incomplete Schema',
+      problem: 'Without schema, AI has to guess what your content means. That puts you at a disadvantage.',
+      fix: 'Implement at minimum: Article schema (blog posts), FAQ schema (Q&A), and Organization schema (homepage). Use SuperSchema to auto-generate.',
+      severity: 'critical'
+    },
+    {
+      mistake: 'Burying the Answer',
+      problem: 'AI engines want instant answers. If your answer is in paragraph 5, you won\'t get cited.',
+      fix: 'Front-load answers in the first 100-200 words. Use a clear H2 question heading, then provide a direct answer immediately.',
+      severity: 'high'
+    },
+    {
+      mistake: 'Ignoring E-E-A-T Signals',
+      problem: 'AI assesses source credibility before citing. No author bio? No credentials? You\'re less likely to be cited.',
+      fix: 'Add author credentials, publication dates, expert quotes, and links to authoritative sources. Show why AI should trust you.',
+      severity: 'high'
+    },
+    {
+      mistake: 'Keyword Stuffing',
+      problem: 'Old SEO habits. AI engines prioritize semantic richness and natural language over keyword density.',
+      fix: 'Write naturally. Answer questions thoroughly. Use synonyms and related terms. AI understands context better than keyword matchers.',
+      severity: 'medium'
+    },
+    {
+      mistake: 'Gating Content Behind Email Signups',
+      problem: 'If AI can\'t access your core content without signup, it can\'t cite you.',
+      fix: 'Keep your best informational content open and crawlable. Save gated content for tools, templates, and extras—not core answers.',
+      severity: 'high'
+    }
+  ]
+
+  const futureTrends = [
+    {
+      trend: 'Multimodal AI Search',
+      description: 'Text, voice, image, and video search are converging. Models like Gemini Pro already support live camera queries and visual search.',
+      impact: 'Start adding ImageObject and VideoObject schema. Optimize alt text, captions, and transcripts for AI understanding.'
+    },
+    {
+      trend: 'Zero-Click Dominance',
+      description: 'By 2026, 25% of organic traffic will shift to AI chatbots. Users get answers without clicking.',
+      impact: 'Focus on brand visibility in AI answers, not just traffic. Being cited builds authority even without clicks.'
+    },
+    {
+      trend: 'Real-Time AI Search',
+      description: 'AI engines are moving toward real-time web access. Perplexity, ChatGPT browsing, and SGE all pull current information.',
+      impact: 'Keep content updated. Add "last updated" dates. Fresh content with recent data gets prioritized.'
+    },
+    {
+      trend: 'Platform Diversification',
+      description: 'Google\'s 57% search market share is being challenged. OpenAI, Perplexity, Amazon Alexa, and TikTok are gaining fast.',
+      impact: 'Don\'t optimize only for Google. Make your content citation-worthy across all AI platforms with universal schema standards.'
+    },
+    {
+      trend: 'Quality Over Quantity',
+      description: 'Winning brands in 2025 prioritize conversions over traffic. AI engines favor original, expert content with genuine value.',
+      impact: 'Stop chasing traffic metrics. Build content AI engines trust and cite as the definitive source.'
+    }
+  ]
+
+  const faqs = [
+    {
+      question: 'What is AI Search Optimization?',
+      answer: 'AI Search Optimization is the process of structuring your content so AI-powered search engines like Google\'s SGE, Microsoft Copilot, Perplexity, and ChatGPT can understand, cite, and recommend it. Unlike traditional SEO which focuses on ranking web pages, AI search optimization ensures your content becomes a trusted source for AI-generated answers.'
+    },
+    {
+      question: 'How is AI search different from traditional Google search?',
+      answer: 'Traditional Google search returns a list of blue links ranked by relevance. AI search engines synthesize information from multiple sources to generate a single conversational answer. Instead of competing for position #1, you\'re competing to be cited as a source within that AI-generated response.'
+    },
+    {
+      question: 'Which schema types matter most for AI search?',
+      answer: 'FAQ, Article, and HowTo schema are the most effective for AI search. FAQPage directly answers common questions (perfect for AI). HowTo provides step-by-step guidance that AI loves to summarize. Article schema helps AI understand your content structure and authorship. Product, LocalBusiness, and Organization schema matter for specific industries.'
+    },
+    {
+      question: 'How do I get cited by Google\'s SGE?',
+      answer: 'To get cited by Google\'s Search Generative Experience (SGE), focus on comprehensive answers with proper schema markup, high E-E-A-T signals, and structured content. Use FAQ and Article schema, answer questions directly, include expert credentials, and provide clear, factual information that AI can confidently cite.'
+    },
+    {
+      question: 'Does schema guarantee I\'ll be cited by AI?',
+      answer: 'No, schema doesn\'t guarantee citations, but it dramatically increases your chances. Schema provides machine-readable context about your content. Combined with quality content, authoritative sources, and proper formatting, schema helps AI engines understand and trust your information enough to cite it.'
+    },
+    {
+      question: 'How can I track AI citations?',
+      answer: 'Monitor AI citations by regularly searching relevant queries in SGE, Copilot, Perplexity, and ChatGPT (with browsing enabled). Document when your domain appears as a cited source. Track patterns in which content types and schema implementations get cited most often. Some enterprise tools like BrightEdge offer SGE tracking.'
+    },
+    {
+      question: 'Do I still need traditional SEO if I\'m doing AI search optimization?',
+      answer: 'Yes. AI search optimization complements traditional SEO—it doesn\'t replace it. Many AI engines (like SGE and Copilot) rely on traditional search rankings to determine which content to cite. Strong SEO helps your content get indexed and found, while AI optimization ensures it can be understood and cited.'
+    },
+    {
+      question: 'How long does it take to see results?',
+      answer: 'Schema implementation is instant, but AI engines need time to re-crawl and understand your content. You might see citations appear within days to weeks, depending on how often AI platforms refresh their indexes or browse the web. The key: implement schema now so you\'re ready when they next update.'
+    }
+  ]
 
   return (
-    <>
-      <Helmet>
-        <script type="application/ld+json">
-          {JSON.stringify(schemaData.faqPage)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(schemaData.article)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(schemaData.breadcrumb)}
-        </script>
-      </Helmet>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <PillarPageNav />
 
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-4 py-4">
-            <Link
-              to="/"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Home
-            </Link>
-          </div>
-        </header>
+      {/* Hero Section */}
+      <section className="py-16 px-4 bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="mb-6">
+              <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                Back to Home
+              </Link>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+              AI Search Optimization: Get Cited by AI Engines
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+              Google SGE, Microsoft Copilot, Perplexity, and ChatGPT are the new gatekeepers. Here's how to get your content cited as the authoritative source. 🎯
+            </p>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <span className="inline-flex items-center">
+                <Bot className="h-4 w-4 mr-2 text-success" />
+                4 Major AI Search Platforms
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <Target className="h-4 w-4 mr-2 text-success" />
+                Schema-Powered Citations
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2 text-success" />
+                Future-Proof Visibility
+              </span>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
-        {/* Hero Section */}
-        <section className="border-b border-border bg-gradient-to-b from-background to-muted/20">
-          <div className="container mx-auto px-4 py-16 md:py-24">
-            <div className="max-w-4xl mx-auto text-center space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                <Bot className="h-4 w-4" />
-                AI Search Optimization Guide
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                AI Search Optimization: Get Cited by AI Engines
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Learn how to optimize your content to get cited by AI search engines like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT. Schema is your competitive edge.
+      {/* Main Content */}
+      <div className="container mx-auto max-w-4xl px-4 py-16 space-y-20">
+
+        {/* What Is AI Search Optimization */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">What Is AI Search Optimization?</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              AI Search Optimization is the practice of making your content citation-worthy for AI-powered search engines. While traditional SEO focuses on ranking in search results, AI search optimization focuses on being the answer that platforms like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT cite as authoritative sources.
+            </p>
+            <p>
+              The shift is fundamental: users aren't clicking through 10 blue links anymore. They're asking AI engines for answers and trusting the sources AI cites. If your content isn't optimized for AI understanding, you're invisible to this massive and growing audience.
+            </p>
+
+            {/* Comparison Table */}
+            <div className="my-8 overflow-hidden rounded-lg border border-border">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">Aspect</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">Traditional Search</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">AI Search</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  <tr>
+                    <td className="px-6 py-4 font-medium">User Behavior</td>
+                    <td className="px-6 py-4">Click through results</td>
+                    <td className="px-6 py-4">Get instant answers</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Success Metric</td>
+                    <td className="px-6 py-4">Ranking position</td>
+                    <td className="px-6 py-4">Being cited as source</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Content Style</td>
+                    <td className="px-6 py-4">Keyword-focused</td>
+                    <td className="px-6 py-4">Answer-first, comprehensive</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Schema Importance</td>
+                    <td className="px-6 py-4">Helpful for rich snippets</td>
+                    <td className="px-6 py-4">Absolutely critical</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Platforms</td>
+                    <td className="px-6 py-4">Google, Bing results pages</td>
+                    <td className="px-6 py-4">ChatGPT, Perplexity, SGE, Copilot</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-info/10 border border-info/20 rounded-lg p-6 my-8">
+              <h4 className="font-semibold mb-2 text-foreground">📊 The New Search Journey</h4>
+              <p className="text-sm">
+                Users now ask AI engines directly instead of searching Google. They get synthesized answers with cited sources. Your goal: be one of those cited sources. Schema markup is how you tell AI engines exactly what your content offers and why it's authoritative.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Main Content */}
-        <article className="container mx-auto px-4 py-16 max-w-4xl">
-          <div className="prose prose-slate dark:prose-invert max-w-none">
+        {/* How to Optimize for AI Search */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">How to Optimize for AI Search (Step-by-Step)</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-8">
+            <p>
+              Getting cited by AI search engines requires a different approach than traditional SEO. Follow these four steps to become an AI-citation magnet.
+            </p>
 
-            {/* Introduction */}
-            <div className="space-y-6 mb-12">
-              <p className="text-lg leading-relaxed">
-                The search landscape has fundamentally changed. AI-powered search engines like Google's Search Generative Experience (SGE), Microsoft Copilot, Perplexity, and ChatGPT are now synthesizing answers instead of just ranking links. The new battleground isn't Page 1—it's being cited as a trusted source within AI-generated responses.
-              </p>
-              <p className="text-lg leading-relaxed">
-                This guide shows you exactly how to optimize your content for AI search engines. You'll learn why schema markup is critical, how different AI platforms select sources, and actionable strategies to increase your citation rate. No fluff. Just what works.
-              </p>
-            </div>
-
-            {/* Section 1: How AI Search Engines Work */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <Sparkles className="h-8 w-8 text-primary" />
-                How AI Search Engines Work
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                Unlike traditional search engines that match keywords and rank pages, AI search engines use Large Language Models (LLMs) to understand intent, retrieve relevant information, and synthesize answers from multiple sources. Here's what happens behind the scenes:
-              </p>
-
-              <div className="bg-muted/50 border border-border rounded-lg p-6 my-8">
-                <h3 className="text-xl font-semibold mb-4">AI Search Pipeline (Simplified)</h3>
-                <ol className="space-y-3 list-decimal list-inside">
-                  <li><strong>Query Understanding:</strong> AI analyzes user intent (informational, transactional, navigational)</li>
-                  <li><strong>Retrieval:</strong> Search index pulls relevant documents based on semantic meaning</li>
-                  <li><strong>Synthesis:</strong> LLM generates answer by combining information from top sources</li>
-                  <li><strong>Citation Selection:</strong> AI attributes specific facts to source URLs</li>
-                  <li><strong>Ranking & Display:</strong> Best answer shown with cited sources linked</li>
-                </ol>
-              </div>
-
-              <p className="text-lg leading-relaxed">
-                The key difference from traditional SEO: AI engines prioritize <strong>structured, unambiguous data</strong> over traditional ranking signals. Schema markup provides that structure, telling AI exactly what your content means, not just what it says.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Platform-Specific Differences</h3>
-
-              <div className="space-y-4">
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Google SGE (Search Generative Experience)
-                  </h4>
-                  <p>Synthesizes answers from Google's search index. Heavily favors sites with strong E-E-A-T signals, proper schema, and comprehensive content. Citations appear as expandable source cards.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Bot className="h-5 w-5 text-primary" />
-                    Microsoft Copilot
-                  </h4>
-                  <p>Powered by GPT-4 with Bing integration. Prefers authoritative domains, recent content, and structured data. Shows citations as numbered footnotes within the response.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Perplexity
-                  </h4>
-                  <p>Research-focused AI search with real-time web retrieval. Values precision, depth, and expert sources. Citations shown inline with source previews.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    ChatGPT (Browsing Mode)
-                  </h4>
-                  <p>Browses the web when needed for current information. Prioritizes authoritative sites, clear structure, and relevant content. Citations listed at the end of responses.</p>
+            {optimizationSteps.map((step, index) => (
+              <div key={index} className="border border-border rounded-lg p-6 bg-card">
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold flex-shrink-0">
+                    {step.number}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2 text-foreground">{step.title}</h3>
+                    <p className="mb-4">{step.description}</p>
+                    <ul className="space-y-2">
+                      {step.tips.map((tip, tipIndex) => (
+                        <li key={tipIndex} className="flex items-start space-x-2">
+                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </section>
-
-            {/* Section 2: The Role of Schema in AI Search */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <Bot className="h-8 w-8 text-primary" />
-                The Role of Schema in AI Search
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                Schema markup is the secret weapon for AI search optimization. While traditional SEO relies on keywords and backlinks, AI engines need <strong>semantic structure</strong>—and that's exactly what schema provides.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Why Schema Matters for AI</h3>
-
-              <div className="bg-muted/50 border border-border rounded-lg p-6 my-8">
-                <ul className="space-y-4">
-                  <li className="flex gap-3">
-                    <span className="text-primary font-bold">•</span>
-                    <div>
-                      <strong>Unambiguous Context:</strong> Schema tells AI exactly what each piece of content represents—a product, a recipe, a FAQ, an event—removing guesswork from interpretation.
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-primary font-bold">•</span>
-                    <div>
-                      <strong>Structured Answers:</strong> FAQ and HowTo schema provide question-answer pairs that map perfectly to how AI engines synthesize responses.
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-primary font-bold">•</span>
-                    <div>
-                      <strong>Entity Recognition:</strong> Organization and Person schema help AI identify authoritative sources and expert credentials.
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-primary font-bold">•</span>
-                    <div>
-                      <strong>Trust Signals:</strong> Review, Rating, and AggregateRating schema provide credibility indicators AI models use to assess source quality.
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-primary font-bold">•</span>
-                    <div>
-                      <strong>Content Relationships:</strong> Breadcrumb and Article schema show how content fits within your site architecture, helping AI understand topical authority.
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Top Schema Types for AI Search</h3>
-
-              <div className="grid gap-4 md:grid-cols-2 my-8">
-                <Link to="/faq-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">FAQ Schema</h4>
-                  <p className="text-sm text-muted-foreground">Perfect for question-based queries. AI engines love structured Q&A pairs.</p>
-                </Link>
-
-                <Link to="/article-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Article Schema</h4>
-                  <p className="text-sm text-muted-foreground">Establishes content type, authorship, and publication details for credibility.</p>
-                </Link>
-
-                <Link to="/howto-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">HowTo Schema</h4>
-                  <p className="text-sm text-muted-foreground">Structures step-by-step instructions AI can cite for procedural queries.</p>
-                </Link>
-
-                <Link to="/product-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Product Schema</h4>
-                  <p className="text-sm text-muted-foreground">Critical for e-commerce. Provides pricing, availability, and review data.</p>
-                </Link>
-
-                <Link to="/organization-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Organization Schema</h4>
-                  <p className="text-sm text-muted-foreground">Establishes entity authority and expertise signals.</p>
-                </Link>
-
-                <Link to="/breadcrumb-schema-generator" className="border border-border rounded-lg p-5 hover:border-primary transition-colors group">
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Breadcrumb Schema</h4>
-                  <p className="text-sm text-muted-foreground">Shows content hierarchy and topical authority structure.</p>
-                </Link>
-              </div>
-
-              <div className="bg-primary/5 border-l-4 border-primary p-6 my-8">
-                <p className="font-semibold mb-2">Pro Tip:</p>
-                <p>Implement multiple schema types on the same page. For example, combine Article + FAQ + Breadcrumb schema on pillar content to maximize AI understanding and citation potential.</p>
-              </div>
-            </section>
-
-            {/* Section 3: How to Get Cited by AI Search Engines */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <TrendingUp className="h-8 w-8 text-primary" />
-                How to Get Cited by AI Search Engines
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                Getting cited by AI search engines requires a different optimization strategy than traditional SEO. Here's the proven framework:
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">1. Answer Questions Directly & Comprehensively</h3>
-              <p className="text-lg leading-relaxed">
-                AI engines favor content that directly answers user queries. Start articles with clear, concise answers before diving into details. Use FAQ schema to structure common questions and answers. The best citations come from content that provides complete, authoritative answers—not surface-level summaries.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">2. Implement Schema Markup on Every Page</h3>
-              <p className="text-lg leading-relaxed">
-                Schema is non-negotiable for AI search optimization. At minimum, implement Article schema (for blog posts), FAQ schema (for Q&A content), and Organization schema (for homepage). Use our <Link to="/generate" className="text-primary hover:underline">free schema generators</Link> to create valid JSON-LD markup in seconds.
-              </p>
-
-              <div className="bg-muted/50 border border-border rounded-lg p-6 my-8">
-                <h4 className="font-semibold mb-3">Quick Schema Implementation Checklist:</h4>
-                <ul className="space-y-2 list-disc list-inside">
-                  <li>Add Article schema to all blog posts and guides</li>
-                  <li>Use FAQ schema for Q&A sections (minimum 3-6 questions)</li>
-                  <li>Implement HowTo schema for tutorials and step-by-step guides</li>
-                  <li>Add Product schema to all product/service pages</li>
-                  <li>Include Organization schema on your homepage</li>
-                  <li>Validate all schema using Google's Rich Results Test</li>
-                </ul>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">3. Optimize for E-E-A-T Signals</h3>
-              <p className="text-lg leading-relaxed">
-                Experience, Expertise, Authoritativeness, and Trust (E-E-A-T) matter more for AI search than traditional SEO. AI models assess source credibility before citing. Include author bios with credentials, link to authoritative sources, show publication/update dates, and display trust indicators like reviews and case studies.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">4. Structure Content for Scannability</h3>
-              <p className="text-lg leading-relaxed">
-                AI engines parse content structure to identify key information. Use clear H2/H3 headings, bullet points, numbered lists, tables, and short paragraphs. The easier it is for humans to scan, the easier it is for AI to extract and cite.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">5. Target Long-Tail & Question-Based Keywords</h3>
-              <p className="text-lg leading-relaxed">
-                AI search works best for complex, informational queries. Focus on "how to," "what is," "why does," and comparison keywords. Create content that answers the full spectrum of related questions around a topic—not just one narrow keyword.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">6. Keep Content Fresh & Updated</h3>
-              <p className="text-lg leading-relaxed">
-                AI engines favor recent content, especially for time-sensitive topics. Regularly update your top-performing pages, add new sections based on emerging questions, and update schema with current publication dates. A fresh "dateModified" signal helps.
-              </p>
-            </section>
-
-            {/* Section 4: Platform-Specific Optimization */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <Zap className="h-8 w-8 text-primary" />
-                Platform-Specific Optimization Strategies
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                While core principles apply across AI search platforms, each has unique preferences. Here's how to optimize for specific AI engines:
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Optimizing for Google SGE</h3>
-              <div className="space-y-4 ml-4">
-                <p className="text-lg leading-relaxed">
-                  Google's Search Generative Experience prioritizes sites already ranking well in traditional search. Focus on:
-                </p>
-                <ul className="space-y-2 list-disc list-inside text-lg">
-                  <li>High-quality backlinks from authoritative domains</li>
-                  <li>Comprehensive content (1,500+ words for pillar pages)</li>
-                  <li>Strong E-E-A-T signals (author credentials, expert sources)</li>
-                  <li>FAQ, Article, and HowTo schema implementation</li>
-                  <li>Mobile optimization and Core Web Vitals performance</li>
-                </ul>
-                <div className="bg-primary/5 border-l-4 border-primary p-6 my-6">
-                  <p><strong>SGE Tip:</strong> Google SGE shows "conversational mode" for follow-up questions. Structure your content to answer both the main query and common follow-up questions.</p>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Optimizing for Microsoft Copilot</h3>
-              <div className="space-y-4 ml-4">
-                <p className="text-lg leading-relaxed">
-                  Copilot uses Bing's index with GPT-4. Key strategies:
-                </p>
-                <ul className="space-y-2 list-disc list-inside text-lg">
-                  <li>Optimize for Bing Webmaster Tools (often overlooked)</li>
-                  <li>Include clear, factual statements (GPT-4 prefers precision)</li>
-                  <li>Add "last updated" dates prominently (recency matters)</li>
-                  <li>Use schema for all structured content types</li>
-                  <li>Submit sitemap to Bing and verify schema implementation</li>
-                </ul>
-                <div className="bg-primary/5 border-l-4 border-primary p-6 my-6">
-                  <p><strong>Copilot Tip:</strong> Microsoft Copilot often cites content with numbered lists and step-by-step instructions. HowTo schema + numbered formatting = citation gold.</p>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Optimizing for Perplexity</h3>
-              <div className="space-y-4 ml-4">
-                <p className="text-lg leading-relaxed">
-                  Perplexity is research-focused and values depth. Optimize by:
-                </p>
-                <ul className="space-y-2 list-disc list-inside text-lg">
-                  <li>Providing comprehensive, research-backed answers</li>
-                  <li>Citing your own sources (links to studies, data, experts)</li>
-                  <li>Using precise, academic-style language</li>
-                  <li>Including data, statistics, and specific examples</li>
-                  <li>Implementing schema to clarify content type and structure</li>
-                </ul>
-                <div className="bg-primary/5 border-l-4 border-primary p-6 my-6">
-                  <p><strong>Perplexity Tip:</strong> Perplexity shows inline citations with source previews. Make sure your meta descriptions and first paragraphs are compelling—they appear in those previews.</p>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Optimizing for ChatGPT (Browsing Mode)</h3>
-              <div className="space-y-4 ml-4">
-                <p className="text-lg leading-relaxed">
-                  ChatGPT with browsing enabled searches the web for current information. Strategies:
-                </p>
-                <ul className="space-y-2 list-disc list-inside text-lg">
-                  <li>Target long-tail, conversational queries</li>
-                  <li>Structure content in clear, logical sections (H2/H3 hierarchy)</li>
-                  <li>Answer questions comprehensively in first 2-3 paragraphs</li>
-                  <li>Include schema to provide context about content type</li>
-                  <li>Make sure your content is crawlable (no paywalls for key info)</li>
-                </ul>
-                <div className="bg-primary/5 border-l-4 border-primary p-6 my-6">
-                  <p><strong>ChatGPT Tip:</strong> ChatGPT browsing cites sources that provide complete answers. Don't gate key information behind CTAs or email signups if you want to be cited.</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Section 5: Top Tools for AI Search Optimization */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <Sparkles className="h-8 w-8 text-primary" />
-                Top Tools for AI Search Optimization
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                The right tools make AI search optimization faster and more effective. Here are the essentials:
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Schema Generation & Validation</h3>
-              <div className="space-y-4">
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">
-                    <Link to="/generate" className="text-primary hover:underline">SuperSchema (Free)</Link>
-                  </h4>
-                  <p>Generate valid schema markup for 10+ content types in seconds. AI-powered schema refinement, auto-detection, and HubSpot integration. No coding required.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">Google Rich Results Test</h4>
-                  <p>Free tool to validate schema implementation and check for errors. Shows how Google interprets your structured data.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">Schema.org Documentation</h4>
-                  <p>Official reference for all schema types and properties. Use when building custom schema beyond standard templates.</p>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">AI Search Monitoring</h3>
-              <div className="space-y-4">
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">Manual Testing</h4>
-                  <p>Regularly search your target keywords in SGE, Copilot, Perplexity, and ChatGPT. Document which queries cite your content and analyze patterns.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">BrightEdge (Enterprise)</h4>
-                  <p>Tracks SGE visibility and citations at scale. Expensive but comprehensive for enterprise SEO teams.</p>
-                </div>
-              </div>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Content Optimization</h3>
-              <div className="space-y-4">
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">Claude / ChatGPT</h4>
-                  <p>Use AI to analyze your content from an AI engine's perspective. Ask: "Would you cite this content? Why or why not?" Surprisingly effective feedback.</p>
-                </div>
-
-                <div className="border border-border rounded-lg p-5">
-                  <h4 className="font-semibold text-lg mb-2">AnswerThePublic</h4>
-                  <p>Find question-based keywords to target. AI search engines excel at answering questions—create content around these queries.</p>
-                </div>
-              </div>
-
-              <div className="bg-muted/50 border border-border rounded-lg p-6 my-8">
-                <h4 className="font-semibold mb-3">Recommended Tool Stack:</h4>
-                <ul className="space-y-2">
-                  <li><strong>Schema:</strong> <Link to="/generate" className="text-primary hover:underline">SuperSchema</Link> + Google Rich Results Test</li>
-                  <li><strong>Research:</strong> AnswerThePublic + AlsoAsked</li>
-                  <li><strong>Monitoring:</strong> Manual testing in all 4 major AI engines</li>
-                  <li><strong>Analysis:</strong> Google Search Console + Bing Webmaster Tools</li>
-                  <li><strong>Content:</strong> Claude/ChatGPT for AI perspective feedback</li>
-                </ul>
-              </div>
-            </section>
-
-            {/* Section 6: Common Myths About AI SEO */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <Bot className="h-8 w-8 text-primary" />
-                Common Myths About AI SEO
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                AI search optimization is new territory, and there's a lot of misinformation. Let's clear up the biggest myths:
-              </p>
-
-              <div className="space-y-6 mt-8">
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #1: "AI search will kill traditional SEO"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> AI search complements traditional SEO. Many AI engines (SGE, Copilot) rely on traditional search rankings to determine which content to cite. You need both traditional SEO fundamentals AND AI-specific optimization.</p>
-                </div>
-
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #2: "Schema guarantees citations"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> Schema increases your chances but doesn't guarantee citations. Content quality, authority, and relevance still matter. Schema helps AI understand your content—it doesn't make bad content good.</p>
-                </div>
-
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #3: "You need to optimize separately for each AI engine"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> Core principles work across platforms. Structured content, comprehensive answers, and proper schema benefit all AI engines. Platform-specific tweaks are minor optimizations, not separate strategies.</p>
-                </div>
-
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #4: "Short content works for AI search"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> AI engines favor comprehensive, authoritative content. Thin content rarely gets cited. Aim for 1,500-3,000+ words on pillar topics with complete answers to the full spectrum of related questions.</p>
-                </div>
-
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #5: "AI search doesn't drive traffic"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> Being cited drives high-quality traffic. Users clicking from AI search responses are actively seeking deep information and tend to have higher engagement and conversion rates than traditional search traffic.</p>
-                </div>
-
-                <div className="border-l-4 border-red-500 pl-6">
-                  <h3 className="text-xl font-semibold mb-2">Myth #6: "You can't track AI search performance"</h3>
-                  <p className="text-muted-foreground"><strong>Reality:</strong> While analytics are limited, you can track citations through manual testing, referral traffic analysis, and brand searches. As AI search matures, better tracking tools will emerge.</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Section 7: The Future of AI Search */}
-            <section className="mb-16 space-y-6">
-              <h2 className="text-3xl font-bold flex items-center gap-3 border-b border-border pb-4">
-                <TrendingUp className="h-8 w-8 text-primary" />
-                The Future of AI Search & What It Means for You
-              </h2>
-
-              <p className="text-lg leading-relaxed">
-                AI search is still early. Here's where it's heading and how to prepare:
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Multimodal Search Is Coming</h3>
-              <p className="text-lg leading-relaxed">
-                Future AI engines will synthesize answers from text, images, videos, and audio. Start adding ImageObject and VideoObject schema now to prepare. Optimize alt text, captions, and transcripts for AI understanding.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Conversational Context Will Matter More</h3>
-              <p className="text-lg leading-relaxed">
-                AI search isn't one-and-done queries—it's conversational threads. Structure content to answer both primary questions and predictable follow-ups. Think in question clusters, not isolated keywords.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Schema Will Become Table Stakes</h3>
-              <p className="text-lg leading-relaxed">
-                As AI search adoption grows, schema implementation will shift from "competitive advantage" to "basic requirement." Get ahead now while there's still low adoption in most industries.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">Citation Transparency Will Increase</h3>
-              <p className="text-lg leading-relaxed">
-                Expect better analytics and reporting around AI citations. Platforms will likely provide citation data to content creators, similar to traditional search console data.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">E-E-A-T Signals Will Intensify</h3>
-              <p className="text-lg leading-relaxed">
-                As AI-generated content floods the web, engines will rely even more heavily on expertise and authority signals to determine citation-worthy sources. Build your brand authority now.
-              </p>
-
-              <div className="bg-primary/5 border-l-4 border-primary p-6 my-8">
-                <p className="font-semibold mb-2">Bottom Line:</p>
-                <p>AI search rewards well-structured, authoritative content. Invest in comprehensive answers, proper schema, and strong E-E-A-T signals. The earlier you optimize, the bigger your competitive advantage.</p>
-              </div>
-            </section>
-
-            {/* Related Reading */}
-            <section className="mb-16">
-              <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary" />
-                Related Reading
-              </h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Link
-                  to="/aeo"
-                  className="block p-6 border border-border rounded-lg hover:border-primary transition-colors group"
-                >
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Answer Engine Optimization (AEO) Guide</h4>
-                  <p className="text-sm text-muted-foreground">Complete guide to optimizing content for AI-generated answers across all platforms.</p>
-                </Link>
-
-                <Link
-                  to="/generate"
-                  className="block p-6 border border-border rounded-lg hover:border-primary transition-colors group"
-                >
-                  <h4 className="font-semibold text-lg mb-2 group-hover:text-primary">Generate Schema Markup</h4>
-                  <p className="text-sm text-muted-foreground">AI-powered tool to create valid schema markup for any content type in seconds.</p>
-                </Link>
-              </div>
-            </section>
-
-            {/* FAQs */}
-            <section className="mb-16">
-              <h2 className="text-3xl font-bold mb-8 border-b border-border pb-4">
-                Frequently Asked Questions
-              </h2>
-
-              <div className="space-y-6">
-                <div className="border-b border-border pb-6">
-                  <h3 className="text-xl font-semibold mb-3">What is AI Search Optimization?</h3>
-                  <p className="text-muted-foreground">
-                    AI Search Optimization is the process of structuring your content so AI-powered search engines like Google's SGE, Microsoft Copilot, Perplexity, and ChatGPT can understand, cite, and recommend it. Unlike traditional SEO which focuses on ranking web pages, AI search optimization ensures your content becomes a trusted source for AI-generated answers.
-                  </p>
-                </div>
-
-                <div className="border-b border-border pb-6">
-                  <h3 className="text-xl font-semibold mb-3">How is AI search different from traditional Google search?</h3>
-                  <p className="text-muted-foreground">
-                    Traditional Google search returns a list of blue links ranked by relevance. AI search engines synthesize information from multiple sources to generate a single conversational answer. Instead of competing for position #1, you're competing to be cited as a source within that AI-generated response.
-                  </p>
-                </div>
-
-                <div className="border-b border-border pb-6">
-                  <h3 className="text-xl font-semibold mb-3">Which schema types help with AI search optimization?</h3>
-                  <p className="text-muted-foreground">
-                    The most effective schema types for AI search are FAQ, Article, HowTo, Product, and Organization schema. These provide structured, unambiguous data that AI engines can easily parse and cite. Schema tells AI exactly what your content means, not just what it says.
-                  </p>
-                </div>
-
-                <div className="border-b border-border pb-6">
-                  <h3 className="text-xl font-semibold mb-3">How do I get cited by Google's SGE?</h3>
-                  <p className="text-muted-foreground">
-                    To get cited by Google's Search Generative Experience (SGE), focus on comprehensive answers with proper schema markup, high E-E-A-T signals, and structured content. Use FAQ and Article schema, answer questions directly, include expert credentials, and provide clear, factual information that AI can confidently cite.
-                  </p>
-                </div>
-
-                <div className="border-b border-border pb-6">
-                  <h3 className="text-xl font-semibold mb-3">Does schema guarantee I'll be cited by AI search engines?</h3>
-                  <p className="text-muted-foreground">
-                    No, schema doesn't guarantee citations, but it dramatically increases your chances. Schema provides machine-readable context about your content. Combined with quality content, authoritative sources, and proper formatting, schema helps AI engines understand and trust your information enough to cite it.
-                  </p>
-                </div>
-
-                <div className="pb-6">
-                  <h3 className="text-xl font-semibold mb-3">How can I track if AI engines are citing my content?</h3>
-                  <p className="text-muted-foreground">
-                    Monitor AI citations by regularly searching relevant queries in SGE, Copilot, Perplexity, and ChatGPT (with browsing enabled). Use tools like BrightEdge for SGE tracking, or manually document when your domain appears as a cited source. Track patterns in which content types and schema implementations get cited most often.
-                  </p>
-                </div>
-              </div>
-            </section>
+            ))}
 
             {/* CTA */}
-            <section className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-8 md:p-12 text-center">
-              <h2 className="text-3xl font-bold mb-4">
-                Ready to Get Cited by AI Search Engines?
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Start with proper schema markup. Our AI-powered generator creates valid JSON-LD schema for any content type in seconds. No coding required.
+            <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border border-primary/20 rounded-lg p-8 text-center my-8">
+              <Brain className="h-12 w-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-2xl font-bold mb-2 text-foreground">SuperSchema Automates All Four Steps</h3>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Paste your URL. Our AI analyzes your content, generates optimized schema, validates everything, and gives you a quality score—in under 30 seconds.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to="/generate"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Zap className="h-5 w-5" />
-                  Generate Schema Now
-                </Link>
-                <Link
-                  to="/library"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-border rounded-lg hover:bg-accent transition-colors"
-                >
-                  View Schema Library
-                </Link>
-              </div>
-            </section>
-
+              <Link
+                to="/sign-up"
+                className="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold"
+              >
+                Start Free (2 Credits)
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </div>
           </div>
-        </article>
+        </section>
+
+        {/* Platform-Specific Strategies */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Platform-Specific Optimization Strategies</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              While core principles apply across platforms, each AI search engine has unique preferences. Here's how to optimize for each major player.
+            </p>
+
+            <div className="space-y-6 my-8">
+              {platformStrategies.map((platform, index) => (
+                <div key={index} className="border border-border rounded-lg p-6 bg-card">
+                  <div className="flex items-start space-x-4 mb-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <platform.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-foreground mb-2">{platform.platform}</h3>
+                      <p className="text-sm">{platform.description}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 mb-4">
+                    {platform.strategies.map((strategy, strategyIndex) => (
+                      <li key={strategyIndex} className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">{strategy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="bg-primary/10 border border-primary/20 rounded p-3">
+                    <p className="text-sm"><strong className="text-foreground">Pro Tip:</strong> {platform.tip}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Common Mistakes */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Common AI Search Optimization Mistakes</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              Most AI search failures come from applying old SEO tactics. Here's what kills your citation chances—and how to fix it.
+            </p>
+
+            <div className="space-y-4 my-8">
+              {commonMistakes.map((item, index) => (
+                <div
+                  key={index}
+                  className={`border rounded-lg p-6 ${
+                    item.severity === 'critical'
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : item.severity === 'high'
+                      ? 'border-warning/50 bg-warning/5'
+                      : 'border-border bg-card'
+                  }`}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className={`p-2 rounded-lg ${
+                      item.severity === 'critical'
+                        ? 'bg-destructive/20'
+                        : item.severity === 'high'
+                        ? 'bg-warning/20'
+                        : 'bg-muted'
+                    }`}>
+                      <AlertTriangle className={`h-6 w-6 ${
+                        item.severity === 'critical'
+                          ? 'text-destructive'
+                          : item.severity === 'high'
+                          ? 'text-warning'
+                          : 'text-muted-foreground'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-foreground">{item.mistake}</h4>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          item.severity === 'critical'
+                            ? 'bg-destructive/20 text-destructive'
+                            : item.severity === 'high'
+                            ? 'bg-warning/20 text-warning'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {item.severity.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-sm mb-2"><strong className="text-foreground">Problem:</strong> {item.problem}</p>
+                      <p className="text-sm"><strong className="text-success">Fix:</strong> {item.fix}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Future of AI Search */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">The Future of AI Search</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              AI search is evolving fast. Here's where it's headed—and how to stay ahead of the curve.
+            </p>
+
+            <div className="space-y-6 my-8">
+              {futureTrends.map((trend, index) => (
+                <div key={index} className="border border-border rounded-lg p-6 bg-card">
+                  <h4 className="font-bold text-lg mb-2 text-foreground">{trend.trend}</h4>
+                  <p className="mb-3">{trend.description}</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded p-3">
+                    <p className="text-sm"><strong className="text-foreground">Impact:</strong> {trend.impact}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-8 my-8">
+              <h3 className="text-2xl font-bold mb-4 text-foreground">The Bottom Line</h3>
+              <p className="text-lg mb-4">
+                The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong className="text-foreground">quality over quantity</strong> and <strong className="text-foreground">citations over traffic</strong>.
+              </p>
+              <p>
+                Brands that combine structured data, comprehensive content, and genuine expertise will dominate AI search. Those that ignore it? They'll be invisible to the next generation of searchers.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Related Tools */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Essential Schema Types for AI Search</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              SuperSchema offers free schema generators for all major content types. Start optimizing for AI search today.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+              {schemaGenerators.map((generator, index) => (
+                <Link
+                  key={index}
+                  to={generator.path}
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">{generator.name}</h5>
+                      <p className="text-sm text-muted-foreground">{generator.description}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-4" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 my-8">
+              <Link
+                to="/generate"
+                className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
+              >
+                <Zap className="h-8 w-8 text-primary mb-3" />
+                <h5 className="font-semibold mb-2 text-foreground">Generate Schema</h5>
+                <p className="text-sm text-muted-foreground mb-3">AI-powered schema generation for any URL</p>
+                <div className="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  Start Generating <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </Link>
+              <Link
+                to="/library"
+                className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
+              >
+                <Search className="h-8 w-8 text-primary mb-3" />
+                <h5 className="font-semibold mb-2 text-foreground">Schema Library</h5>
+                <p className="text-sm text-muted-foreground mb-3">Manage all your URLs and schema in one place</p>
+                <div className="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  View Library <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <FAQItem
+                key={index}
+                question={faq.question}
+                answer={faq.answer}
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="bg-primary rounded-lg p-8 md:p-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+            Ready to Get Cited by AI Search Engines?
+          </h2>
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+            Join thousands using SuperSchema to optimize for AI search and future-proof their visibility. Start with 2 free credits—no credit card required.
+          </p>
+          <Link
+            to="/sign-up"
+            className="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-semibold"
+          >
+            Get Your Free Credits
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </section>
       </div>
-    </>
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Schema Markup - FAQPage, Article, and BreadcrumbList */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": faqs.map(faq => ({
+            "@type": "Question",
+            "name": faq.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.answer
+            }
+          }))
+        }, null, 2)}
+      </script>
+
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": "AI Search Optimization: Get Cited by AI Engines (SGE, Copilot, Perplexity)",
+          "description": "Learn how to optimize your content for AI search engines like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT. Complete guide with schema strategies and platform-specific tactics.",
+          "author": {
+            "@type": "Organization",
+            "name": "SuperSchema",
+            "url": "https://superschema.ai"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Lightbulb Moment Labs",
+            "url": "https://superschema.ai"
+          },
+          "datePublished": "2025-01-10",
+          "dateModified": "2025-01-10"
+        }, null, 2)}
+      </script>
+
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://superschema.ai"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Resources",
+              "item": "https://superschema.ai/ai-search-optimization"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "AI Search Optimization",
+              "item": "https://superschema.ai/ai-search-optimization"
+            }
+          ]
+        }, null, 2)}
+      </script>
+    </div>
   )
 }
