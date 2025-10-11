@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import { ChevronDown, BookOpen, Zap, Library as LibraryIcon } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -8,6 +9,7 @@ interface ResourcesDropdownProps {
 }
 
 export default function ResourcesDropdown({ className }: ResourcesDropdownProps) {
+  const { isSignedIn } = useUser()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -28,20 +30,21 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
   }, [isOpen])
 
   const learningResources = [
-    { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' }
+    { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' },
+    { name: 'AI Search Optimization', path: '/ai-search-optimization', description: 'Get cited by AI engines (SGE, Copilot, Perplexity)' }
   ]
 
   const schemaGenerators = [
-    { name: 'FAQ Schema', path: '/faq-schema-generator' },
-    { name: 'Article Schema', path: '/article-schema-generator' },
-    { name: 'BlogPosting Schema', path: '/blogposting-schema-generator' },
-    { name: 'HowTo Schema', path: '/howto-schema-generator' },
-    { name: 'Product Schema', path: '/product-schema-generator' },
-    { name: 'LocalBusiness Schema', path: '/localbusiness-schema-generator' },
-    { name: 'Organization Schema', path: '/organization-schema-generator' },
-    { name: 'Event Schema', path: '/event-schema-generator' },
-    { name: 'Review Schema', path: '/review-schema-generator' },
-    { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator' }
+    { name: 'FAQ', path: '/faq-schema-generator' },
+    { name: 'Article', path: '/article-schema-generator' },
+    { name: 'BlogPosting', path: '/blogposting-schema-generator' },
+    { name: 'HowTo', path: '/howto-schema-generator' },
+    { name: 'Product', path: '/product-schema-generator' },
+    { name: 'LocalBusiness', path: '/localbusiness-schema-generator' },
+    { name: 'Organization', path: '/organization-schema-generator' },
+    { name: 'Event', path: '/event-schema-generator' },
+    { name: 'Review', path: '/review-schema-generator' },
+    { name: 'Breadcrumb', path: '/breadcrumb-schema-generator' }
   ]
 
   const tools = [
@@ -60,8 +63,8 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-[600px] bg-background border border-border rounded-lg shadow-lg z-50 p-6">
-          <div className="grid grid-cols-2 gap-6">
+        <div className="absolute right-0 mt-2 w-[600px] max-w-[calc(100vw-2rem)] bg-background border border-border rounded-lg shadow-lg z-50 p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Learning Hub */}
             <div>
               <div className="flex items-center space-x-2 mb-3">
@@ -91,7 +94,7 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Zap className="h-4 w-4 text-primary" />
-                <h3 className="font-semibold text-sm text-foreground">Schema Generators</h3>
+                <h3 className="font-semibold text-sm text-foreground">Free Schema Generators</h3>
               </div>
               <div className="grid grid-cols-2 gap-1 max-h-[300px] overflow-y-auto">
                 {schemaGenerators.map((generator, index) => (
@@ -113,10 +116,11 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
             <div className="grid grid-cols-2 gap-3">
               {tools.map((tool, index) => {
                 const Icon = tool.icon
+                const toolPath = isSignedIn ? tool.path : '/sign-up'
                 return (
                   <Link
                     key={index}
-                    to={tool.path}
+                    to={toolPath}
                     onClick={() => setIsOpen(false)}
                     className="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group"
                   >

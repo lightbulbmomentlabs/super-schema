@@ -28,6 +28,7 @@ import EventSchemaGeneratorPage from './pages/EventSchemaGeneratorPage'
 import ReviewSchemaGeneratorPage from './pages/ReviewSchemaGeneratorPage'
 import BreadcrumbSchemaGeneratorPage from './pages/BreadcrumbSchemaGeneratorPage'
 import AEOPillarPage from './pages/AEOPillarPage'
+import AISearchOptimizationPillarPage from './pages/AISearchOptimizationPillarPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -79,6 +80,7 @@ function App() {
 
           {/* Resources - Public pillar pages */}
           <Route path="/aeo" element={<AEOPillarPage />} />
+          <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={
