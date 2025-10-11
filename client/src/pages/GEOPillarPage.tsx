@@ -8,11 +8,10 @@ import {
   TrendingUp,
   Target,
   Zap,
-  Shield,
+  Search,
   Brain,
   FileJson,
-  ChevronRight,
-  Network
+  ChevronRight
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Footer from '@/components/Footer'
@@ -31,10 +30,15 @@ export default function GEOPillarPage() {
 
   const schemaGenerators = [
     { name: 'Organization Schema', path: '/organization-schema-generator', description: 'Establish entity authority' },
-    { name: 'Author Schema', path: '/organization-schema-generator', description: 'Build E-E-A-T signals' },
     { name: 'Article Schema', path: '/article-schema-generator', description: 'Content context for AI' },
     { name: 'FAQ Schema', path: '/faq-schema-generator', description: 'Direct answer formatting' },
-    { name: 'BlogPosting Schema', path: '/blogposting-schema-generator', description: 'Blog credibility signals' }
+    { name: 'BlogPosting Schema', path: '/blogposting-schema-generator', description: 'Blog credibility signals' },
+    { name: 'Product Schema', path: '/product-schema-generator', description: 'E-commerce products with reviews' },
+    { name: 'LocalBusiness Schema', path: '/localbusiness-schema-generator', description: 'Physical business locations' },
+    { name: 'HowTo Schema', path: '/howto-schema-generator', description: 'Step-by-step instructions' },
+    { name: 'Event Schema', path: '/event-schema-generator', description: 'Conferences, webinars, meetups' },
+    { name: 'Review Schema', path: '/review-schema-generator', description: 'Product and business reviews' },
+    { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator', description: 'Site navigation hierarchy' }
   ]
 
   const geoSteps = [
@@ -119,45 +123,13 @@ export default function GEOPillarPage() {
       fix: 'Schema must accurately reflect what users see. Never lie to search engines or AI models.',
       icon: AlertTriangle,
       severity: 'critical'
-    }
-  ]
-
-  const comparisonData = [
-    {
-      aspect: 'Primary Goal',
-      seo: 'Rank in traditional search results',
-      aeo: 'Get cited in AI-generated answers',
-      geo: 'Become the training source AI relies on'
     },
     {
-      aspect: 'Target Platforms',
-      seo: 'Google, Bing, traditional search engines',
-      aeo: 'AI Overviews, featured snippets, voice assistants',
-      geo: 'ChatGPT, Perplexity, Gemini, Claude, LLM training'
-    },
-    {
-      aspect: 'Success Metric',
-      seo: 'Clicks and website traffic',
-      aeo: 'Zero-click citations and visibility',
-      geo: 'Entity authority and narrative control'
-    },
-    {
-      aspect: 'Content Focus',
-      seo: 'Keywords and backlinks',
-      aeo: 'Direct answers and structured data',
-      geo: 'Entity relationships and credibility signals'
-    },
-    {
-      aspect: 'Schema Priority',
-      seo: 'Optional (helpful for rich results)',
-      aeo: 'Important (enables featured snippets)',
-      geo: 'Critical (required for AI parsing)'
-    },
-    {
-      aspect: 'Timeline',
-      seo: '2000s–present',
-      aeo: '2020s–present',
-      geo: '2024–future'
+      mistake: 'Ignoring Schema After Updates',
+      problem: 'CMS updates, template changes, and plugin installations silently break schema. AI can\'t parse broken markup.',
+      fix: 'Revalidate schema after any site changes. Set up automated monitoring to catch breaks before they hurt you.',
+      icon: AlertTriangle,
+      severity: 'medium'
     }
   ]
 
@@ -205,11 +177,11 @@ export default function GEOPillarPage() {
     },
     {
       question: 'How does schema help with GEO?',
-      answer: 'Schema is machine-readable credibility. AI models parse structured data to understand entities, relationships, authorship, and context. Without schema, AI has to guess what your content means. With schema, you\'re telling AI exactly who you are, what you do, and why you\'re authoritative. Organization, Author, Article, and FAQ schema are critical for GEO. Use SuperSchema to generate error-free markup that AI models trust.'
+      answer: 'Schema is machine-readable credibility. AI models parse structured data to understand entities, relationships, authorship, and context. Without schema, AI has to guess what your content means. With schema, you\'re telling AI exactly who you are, what you do, and why you\'re authoritative. Organization, Article, and FAQ schema are critical for GEO. Use SuperSchema to generate error-free markup that AI models trust.'
     },
     {
       question: 'Which schema types matter most for GEO?',
-      answer: 'Organization schema (establishes entity authority), Author schema (builds E-E-A-T signals), Article schema (provides content context), and FAQ schema (direct answer formatting). These four schema types signal to AI that your content is credible, well-structured, and training-worthy. SuperSchema automatically detects which schema types you need based on your content.'
+      answer: 'Organization schema (establishes entity authority), Article schema (provides content context), FAQ schema (direct answer formatting), and Author schema (builds E-E-A-T signals). These schema types signal to AI that your content is credible, well-structured, and training-worthy. SuperSchema automatically detects which schema types you need based on your content.'
     },
     {
       question: 'How do I measure GEO success?',
@@ -231,452 +203,522 @@ export default function GEOPillarPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <PillarPageNav />
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
-        <div className="container mx-auto max-w-4xl relative z-10">
+      <section className="py-16 px-4 bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center"
           >
-            <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-              <Brain className="h-4 w-4" />
-              <span>The Next Frontier of Search</span>
+            <div className="mb-6">
+              <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+                Back to Home
+              </Link>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
-              Generative Engine Optimization (GEO): How to Be the Source AI Chooses
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+              Generative Engine Optimization (GEO): Be the Source AI Chooses
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              SEO gets you ranked. AEO gets you cited. <strong>GEO makes you the training source AI can't ignore.</strong> Welcome to Act II of search.
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+              SEO gets you ranked. AEO gets you cited. <strong>GEO makes you the training source AI can't ignore.</strong> Welcome to Act II of search. 🚀
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to={isSignedIn ? '/generate' : '/sign-up'}
-                className="inline-flex items-center px-6 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
-              >
-                Generate Perfect Schema for GEO
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-              <Link
-                to="/aeo"
-                className="inline-flex items-center px-6 py-3 rounded-md border border-border hover:bg-accent transition-colors font-medium"
-              >
-                Learn About AEO First
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </Link>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <span className="inline-flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2 text-success" />
+                1B+ Daily ChatGPT Prompts
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <Target className="h-4 w-4 mr-2 text-success" />
+                71% Americans Use AI Search
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center">
+                <Zap className="h-4 w-4 mr-2 text-success" />
+                800% YoY LLM Referral Growth
+              </span>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* What Is GEO */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-6">What Is GEO?</h2>
-            <div className="prose prose-lg max-w-none text-muted-foreground">
-              <p>
-                Generative Engine Optimization (GEO) is the evolution of search optimization for the AI era. While <Link to="/aeo" className="text-primary hover:underline">AEO</Link> focuses on getting your content cited in AI-generated answers, GEO goes deeper—it's about <strong>becoming the training source</strong> that AI models rely on.
-              </p>
-              <p>
-                Think of it this way: AEO is about showing up in the answer. GEO is about being the authority AI can't write an answer without.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
-                <div className="p-6 rounded-lg bg-primary/5 border border-primary/10">
-                  <div className="text-4xl font-bold text-primary mb-2">1B+</div>
-                  <div className="text-sm text-muted-foreground">Daily prompts to ChatGPT (2025)</div>
-                </div>
-                <div className="p-6 rounded-lg bg-primary/5 border border-primary/10">
-                  <div className="text-4xl font-bold text-primary mb-2">71%</div>
-                  <div className="text-sm text-muted-foreground">Americans using AI search for purchases</div>
-                </div>
-                <div className="p-6 rounded-lg bg-primary/5 border border-primary/10">
-                  <div className="text-4xl font-bold text-primary mb-2">800%</div>
-                  <div className="text-sm text-muted-foreground">YoY increase in LLM referrals (2024-2025)</div>
-                </div>
-              </div>
-              <p>
-                <strong>AEO = Get cited in answers.</strong><br />
-                <strong>GEO = Become the source AI trains on.</strong>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* Main Content */}
+      <div className="container mx-auto max-w-4xl px-4 py-16 space-y-20">
 
-      {/* Comparison Table */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-6 text-center">How GEO Differs from AEO and SEO</h2>
-            <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-              The evolution from SEO → AEO → GEO isn't about replacement—it's about expansion. Each builds on the last.
+        {/* What Is GEO */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">What Is Generative Engine Optimization?</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              Generative Engine Optimization (GEO) is the practice of optimizing your content to become the training source that AI models—ChatGPT, Perplexity, Google Gemini, Claude, and others—rely on when generating answers.
             </p>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-background rounded-lg overflow-hidden">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="p-4 text-left font-semibold">Aspect</th>
-                    <th className="p-4 text-left font-semibold">SEO</th>
-                    <th className="p-4 text-left font-semibold">AEO</th>
-                    <th className="p-4 text-left font-semibold text-primary">GEO</th>
+            <p>
+              While <Link to="/aeo" className="text-primary hover:underline">AEO</Link> focuses on getting cited in AI-generated answers, GEO goes deeper—it's about becoming the authoritative source that AI can't write an answer without. Think of it as earning a permanent spot in the AI knowledge base.
+            </p>
+
+            {/* GEO vs AEO vs SEO Comparison Table */}
+            <div className="my-8 overflow-hidden rounded-lg border border-border">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">Aspect</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">Traditional SEO</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">AEO</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold">GEO</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {comparisonData.map((row, index) => (
-                    <tr key={index} className="border-t border-border">
-                      <td className="p-4 font-medium">{row.aspect}</td>
-                      <td className="p-4 text-muted-foreground">{row.seo}</td>
-                      <td className="p-4 text-muted-foreground">{row.aeo}</td>
-                      <td className="p-4 font-medium">{row.geo}</td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-border">
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Goal</td>
+                    <td className="px-6 py-4">Rank in search results</td>
+                    <td className="px-6 py-4">Get cited in AI answers</td>
+                    <td className="px-6 py-4">Become the training source</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Focus</td>
+                    <td className="px-6 py-4">Keywords, backlinks, page speed</td>
+                    <td className="px-6 py-4">Structured data, direct answers</td>
+                    <td className="px-6 py-4">Entity relationships, credibility signals</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Content Style</td>
+                    <td className="px-6 py-4">Long-form, keyword-rich</td>
+                    <td className="px-6 py-4">Concise, answer-first</td>
+                    <td className="px-6 py-4">Authoritative, well-cited, comprehensive</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Platforms</td>
+                    <td className="px-6 py-4">Google, Bing search results</td>
+                    <td className="px-6 py-4">AI Overviews, voice assistants</td>
+                    <td className="px-6 py-4">ChatGPT, Perplexity, Gemini, LLM training</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Success Metric</td>
+                    <td className="px-6 py-4">Traffic and rankings</td>
+                    <td className="px-6 py-4">Zero-click citations</td>
+                    <td className="px-6 py-4">Entity authority and narrative control</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-medium">Schema Importance</td>
+                    <td className="px-6 py-4">Helpful for rich snippets</td>
+                    <td className="px-6 py-4">Important for featured snippets</td>
+                    <td className="px-6 py-4">Critical for AI parsing</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-            <div className="mt-8 p-6 rounded-lg bg-primary/5 border border-primary/10">
-              <p className="text-center">
-                <strong>Key Takeaway:</strong> They synergize, not compete. GEO extends your SEO & AEO efforts. Do all three for maximum visibility across traditional search, AI answers, and LLM training datasets.
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
-      {/* Schema's Role in GEO */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-6">The Role of Schema in GEO</h2>
-            <div className="prose prose-lg max-w-none text-muted-foreground mb-8">
-              <p>
-                Schema isn't optional for GEO—it's <strong>mandatory</strong>. Structured data is how you signal credibility, authority, and context to AI models. Without schema, your content is just text on a page. With schema, you're telling AI exactly who you are, what you do, and why you matter.
-              </p>
-              <p>
-                Think of schema as machine-readable credibility signals. AI models parse structured data to understand entities, relationships, authorship, and content structure. The better your schema, the more likely AI includes your content in training datasets.
+            <div className="bg-info/10 border border-info/20 rounded-lg p-6 my-8">
+              <h4 className="font-semibold mb-2 text-foreground">🎯 The Bottom Line</h4>
+              <p className="text-sm text-info-foreground">
+                SEO, AEO, and GEO synergize—they don't compete. Use all three for maximum visibility across traditional search, AI answers, and LLM training datasets. GEO is the future-proof layer that extends your SEO and AEO efforts.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {schemaGenerators.map((schema, index) => (
+
+            <p>
+              Here's the reality: over 1 billion prompts are sent to ChatGPT daily. 71% of Americans use AI search to research purchases. By 2027, LLM traffic is projected to overtake traditional Google search. If your content isn't optimized for GEO, you're invisible to the next generation of search.
+            </p>
+          </div>
+        </section>
+
+        {/* Why Schema Markup Is Essential for GEO */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Is Essential for GEO</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              Schema isn't optional for GEO—it's mandatory. Structured data is how AI models understand entities, relationships, authorship, and credibility. Without schema, you're just text on a page. With schema, you're a trusted, parseable source.
+            </p>
+            <p>
+              Think of schema as machine-readable credibility signals. AI models parse Organization schema to understand who you are. Article schema provides content context and authorship. FAQ schema formats direct answers that AI loves to cite.
+            </p>
+
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 my-8">
+              <div className="flex items-start space-x-4">
+                <FileJson className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold mb-2 text-foreground">The GEO Schema Equation</h4>
+                  <p className="text-sm">
+                    <strong>Structured Data → Entity Authority → AI Training Eligibility → Narrative Control</strong>
+                  </p>
+                  <p className="text-sm mt-2">
+                    Schema bridges the gap between human-readable content and machine-parseable authority. When you implement schema, you're signaling to AI: "This content is credible, structured, and training-worthy."
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p>
+              The brands that build strong schema now will dominate AI-generated answers in 2026. Early GEO adopters are already seeing 3-5x higher citation rates across AI platforms. Don't wait for competitors to steal your spot in AI training datasets.
+            </p>
+
+            {/* Schema Type Links */}
+            <div className="my-8">
+              <h4 className="font-semibold mb-4 text-foreground text-lg">Essential Schema Types for GEO</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Link
+                  to="/organization-schema-generator"
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">Organization Schema</h5>
+                      <p className="text-sm text-muted-foreground">Establish entity authority</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
+                <Link
+                  to="/article-schema-generator"
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">Article Schema</h5>
+                      <p className="text-sm text-muted-foreground">Content context for AI</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
+                <Link
+                  to="/faq-schema-generator"
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">FAQ Schema</h5>
+                      <p className="text-sm text-muted-foreground">Direct answer formatting</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
+                <Link
+                  to="/blogposting-schema-generator"
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">BlogPosting Schema</h5>
+                      <p className="text-sm text-muted-foreground">Blog credibility signals</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            <p className="font-semibold text-foreground">
+              SuperSchema automatically detects which schema types your content needs, extracts real data from your page, and generates error-free JSON-LD in under 30 seconds. No manual data entry. No Schema.org documentation hunting. Just paste your URL and go.
+            </p>
+          </div>
+        </section>
+
+        {/* How to Optimize for GEO */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">How to Optimize for GEO (Step-by-Step)</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-8">
+            <p>
+              GEO isn't rocket science—it's strategic, authoritative content that AI models trust and train on. Follow these four steps to dominate AI discovery.
+            </p>
+
+            {geoSteps.map((step, index) => (
+              <div key={index} className="border border-border rounded-lg p-6 bg-card">
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold flex-shrink-0">
+                    {step.number}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2 text-foreground">{step.title}</h3>
+                    <p className="mb-4">{step.description}</p>
+                    <ul className="space-y-2">
+                      {step.tips.map((tip, tipIndex) => (
+                        <li key={tipIndex} className="flex items-start space-x-2">
+                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* CTA */}
+            <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border border-primary/20 rounded-lg p-8 text-center my-8">
+              <Brain className="h-12 w-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-2xl font-bold mb-2 text-foreground">Use SuperSchema's AI Generator to Build GEO Authority</h3>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Paste your URL. Our AI detects your entity, generates comprehensive schema, validates everything, and gives you a quality score—all in under 30 seconds.
+              </p>
+              <Link
+                to="/sign-up"
+                className="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold"
+              >
+                Start Free (2 Credits)
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Common GEO Mistakes */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Common GEO Mistakes (and How to Fix Them)</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              Even experienced marketers screw up GEO. Here are the mistakes killing your AI training eligibility—and exactly how to fix them.
+            </p>
+
+            <div className="space-y-4 my-8">
+              {commonMistakes.map((item, index) => (
+                <div
                   key={index}
-                  to={schema.path}
-                  className="p-6 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                  className={`border rounded-lg p-6 ${
+                    item.severity === 'critical'
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : item.severity === 'high'
+                      ? 'border-warning/50 bg-warning/5'
+                      : 'border-border bg-card'
+                  }`}
                 >
                   <div className="flex items-start space-x-4">
-                    <FileJson className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                    <div>
-                      <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
-                        {schema.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">{schema.description}</p>
+                    <div className={`p-2 rounded-lg ${
+                      item.severity === 'critical'
+                        ? 'bg-destructive/20'
+                        : item.severity === 'high'
+                        ? 'bg-warning/20'
+                        : 'bg-muted'
+                    }`}>
+                      <item.icon className={`h-6 w-6 ${
+                        item.severity === 'critical'
+                          ? 'text-destructive'
+                          : item.severity === 'high'
+                          ? 'text-warning'
+                          : 'text-muted-foreground'
+                      }`} />
                     </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-foreground">{item.mistake}</h4>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          item.severity === 'critical'
+                            ? 'bg-destructive/20 text-destructive'
+                            : item.severity === 'high'
+                            ? 'bg-warning/20 text-warning'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {item.severity.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-sm mb-2"><strong className="text-foreground">Problem:</strong> {item.problem}</p>
+                      <p className="text-sm"><strong className="text-success">Fix:</strong> {item.fix}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-success/10 border border-success/20 rounded-lg p-6 my-8">
+              <div className="flex items-start space-x-4">
+                <Search className="h-8 w-8 text-success flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold mb-2 text-foreground">Always Validate Before Going Live</h4>
+                  <p className="text-sm">
+                    Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards—so you don't have to.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Future of GEO */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">The Future of GEO and AI Discovery</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              GEO isn't a trend—it's the next SEO frontier. Here's where AI discovery is headed, and why early adopters will dominate.
+            </p>
+
+            <div className="space-y-6 my-8">
+              {futureTrends.map((trend, index) => (
+                <div key={index} className="border border-border rounded-lg p-6 bg-card">
+                  <h4 className="font-bold text-lg mb-2 text-foreground">{trend.trend}</h4>
+                  <p className="mb-3">{trend.description}</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded p-3">
+                    <p className="text-sm"><strong className="text-foreground">Impact:</strong> {trend.impact}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-8 my-8">
+              <h3 className="text-2xl font-bold mb-4 text-foreground">The Bottom Line</h3>
+              <p className="text-lg mb-4">
+                The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong className="text-foreground">entity authority over traffic</strong> and <strong className="text-foreground">citations over clicks</strong>.
+              </p>
+              <p>
+                Brands that build GEO now—combining structured data, credibility signals, and genuine expertise—will dominate AI discovery. Those that wait? They'll be invisible to the next generation of search.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Related Tools */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Related Tools & Resources</h2>
+          <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
+            <p>
+              SuperSchema offers free schema generators for all major content types. Start building GEO authority today.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+              {schemaGenerators.map((generator, index) => (
+                <Link
+                  key={index}
+                  to={generator.path}
+                  className="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-semibold group-hover:text-primary transition-colors">{generator.name}</h5>
+                      <p className="text-sm text-muted-foreground">{generator.description}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-4" />
                   </div>
                 </Link>
               ))}
             </div>
-            <div className="p-6 rounded-lg bg-primary/5 border border-primary/10 text-center">
-              <p className="mb-4">
-                <strong>Want perfect schema?</strong> SuperSchema generates it automatically.
-              </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 my-8">
               <Link
-                to={isSignedIn ? '/generate' : '/sign-up'}
-                className="inline-flex items-center px-6 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+                to={isSignedIn ? "/generate" : "/sign-up"}
+                className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
               >
-                Try SuperSchema Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* How to Optimize for GEO */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-12 text-center">How to Optimize for GEO</h2>
-            <div className="space-y-12">
-              {geoSteps.map((step, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="relative"
-                >
-                  <div className="flex items-start space-x-6">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl">
-                      {step.number}
-                    </div>
-                    <div className="flex-grow">
-                      <h3 className="text-2xl font-bold mb-3">{step.title}</h3>
-                      <p className="text-muted-foreground mb-4">{step.description}</p>
-                      <ul className="space-y-2">
-                        {step.tips.map((tip, tipIndex) => (
-                          <li key={tipIndex} className="flex items-start space-x-2">
-                            <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                            <span className="text-muted-foreground">{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Ethical Considerations */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="flex items-center space-x-3 mb-6">
-              <Shield className="h-8 w-8 text-primary" />
-              <h2 className="text-3xl font-bold">Ethical Considerations</h2>
-            </div>
-            <div className="prose prose-lg max-w-none text-muted-foreground">
-              <p>
-                GEO isn't about gaming AI models—it's about building genuine authority. As generative AI faces increasing scrutiny over training data ethics, platforms prioritize transparent, credible sources. Here's how to do GEO the right way:
-              </p>
-              <ul className="space-y-4 my-6">
-                <li className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <strong>Data Transparency:</strong> Be clear about what you claim. If your schema says you're an expert, prove it with credentials and case studies.
-                  </div>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <strong>Source Attribution:</strong> Give credit where it's due. Cite your sources, link to research, and acknowledge contributors.
-                  </div>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <strong>Avoid Manipulation:</strong> Schema must match visible content. Never lie to search engines or AI models—it's not worth the penalty.
-                  </div>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <strong>Trust Over Tricks:</strong> AI rewards authenticity. Build real expertise, create valuable content, and use schema to signal credibility—not to fake it.
-                  </div>
-                </li>
-              </ul>
-              <div className="p-6 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <p className="m-0">
-                  <strong>Remember:</strong> Schema that lies gets penalized. Schema that helps gets cited. Do GEO ethically, and you'll build lasting authority across all AI platforms.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Future of GEO */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="flex items-center space-x-3 mb-6">
-              <TrendingUp className="h-8 w-8 text-primary" />
-              <h2 className="text-3xl font-bold">The Future of GEO and AI Discovery</h2>
-            </div>
-            <p className="text-lg text-muted-foreground mb-8">
-              GEO isn't a trend—it's the next SEO frontier. Here's where AI discovery is headed, and why early adopters win big.
-            </p>
-            <div className="grid grid-cols-1 gap-6">
-              {futureTrends.map((trend, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="p-6 rounded-lg border border-border bg-background"
-                >
-                  <h3 className="font-bold text-xl mb-3 flex items-center space-x-2">
-                    <Target className="h-5 w-5 text-primary" />
-                    <span>{trend.trend}</span>
-                  </h3>
-                  <p className="text-muted-foreground mb-4">{trend.description}</p>
-                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
-                    <p className="text-sm m-0">
-                      <strong className="text-primary">Impact:</strong> {trend.impact}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-12 p-8 rounded-lg bg-primary text-primary-foreground text-center">
-              <h3 className="text-2xl font-bold mb-4">The brands building GEO now will dominate AI discovery in 2026.</h3>
-              <p className="mb-6 opacity-90">
-                Don't wait for competitors to steal your spot in AI training datasets. Start optimizing today.
-              </p>
-              <Link
-                to={isSignedIn ? '/generate' : '/sign-up'}
-                className="inline-flex items-center px-6 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors font-medium"
-              >
-                Start Building GEO Authority
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Common Mistakes */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-4 text-center">Common GEO Mistakes to Avoid</h2>
-            <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-              Even experienced marketers screw up GEO. Here's what to watch for.
-            </p>
-            <div className="grid grid-cols-1 gap-6">
-              {commonMistakes.map((item, index) => {
-                const Icon = item.icon
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className={`p-6 rounded-lg border ${
-                      item.severity === 'critical'
-                        ? 'border-red-500/20 bg-red-500/5'
-                        : item.severity === 'high'
-                        ? 'border-orange-500/20 bg-orange-500/5'
-                        : 'border-yellow-500/20 bg-yellow-500/5'
-                    }`}
-                  >
-                    <div className="flex items-start space-x-4">
-                      <Icon className={`h-6 w-6 flex-shrink-0 mt-1 ${
-                        item.severity === 'critical'
-                          ? 'text-red-500'
-                          : item.severity === 'high'
-                          ? 'text-orange-500'
-                          : 'text-yellow-500'
-                      }`} />
-                      <div className="flex-grow">
-                        <h3 className="font-bold text-lg mb-2">{item.mistake}</h3>
-                        <p className="text-muted-foreground mb-3">
-                          <strong>Problem:</strong> {item.problem}
-                        </p>
-                        <p className="text-muted-foreground">
-                          <strong>Fix:</strong> {item.fix}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* FAQs */}
-      <section className="py-16 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-4xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
-            <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-              Everything you need to know about Generative Engine Optimization.
-            </p>
-            <div className="space-y-4">
-              {faqs.map((faq, index) => (
-                <FAQItem key={index} question={faq.question} answer={faq.answer} />
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <Zap className="h-16 w-16 text-primary mx-auto mb-6" />
-            <h2 className="text-3xl font-bold mb-4">Ready to Dominate AI Discovery?</h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              SuperSchema generates perfect, GEO-optimized schema markup automatically. No technical skills required. Start building entity authority today.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to={isSignedIn ? '/generate' : '/sign-up'}
-                className="inline-flex items-center px-8 py-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium text-lg"
-              >
-                Generate Schema Now
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Zap className="h-8 w-8 text-primary mb-3" />
+                <h5 className="font-semibold mb-2 text-foreground">Generate Schema</h5>
+                <p className="text-sm text-muted-foreground mb-3">AI-powered schema generation for any URL</p>
+                <div className="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  Start Generating <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
               </Link>
               <Link
-                to="/schema-markup-grader"
-                className="inline-flex items-center px-8 py-4 rounded-md border border-border hover:bg-accent transition-colors font-medium text-lg"
+                to={isSignedIn ? "/library" : "/sign-up"}
+                className="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
               >
-                Grade Your Existing Schema
-                <ChevronRight className="ml-2 h-5 w-5" />
+                <Search className="h-8 w-8 text-primary mb-3" />
+                <h5 className="font-semibold mb-2 text-foreground">Schema Library</h5>
+                <p className="text-sm text-muted-foreground mb-3">Manage all your URLs and schema in one place</p>
+                <div className="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  View Library <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
               </Link>
             </div>
-          </motion.div>
-        </div>
-      </section>
+          </div>
+        </section>
 
+        {/* FAQ Section */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <FAQItem
+                key={index}
+                question={faq.question}
+                answer={faq.answer}
+                index={index}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="bg-primary rounded-lg p-8 md:p-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+            Ready to Dominate AI Discovery?
+          </h2>
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+            Join thousands using SuperSchema to build GEO authority and future-proof their visibility. Start with 2 free credits—no credit card required.
+          </p>
+          <Link
+            to="/sign-up"
+            className="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-semibold"
+          >
+            Get Your Free Credits
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </section>
+      </div>
+
+      {/* Footer */}
       <Footer />
+
+      {/* Schema Markup - FAQPage, Article, and BreadcrumbList */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": faqs.map(faq => ({
+            "@type": "Question",
+            "name": faq.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.answer
+            }
+          }))
+        }, null, 2)}
+      </script>
+
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": "Generative Engine Optimization (GEO): Be the Source AI Chooses",
+          "description": "Learn how to optimize your content to become the training source AI models rely on. Comprehensive guide to GEO, schema markup, entity optimization, and building authority for AI discovery.",
+          "author": {
+            "@type": "Organization",
+            "name": "SuperSchema",
+            "url": "https://superschema.ai"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Lightbulb Moment Labs",
+            "url": "https://superschema.ai"
+          },
+          "datePublished": "2025-01-11",
+          "dateModified": "2025-01-11"
+        }, null, 2)}
+      </script>
+
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://superschema.ai"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Resources",
+              "item": "https://superschema.ai/geo"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "GEO Guide",
+              "item": "https://superschema.ai/geo"
+            }
+          ]
+        }, null, 2)}
+      </script>
     </div>
   )
 }
