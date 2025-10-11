@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'react-hot-toast'
-import SuperSchemaLogo from '@/components/SuperSchemaLogo'
+import PillarPageNav from '@/components/PillarPageNav'
 import SchemaScore from '@/components/SchemaScore'
 import FAQItem from '@/components/FAQItem'
 import Footer from '@/components/Footer'
@@ -271,42 +271,8 @@ export default function SchemaMarkupGraderPage() {
         </script>
       </Helmet>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-            <SuperSchemaLogo className="h-8 w-8" />
-            <span className="font-bold text-xl">SuperSchema</span>
-          </Link>
-          <div className="flex items-center space-x-4">
-            {isSignedIn ? (
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
-              >
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/sign-in"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/sign-up"
-                  className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm"
-                >
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Header with Resources dropdown */}
+      <PillarPageNav />
 
       {/* Hero Section */}
       <section className="py-16 px-4 bg-gradient-to-b from-muted/30 to-background">

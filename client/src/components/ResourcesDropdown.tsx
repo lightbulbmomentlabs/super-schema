@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
-import { ChevronDown, BookOpen, Zap, Library as LibraryIcon } from 'lucide-react'
+import { ChevronDown, BookOpen, Zap, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 interface ResourcesDropdownProps {
@@ -54,7 +54,7 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
 
   const tools = [
     { name: 'Generate Schema', path: '/generate', icon: Zap },
-    { name: 'Schema Library', path: '/library', icon: LibraryIcon }
+    { name: 'Schema Markup Grader', path: '/schema-markup-grader', icon: CheckCircle2, requiresAuth: false }
   ]
 
   return (
@@ -145,7 +145,8 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
             <div className="grid grid-cols-2 gap-3">
               {tools.map((tool, index) => {
                 const Icon = tool.icon
-                const toolPath = isSignedIn ? tool.path : '/sign-up'
+                // If tool doesn't require auth, always use its path. Otherwise, redirect to sign-up if not signed in
+                const toolPath = (tool.requiresAuth === false || isSignedIn) ? tool.path : '/sign-up'
                 return (
                   <Link
                     key={index}
