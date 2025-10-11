@@ -34,6 +34,7 @@ import SchemaMarkupGraderPage from './pages/SchemaMarkupGraderPage'
 import GEOPillarPage from './pages/GEOPillarPage'
 import HowToWinFeaturedSnippetsPage from './pages/HowToWinFeaturedSnippetsPage'
 import JsonLdVsMicrodataPage from './pages/JsonLdVsMicrodataPage'
+import HowAIEnginesRankSourcesPage from './pages/HowAIEnginesRankSourcesPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -88,6 +89,7 @@ function App() {
           <Route path="/aeo/how-to-win-featured-snippets" element={<HowToWinFeaturedSnippetsPage />} />
           <Route path="/geo" element={<GEOPillarPage />} />
           <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
+          <Route path="/ai-search-optimization/how-ai-engines-rank-sources" element={<HowAIEnginesRankSourcesPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />
           <Route path="/schema-markup/json-ld-vs-microdata" element={<JsonLdVsMicrodataPage />} />
 

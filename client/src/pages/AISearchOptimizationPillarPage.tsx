@@ -577,6 +577,30 @@ export default function AISearchOptimizationPillarPage() {
           </div>
         </section>
 
+        {/* Deep Dive Guides */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            Expert guides to master specific AI search optimization strategies and technical implementation.
+          </p>
+          <div className="grid gap-6">
+            <Link
+              to="/ai-search-optimization/how-ai-engines-rank-sources"
+              className="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 text-foreground">How AI Search Engines Rank and Cite Sources</h3>
+                  <p className="text-muted-foreground mb-3">
+                    Learn the 5 core signals AI engines use to select sources, E-E-A-T factors, and schema strategies to become citation-worthy
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* FAQ Section */}
         <section>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
