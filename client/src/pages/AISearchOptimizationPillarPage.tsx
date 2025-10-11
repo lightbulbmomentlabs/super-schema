@@ -62,7 +62,7 @@ export default function AISearchOptimizationPillarPage() {
     {
       number: 3,
       title: 'Optimize for E-E-A-T Signals',
-      description: 'Experience, Expertise, Authoritativeness, Trust—AI engines assess these before citing sources.',
+      description: 'Experience, Expertise, Authoritativeness, Trust - AI engines assess these before citing sources.',
       tips: [
         'Add author bios with credentials',
         'Link to authoritative sources',
@@ -172,7 +172,7 @@ export default function AISearchOptimizationPillarPage() {
     {
       mistake: 'Gating Content Behind Email Signups',
       problem: 'If AI can\'t access your core content without signup, it can\'t cite you.',
-      fix: 'Keep your best informational content open and crawlable. Save gated content for tools, templates, and extras—not core answers.',
+      fix: 'Keep your best informational content open and crawlable. Save gated content for tools, templates, and extras - not core answers.',
       severity: 'high'
     }
   ]
@@ -232,7 +232,7 @@ export default function AISearchOptimizationPillarPage() {
     },
     {
       question: 'Do I still need traditional SEO if I\'m doing AI search optimization?',
-      answer: 'Yes. AI search optimization complements traditional SEO—it doesn\'t replace it. Many AI engines (like SGE and Copilot) rely on traditional search rankings to determine which content to cite. Strong SEO helps your content get indexed and found, while AI optimization ensures it can be understood and cited.'
+      answer: 'Yes. AI search optimization complements traditional SEO - it doesn\'t replace it. Many AI engines (like SGE and Copilot) rely on traditional search rankings to determine which content to cite. Strong SEO helps your content get indexed and found, while AI optimization ensures it can be understood and cited.'
     },
     {
       question: 'How long does it take to see results?',
@@ -383,7 +383,7 @@ export default function AISearchOptimizationPillarPage() {
               <Brain className="h-12 w-12 mx-auto mb-4 text-primary" />
               <h3 className="text-2xl font-bold mb-2 text-foreground">SuperSchema Automates All Four Steps</h3>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Paste your URL. Our AI analyzes your content, generates optimized schema, validates everything, and gives you a quality score—in under 30 seconds.
+                Paste your URL. Our AI analyzes your content, generates optimized schema, validates everything, and gives you a quality score - in under 30 seconds.
               </p>
               <Link
                 to="/sign-up"
@@ -438,7 +438,7 @@ export default function AISearchOptimizationPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Common AI Search Optimization Mistakes</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Most AI search failures come from applying old SEO tactics. Here's what kills your citation chances—and how to fix it.
+              Most AI search failures come from applying old SEO tactics. Here's what kills your citation chances - and how to fix it.
             </p>
 
             <div className="space-y-4 my-8">
@@ -497,7 +497,7 @@ export default function AISearchOptimizationPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">The Future of AI Search</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              AI search is evolving fast. Here's where it's headed—and how to stay ahead of the curve.
+              AI search is evolving fast. Here's where it's headed - and how to stay ahead of the curve.
             </p>
 
             <div className="space-y-6 my-8">
@@ -598,7 +598,7 @@ export default function AISearchOptimizationPillarPage() {
             Ready to Get Cited by AI Search Engines?
           </h2>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands using SuperSchema to optimize for AI search and future-proof their visibility. Start with 2 free credits—no credit card required.
+            Join thousands using SuperSchema to optimize for AI search and future-proof their visibility. Start with 2 free credits - no credit card required.
           </p>
           <Link
             to="/sign-up"

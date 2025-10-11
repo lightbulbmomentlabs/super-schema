@@ -159,7 +159,7 @@ export default function SchemaMarkupPillarPage() {
     {
       mistake: 'Ignoring Validation Errors',
       problem: 'Warnings and errors prevent rich results. "It\'s just a warning" means "it won\'t work."',
-      fix: 'Fix all errors and warnings before deployment. Treat validation seriously—your rich results depend on it.',
+      fix: 'Fix all errors and warnings before deployment. Treat validation seriously - your rich results depend on it.',
       severity: 'high'
     }
   ]
@@ -167,7 +167,7 @@ export default function SchemaMarkupPillarPage() {
   const faqs = [
     {
       question: 'What is schema markup?',
-      answer: 'Schema markup is structured data vocabulary (from Schema.org) that helps search engines and AI understand your content. It\'s machine-readable code (usually JSON-LD) added to your HTML that defines what each piece of content represents—an article, product, event, FAQ, etc. Schema enables rich results in search, powers knowledge graphs, and makes your content AI-ready.'
+      answer: 'Schema markup is structured data vocabulary (from Schema.org) that helps search engines and AI understand your content. It\'s machine-readable code (usually JSON-LD) added to your HTML that defines what each piece of content represents - an article, product, event, FAQ, etc. Schema enables rich results in search, powers knowledge graphs, and makes your content AI-ready.'
     },
     {
       question: 'Which schema format should I use?',
@@ -175,15 +175,15 @@ export default function SchemaMarkupPillarPage() {
     },
     {
       question: 'Do I need schema on every page?',
-      answer: 'Not necessarily, but strategic schema implementation matters. Prioritize: homepage (Organization schema), blog posts (Article schema), FAQs (FAQPage schema), products (Product schema), and key landing pages. More schema = more opportunities for rich results and AI citations. But quality beats quantity—implement schema correctly on important pages first.'
+      answer: 'Not necessarily, but strategic schema implementation matters. Prioritize: homepage (Organization schema), blog posts (Article schema), FAQs (FAQPage schema), products (Product schema), and key landing pages. More schema = more opportunities for rich results and AI citations. But quality beats quantity - implement schema correctly on important pages first.'
     },
     {
       question: 'How long does it take to see results from schema?',
-      answer: 'Schema implementation is instant, but search engines need time to re-crawl and re-index your pages. Rich snippets can appear within days to weeks. Ranking improvements take longer—typically 2-8 weeks. The key: implement schema now so you\'re ready when search engines next crawl your site. Use Google Search Console to monitor rich result status.'
+      answer: 'Schema implementation is instant, but search engines need time to re-crawl and re-index your pages. Rich snippets can appear within days to weeks. Ranking improvements take longer - typically 2-8 weeks. The key: implement schema now so you\'re ready when search engines next crawl your site. Use Google Search Console to monitor rich result status.'
     },
     {
       question: 'Can schema markup hurt my SEO?',
-      answer: 'Only if implemented incorrectly. Invalid schema gets ignored (no harm, but no benefit). Schema that doesn\'t match visible content can trigger manual penalties. Duplicate or conflicting schema confuses search engines. But properly implemented schema? Pure upside—better rankings, rich snippets, and AI visibility. Always validate before deploying.'
+      answer: 'Only if implemented incorrectly. Invalid schema gets ignored (no harm, but no benefit). Schema that doesn\'t match visible content can trigger manual penalties. Duplicate or conflicting schema confuses search engines. But properly implemented schema? Pure upside - better rankings, rich snippets, and AI visibility. Always validate before deploying.'
     },
     {
       question: 'What\'s the difference between schema types?',
@@ -191,7 +191,7 @@ export default function SchemaMarkupPillarPage() {
     },
     {
       question: 'How do I validate schema markup?',
-      answer: 'Use Google\'s Rich Results Test (search.google.com/test/rich-results) to see how Google interprets your schema and preview rich results. Use Schema.org Validator for spec compliance. SuperSchema validates automatically and provides quality scores. Fix all errors before deployment—warnings and errors prevent rich results from appearing.'
+      answer: 'Use Google\'s Rich Results Test (search.google.com/test/rich-results) to see how Google interprets your schema and preview rich results. Use Schema.org Validator for spec compliance. SuperSchema validates automatically and provides quality scores. Fix all errors before deployment - warnings and errors prevent rich results from appearing.'
     },
     {
       question: 'Which schema types should I prioritize?',
@@ -304,7 +304,7 @@ export default function SchemaMarkupPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Matters</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Schema markup isn't just "nice to have"—it's a competitive advantage. Here's why it matters for SEO, rich results, and AI visibility:
+              Schema markup isn't just "nice to have" - it's a competitive advantage. Here's why it matters for SEO, rich results, and AI visibility:
             </p>
 
             <div className="my-8 space-y-6">
@@ -330,7 +330,7 @@ export default function SchemaMarkupPillarPage() {
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-foreground mb-2">Entity Understanding & Knowledge Graph</h3>
                     <p className="text-sm">
-                      Schema helps Google understand entities—people, places, organizations, products—and their relationships. This powers knowledge panels, entity carousels, and "People also ask" boxes. Schema makes your brand a recognized entity, not just a website.
+                      Schema helps Google understand entities - people, places, organizations, products - and their relationships. This powers knowledge panels, entity carousels, and "People also ask" boxes. Schema makes your brand a recognized entity, not just a website.
                     </p>
                   </div>
                 </div>
@@ -469,7 +469,7 @@ export default function SchemaMarkupPillarPage() {
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 my-8">
               <p className="font-semibold text-foreground mb-2">Our Recommendation: Use JSON-LD</p>
               <p className="text-sm">
-                SuperSchema generates JSON-LD exclusively because it's simpler, cleaner, and the industry standard. Microdata and RDFa are legacy formats—still supported, but unnecessarily complex. JSON-LD is the future. Stick with it.
+                SuperSchema generates JSON-LD exclusively because it's simpler, cleaner, and the industry standard. Microdata and RDFa are legacy formats - still supported, but unnecessarily complex. JSON-LD is the future. Stick with it.
               </p>
             </div>
 
@@ -664,7 +664,7 @@ export default function SchemaMarkupPillarPage() {
             <div className="bg-warning/10 border border-warning/20 rounded-lg p-6 my-8">
               <p className="font-semibold text-foreground mb-2">⚠️ Always Fix Validation Errors</p>
               <p className="text-sm">
-                Warnings aren't optional—they prevent rich results. "Just a warning" means "won't work." Fix all errors and warnings before deploying schema. Your rich results depend on it.
+                Warnings aren't optional - they prevent rich results. "Just a warning" means "won't work." Fix all errors and warnings before deploying schema. Your rich results depend on it.
               </p>
             </div>
           </div>
@@ -675,7 +675,7 @@ export default function SchemaMarkupPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Common Schema Markup Mistakes</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Most schema failures come from preventable mistakes. Here's what kills rich results—and how to fix it:
+              Most schema failures come from preventable mistakes. Here's what kills rich results - and how to fix it:
             </p>
 
             <div className="space-y-4 my-8">
@@ -803,7 +803,7 @@ export default function SchemaMarkupPillarPage() {
             Ready to Implement Schema Markup?
           </h2>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands using SuperSchema to generate valid, optimized JSON-LD in seconds. Start with 2 free credits—no credit card required.
+            Join thousands using SuperSchema to generate valid, optimized JSON-LD in seconds. Start with 2 free credits - no credit card required.
           </p>
           <Link
             to="/sign-up"

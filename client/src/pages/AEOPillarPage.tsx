@@ -78,7 +78,7 @@ export default function AEOPillarPage() {
     {
       number: 4,
       title: 'Monitor AI Citations',
-      description: 'Track where your content shows up in AI-generated answers. ChatGPT, Perplexity, Google AI Overviews—be everywhere.',
+      description: 'Track where your content shows up in AI-generated answers. ChatGPT, Perplexity, Google AI Overviews - be everywhere.',
       tips: [
         'Search your brand in ChatGPT and Perplexity',
         'Monitor Google AI Overviews for your keywords',
@@ -153,7 +153,7 @@ export default function AEOPillarPage() {
     },
     {
       trend: 'Google AI Mode with Advanced Reasoning',
-      description: 'Google AI Mode is rolling out with 1B+ users. It uses advanced reasoning to handle complex, multi-step queries—way beyond simple featured snippets.',
+      description: 'Google AI Mode is rolling out with 1B+ users. It uses advanced reasoning to handle complex, multi-step queries - way beyond simple featured snippets.',
       impact: 'Create comprehensive content that connects multiple concepts. AI engines reward depth and relationships between topics.'
     },
     {
@@ -176,11 +176,11 @@ export default function AEOPillarPage() {
   const faqs = [
     {
       question: 'What\'s the difference between AEO and SEO?',
-      answer: 'SEO (Search Engine Optimization) focuses on ranking in traditional search results—think blue links on Google. AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. SEO is about traffic. AEO is about being the answer. Both matter in 2025, but AEO is how you future-proof your visibility.'
+      answer: 'SEO (Search Engine Optimization) focuses on ranking in traditional search results - think blue links on Google. AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. SEO is about traffic. AEO is about being the answer. Both matter in 2025, but AEO is how you future-proof your visibility.'
     },
     {
       question: 'Do I still need SEO if I\'m doing AEO?',
-      answer: 'Yes. AEO isn\'t a replacement for SEO—it\'s an extension. Strong SEO gets your content indexed and ranked, which helps AI platforms find it. AEO ensures AI can understand, extract, and cite your content. Use both strategies together for maximum visibility across traditional search engines, AI tools, and voice assistants.'
+      answer: 'Yes. AEO isn\'t a replacement for SEO - it\'s an extension. Strong SEO gets your content indexed and ranked, which helps AI platforms find it. AEO ensures AI can understand, extract, and cite your content. Use both strategies together for maximum visibility across traditional search engines, AI tools, and voice assistants.'
     },
     {
       question: 'How do I know if my AEO strategy is working?',
@@ -192,11 +192,11 @@ export default function AEOPillarPage() {
     },
     {
       question: 'Can schema markup hurt my SEO?',
-      answer: 'Only if it\'s wrong. Invalid schema gets ignored. Schema that doesn\'t match your visible content can trigger penalties. Duplicate or conflicting schema confuses search engines. But properly implemented schema? That\'s pure upside—better rankings, rich snippets, and AI citations. Always validate with Google Rich Results Test or use SuperSchema to generate error-free markup.'
+      answer: 'Only if it\'s wrong. Invalid schema gets ignored. Schema that doesn\'t match your visible content can trigger penalties. Duplicate or conflicting schema confuses search engines. But properly implemented schema? That\'s pure upside - better rankings, rich snippets, and AI citations. Always validate with Google Rich Results Test or use SuperSchema to generate error-free markup.'
     },
     {
       question: 'How long does it take to see AEO results?',
-      answer: 'Schema implementation is instant, but search engines need time to re-crawl and re-index your pages. Featured snippets can appear in days to weeks. Ranking improvements take longer—typically 2-8 weeks. AI citation in tools like ChatGPT depends on when they refresh their training data or search indexes. The key: implement schema now so you\'re ready when AI platforms next update.'
+      answer: 'Schema implementation is instant, but search engines need time to re-crawl and re-index your pages. Featured snippets can appear in days to weeks. Ranking improvements take longer - typically 2-8 weeks. AI citation in tools like ChatGPT depends on when they refresh their training data or search indexes. The key: implement schema now so you\'re ready when AI platforms next update.'
     },
     {
       question: 'What\'s a good schema quality score?',
@@ -204,7 +204,7 @@ export default function AEOPillarPage() {
     },
     {
       question: 'Why are listicles so effective for AEO?',
-      answer: 'Listicles make up 32% of all AI citations—the highest of any content format. Why? They\'re structured, scannable, and answer-focused. AI engines love clear, numbered points that can be easily extracted and summarized. Pair listicles with proper schema (FAQPage or HowTo) and you\'ve got an AEO goldmine.'
+      answer: 'Listicles make up 32% of all AI citations - the highest of any content format. Why? They\'re structured, scannable, and answer-focused. AI engines love clear, numbered points that can be easily extracted and summarized. Pair listicles with proper schema (FAQPage or HowTo) and you\'ve got an AEO goldmine.'
     }
   ]
 
@@ -231,7 +231,7 @@ export default function AEOPillarPage() {
               Answer Engine Optimization (AEO): The Complete Guide
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-              AI search is eating traditional search alive. 700M+ ChatGPT users aren't clicking blue links—they're getting instant answers. Here's how to make sure your content is the answer they get. 🎯
+              AI search is eating traditional search alive. 700M+ ChatGPT users aren't clicking blue links - they're getting instant answers. Here's how to make sure your content is the answer they get. 🎯
             </p>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span className="inline-flex items-center">
@@ -261,7 +261,7 @@ export default function AEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">What Is Answer Engine Optimization?</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Answer Engine Optimization (AEO) is the practice of optimizing your content so AI search platforms—ChatGPT, Perplexity, Google AI Overviews, Claude, and others—can find, understand, and cite your content as the definitive answer.
+              Answer Engine Optimization (AEO) is the practice of optimizing your content so AI search platforms - ChatGPT, Perplexity, Google AI Overviews, Claude, and others - can find, understand, and cite your content as the definitive answer.
             </p>
             <p>
               While traditional SEO focuses on ranking in search results (those blue links you're used to), AEO focuses on being the answer that AI engines deliver directly to users. No click required. No scrolling through results. Just your content, front and center, as the authoritative source.
@@ -323,7 +323,7 @@ export default function AEOPillarPage() {
               Here's the brutal truth: search behavior is fundamentally changing. ChatGPT usage grew from 400 million to 700 million users in just 5 months. "Asking" (essentially search) now makes up 51.6% of all ChatGPT interactions. Google AI Overviews serve over 1 billion users. By 2026, experts predict 25% of organic traffic will shift to AI chatbots and virtual agents.
             </p>
             <p>
-              Translation? If your content isn't optimized for AI search, you're invisible to a massive—and rapidly growing—segment of your audience.
+              Translation? If your content isn't optimized for AI search, you're invisible to a massive - and rapidly growing - segment of your audience.
             </p>
           </div>
         </section>
@@ -333,7 +333,7 @@ export default function AEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Is the Heart of AEO</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Schema markup is how you speak machine. Think of it as a cheat sheet for AI engines—a way to tell them exactly what your content is about, who wrote it, when it was published, and why it matters.
+              Schema markup is how you speak machine. Think of it as a cheat sheet for AI engines - a way to tell them exactly what your content is about, who wrote it, when it was published, and why it matters.
             </p>
             <p>
               Without schema, AI engines are guessing. With schema, they know. And when AI knows exactly what your content offers, it's 434% more likely to appear in featured snippets and AI-generated answers.
@@ -348,7 +348,7 @@ export default function AEOPillarPage() {
                     <strong>Structured Data → Machine Understanding → AI Answer Eligibility → Citations & Visibility</strong>
                   </p>
                   <p className="text-sm mt-2">
-                    Schema markup bridges the gap between human-readable content and machine-extractable data. When you add schema, you're not just optimizing for search engines—you're making your content AI-ready.
+                    Schema markup bridges the gap between human-readable content and machine-extractable data. When you add schema, you're not just optimizing for search engines - you're making your content AI-ready.
                   </p>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export default function AEOPillarPage() {
               Here's why schema matters more for AEO than traditional SEO: AI engines don't have time to read your entire article and infer context. They need explicit signals. FAQPage schema tells them "here are questions and answers." HowTo schema says "here's a step-by-step process." Article schema provides authorship, publish dates, and topics.
             </p>
             <p>
-              Users who click on rich results (powered by schema) do so 58% of the time compared to 41% for non-rich results. But in the AEO world, clicks aren't the only metric that matters. Being cited in an AI-generated answer—even without a click—builds brand authority and trust.
+              Users who click on rich results (powered by schema) do so 58% of the time compared to 41% for non-rich results. But in the AEO world, clicks aren't the only metric that matters. Being cited in an AI-generated answer - even without a click - builds brand authority and trust.
             </p>
 
             {/* Schema Type Links */}
@@ -427,7 +427,7 @@ export default function AEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">How to Optimize for AEO (Step-by-Step)</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-8">
             <p>
-              AEO isn't rocket science—it's strategic, structured content that AI engines can easily understand and cite. Follow these four steps to dominate AI search results.
+              AEO isn't rocket science - it's strategic, structured content that AI engines can easily understand and cite. Follow these four steps to dominate AI search results.
             </p>
 
             {aeoSteps.map((step, index) => (
@@ -457,7 +457,7 @@ export default function AEOPillarPage() {
               <Brain className="h-12 w-12 mx-auto mb-4 text-primary" />
               <h3 className="text-2xl font-bold mb-2 text-foreground">Use SuperSchema's AI Generator to Automate All Four Steps</h3>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Paste your URL. Our AI identifies answerable queries, generates optimized schema, validates everything, and gives you a quality score—all in under 30 seconds.
+                Paste your URL. Our AI identifies answerable queries, generates optimized schema, validates everything, and gives you a quality score - all in under 30 seconds.
               </p>
               <Link
                 to="/sign-up"
@@ -475,7 +475,7 @@ export default function AEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Common AEO Mistakes (and How to Fix Them)</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Most AEO failures come from old SEO habits. Here are the mistakes killing your AI search visibility—and exactly how to fix them.
+              Most AEO failures come from old SEO habits. Here are the mistakes killing your AI search visibility - and exactly how to fix them.
             </p>
 
             <div className="space-y-4 my-8">
@@ -533,7 +533,7 @@ export default function AEOPillarPage() {
                 <div>
                   <h4 className="font-semibold mb-2 text-foreground">Always Validate Before Going Live</h4>
                   <p className="text-sm">
-                    Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards—so you don't have to.
+                    Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards - so you don't have to.
                   </p>
                 </div>
               </div>
@@ -546,7 +546,7 @@ export default function AEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">The Future of AEO and AI Search</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              AI search is moving fast. Really fast. Here's where we're headed—and how to stay ahead.
+              AI search is moving fast. Really fast. Here's where we're headed - and how to stay ahead.
             </p>
 
             <div className="space-y-6 my-8">
@@ -567,7 +567,7 @@ export default function AEOPillarPage() {
                 The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong className="text-foreground">conversions over traffic</strong> and <strong className="text-foreground">quality over quantity</strong>.
               </p>
               <p>
-                Brands that evolve with this landscape—combining structured data, natural language optimization, and genuine expertise—will thrive. Those that cling to old SEO tactics? They'll be invisible to the next generation of search.
+                Brands that evolve with this landscape - combining structured data, natural language optimization, and genuine expertise - will thrive. Those that cling to old SEO tactics? They'll be invisible to the next generation of search.
               </p>
             </div>
           </div>
@@ -647,7 +647,7 @@ export default function AEOPillarPage() {
             Ready to Dominate AI Search?
           </h2>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands using SuperSchema to optimize for answer engines and future-proof their visibility. Start with 2 free credits—no credit card required.
+            Join thousands using SuperSchema to optimize for answer engines and future-proof their visibility. Start with 2 free credits - no credit card required.
           </p>
           <Link
             to="/sign-up"

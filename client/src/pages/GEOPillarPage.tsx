@@ -56,7 +56,7 @@ export default function GEOPillarPage() {
     {
       number: 2,
       title: 'Consistent Structured Data',
-      description: 'Schema isn\'t optional for GEO—it\'s mandatory. AI can\'t parse what it can\'t read. Machine-readable markup is your ticket to AI training datasets.',
+      description: 'Schema isn\'t optional for GEO - it\'s mandatory. AI can\'t parse what it can\'t read. Machine-readable markup is your ticket to AI training datasets.',
       tips: [
         'Implement schema sitewide, not just on select pages',
         'Validate regularly (broken schema = invisibility)',
@@ -67,7 +67,7 @@ export default function GEOPillarPage() {
     {
       number: 3,
       title: 'Credibility Signals',
-      description: 'AI models train on authoritative sources. E-E-A-T isn\'t just for Google anymore—it\'s how you earn a spot in AI training data.',
+      description: 'AI models train on authoritative sources. E-E-A-T isn\'t just for Google anymore - it\'s how you earn a spot in AI training data.',
       tips: [
         'Add citations from authoritative sources',
         'Include author bios with credentials and expertise',
@@ -83,7 +83,7 @@ export default function GEOPillarPage() {
         'Link to reputable sources (research papers, industry reports)',
         'Include statistics with proper attribution',
         'Reference authoritative domains (.edu, .gov, industry leaders)',
-        'AI rewards depth—cite multiple sources per claim'
+        'AI rewards depth - cite multiple sources per claim'
       ]
     }
   ]
@@ -112,7 +112,7 @@ export default function GEOPillarPage() {
     },
     {
       mistake: 'Ignoring E-E-A-T Signals',
-      problem: 'Experience, Expertise, Authoritativeness, Trust—AI models evaluate these before including content in training data.',
+      problem: 'Experience, Expertise, Authoritativeness, Trust - AI models evaluate these before including content in training data.',
       fix: 'Showcase real expertise. Add author bios, credentials, case studies, and industry recognition.',
       icon: AlertTriangle,
       severity: 'high'
@@ -169,11 +169,11 @@ export default function GEOPillarPage() {
   const faqs = [
     {
       question: 'What\'s the difference between GEO and AEO?',
-      answer: 'AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers—think featured snippets, AI Overviews, and voice assistant responses. GEO (Generative Engine Optimization) goes deeper: it\'s about becoming the training source AI models rely on. AEO is about being the answer. GEO is about being the source AI can\'t ignore. Both matter, but GEO builds long-term entity authority that persists across all AI platforms.'
+      answer: 'AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers - think featured snippets, AI Overviews, and voice assistant responses. GEO (Generative Engine Optimization) goes deeper: it\'s about becoming the training source AI models rely on. AEO is about being the answer. GEO is about being the source AI can\'t ignore. Both matter, but GEO builds long-term entity authority that persists across all AI platforms.'
     },
     {
       question: 'Do I need GEO if I already do SEO?',
-      answer: 'Absolutely. SEO gets you ranked in traditional search results. GEO ensures you\'re cited in AI-generated answers. By 2027, LLM traffic is projected to overtake Google search. If you\'re only doing SEO, you\'re optimizing for yesterday\'s search behavior. GEO extends your SEO efforts—they synergize, not compete. Strong SEO gets your content indexed. GEO ensures AI can understand, cite, and train on it.'
+      answer: 'Absolutely. SEO gets you ranked in traditional search results. GEO ensures you\'re cited in AI-generated answers. By 2027, LLM traffic is projected to overtake Google search. If you\'re only doing SEO, you\'re optimizing for yesterday\'s search behavior. GEO extends your SEO efforts - they synergize, not compete. Strong SEO gets your content indexed. GEO ensures AI can understand, cite, and train on it.'
     },
     {
       question: 'How does schema help with GEO?',
@@ -185,19 +185,19 @@ export default function GEOPillarPage() {
     },
     {
       question: 'How do I measure GEO success?',
-      answer: 'Check if your brand appears in ChatGPT responses, Perplexity citations, and Google AI Overviews. Monitor your entity\'s presence across AI platforms. Track brand mentions in AI-generated answers (even without links—visibility builds authority). Use tools like SuperSchema to ensure your schema quality score is 80+ for better AI parsing. GEO success isn\'t about clicks—it\'s about becoming the default source AI cites.'
+      answer: 'Check if your brand appears in ChatGPT responses, Perplexity citations, and Google AI Overviews. Monitor your entity\'s presence across AI platforms. Track brand mentions in AI-generated answers (even without links - visibility builds authority). Use tools like SuperSchema to ensure your schema quality score is 80+ for better AI parsing. GEO success isn\'t about clicks - it\'s about becoming the default source AI cites.'
     },
     {
       question: 'Is GEO just for big brands?',
-      answer: 'No. GEO levels the playing field. Small brands with strong schema, clear entity definitions, and credible content can outrank Fortune 500 companies in AI-generated answers. AI doesn\'t care about your brand size—it cares about authority signals. If your content is well-structured, cited, and authoritative, AI will use it as a training source regardless of your company size.'
+      answer: 'No. GEO levels the playing field. Small brands with strong schema, clear entity definitions, and credible content can outrank Fortune 500 companies in AI-generated answers. AI doesn\'t care about your brand size - it cares about authority signals. If your content is well-structured, cited, and authoritative, AI will use it as a training source regardless of your company size.'
     },
     {
       question: 'Can GEO hurt my SEO?',
-      answer: 'Only if you do it wrong. Invalid schema gets ignored. Schema that doesn\'t match visible content can trigger penalties. But properly implemented GEO? Pure upside. It enhances your SEO by making your content more parseable, more authoritative, and more citation-worthy across both traditional search engines and AI platforms. GEO and SEO work together—strong schema benefits both.'
+      answer: 'Only if you do it wrong. Invalid schema gets ignored. Schema that doesn\'t match visible content can trigger penalties. But properly implemented GEO? Pure upside. It enhances your SEO by making your content more parseable, more authoritative, and more citation-worthy across both traditional search engines and AI platforms. GEO and SEO work together - strong schema benefits both.'
     },
     {
       question: 'When will GEO become critical?',
-      answer: 'It already is. Over 1 billion prompts are sent to ChatGPT daily. 71% of Americans use AI search to research purchases. By 2027, LLM traffic will overtake traditional Google search. The brands optimizing for GEO now will dominate AI discovery in 2026. Waiting means losing ground to competitors who are already building entity authority. Start implementing GEO today—your future visibility depends on it.'
+      answer: 'It already is. Over 1 billion prompts are sent to ChatGPT daily. 71% of Americans use AI search to research purchases. By 2027, LLM traffic will overtake traditional Google search. The brands optimizing for GEO now will dominate AI discovery in 2026. Waiting means losing ground to competitors who are already building entity authority. Start implementing GEO today - your future visibility depends on it.'
     }
   ]
 
@@ -254,10 +254,10 @@ export default function GEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">What Is Generative Engine Optimization?</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Generative Engine Optimization (GEO) is the practice of optimizing your content to become the training source that AI models—ChatGPT, Perplexity, Google Gemini, Claude, and others—rely on when generating answers.
+              Generative Engine Optimization (GEO) is the practice of optimizing your content to become the training source that AI models - ChatGPT, Perplexity, Google Gemini, Claude, and others - rely on when generating answers.
             </p>
             <p>
-              While <Link to="/aeo" className="text-primary hover:underline">AEO</Link> focuses on getting cited in AI-generated answers, GEO goes deeper—it's about becoming the authoritative source that AI can't write an answer without. Think of it as earning a permanent spot in the AI knowledge base.
+              While <Link to="/aeo" className="text-primary hover:underline">AEO</Link> focuses on getting cited in AI-generated answers, GEO goes deeper - it's about becoming the authoritative source that AI can't write an answer without. Think of it as earning a permanent spot in the AI knowledge base.
             </p>
 
             {/* GEO vs AEO vs SEO Comparison Table */}
@@ -315,7 +315,7 @@ export default function GEOPillarPage() {
             <div className="bg-info/10 border border-info/20 rounded-lg p-6 my-8">
               <h4 className="font-semibold mb-2 text-foreground">🎯 The Bottom Line</h4>
               <p className="text-sm text-info-foreground">
-                SEO, AEO, and GEO synergize—they don't compete. Use all three for maximum visibility across traditional search, AI answers, and LLM training datasets. GEO is the future-proof layer that extends your SEO and AEO efforts.
+                SEO, AEO, and GEO synergize - they don't compete. Use all three for maximum visibility across traditional search, AI answers, and LLM training datasets. GEO is the future-proof layer that extends your SEO and AEO efforts.
               </p>
             </div>
 
@@ -330,7 +330,7 @@ export default function GEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Is Essential for GEO</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Schema isn't optional for GEO—it's mandatory. Structured data is how AI models understand entities, relationships, authorship, and credibility. Without schema, you're just text on a page. With schema, you're a trusted, parseable source.
+              Schema isn't optional for GEO - it's mandatory. Structured data is how AI models understand entities, relationships, authorship, and credibility. Without schema, you're just text on a page. With schema, you're a trusted, parseable source.
             </p>
             <p>
               Think of schema as machine-readable credibility signals. AI models parse Organization schema to understand who you are. Article schema provides content context and authorship. FAQ schema formats direct answers that AI loves to cite.
@@ -421,7 +421,7 @@ export default function GEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">How to Optimize for GEO (Step-by-Step)</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-8">
             <p>
-              GEO isn't rocket science—it's strategic, authoritative content that AI models trust and train on. Follow these four steps to dominate AI discovery.
+              GEO isn't rocket science - it's strategic, authoritative content that AI models trust and train on. Follow these four steps to dominate AI discovery.
             </p>
 
             {geoSteps.map((step, index) => (
@@ -451,7 +451,7 @@ export default function GEOPillarPage() {
               <Brain className="h-12 w-12 mx-auto mb-4 text-primary" />
               <h3 className="text-2xl font-bold mb-2 text-foreground">Use SuperSchema's AI Generator to Build GEO Authority</h3>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Paste your URL. Our AI detects your entity, generates comprehensive schema, validates everything, and gives you a quality score—all in under 30 seconds.
+                Paste your URL. Our AI detects your entity, generates comprehensive schema, validates everything, and gives you a quality score - all in under 30 seconds.
               </p>
               <Link
                 to="/sign-up"
@@ -469,7 +469,7 @@ export default function GEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Common GEO Mistakes (and How to Fix Them)</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              Even experienced marketers screw up GEO. Here are the mistakes killing your AI training eligibility—and exactly how to fix them.
+              Even experienced marketers screw up GEO. Here are the mistakes killing your AI training eligibility - and exactly how to fix them.
             </p>
 
             <div className="space-y-4 my-8">
@@ -527,7 +527,7 @@ export default function GEOPillarPage() {
                 <div>
                   <h4 className="font-semibold mb-2 text-foreground">Always Validate Before Going Live</h4>
                   <p className="text-sm">
-                    Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards—so you don't have to.
+                    Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards - so you don't have to.
                   </p>
                 </div>
               </div>
@@ -540,7 +540,7 @@ export default function GEOPillarPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">The Future of GEO and AI Discovery</h2>
           <div className="prose prose-lg max-w-none text-muted-foreground space-y-6">
             <p>
-              GEO isn't a trend—it's the next SEO frontier. Here's where AI discovery is headed, and why early adopters will dominate.
+              GEO isn't a trend - it's the next SEO frontier. Here's where AI discovery is headed, and why early adopters will dominate.
             </p>
 
             <div className="space-y-6 my-8">
@@ -561,7 +561,7 @@ export default function GEOPillarPage() {
                 The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong className="text-foreground">entity authority over traffic</strong> and <strong className="text-foreground">citations over clicks</strong>.
               </p>
               <p>
-                Brands that build GEO now—combining structured data, credibility signals, and genuine expertise—will dominate AI discovery. Those that wait? They'll be invisible to the next generation of search.
+                Brands that build GEO now - combining structured data, credibility signals, and genuine expertise - will dominate AI discovery. Those that wait? They'll be invisible to the next generation of search.
               </p>
             </div>
           </div>
@@ -641,7 +641,7 @@ export default function GEOPillarPage() {
             Ready to Dominate AI Discovery?
           </h2>
           <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join thousands using SuperSchema to build GEO authority and future-proof their visibility. Start with 2 free credits—no credit card required.
+            Join thousands using SuperSchema to build GEO authority and future-proof their visibility. Start with 2 free credits - no credit card required.
           </p>
           <Link
             to="/sign-up"
