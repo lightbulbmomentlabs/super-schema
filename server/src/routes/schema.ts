@@ -8,36 +8,43 @@ import {
   getGenerationInsights,
   batchGenerateSchemas,
   refineSchema,
-  refineLibrarySchema
+  refineLibrarySchema,
+  extractSchemaFromUrl
 } from '../controllers/schemaController.js'
+import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
+// PUBLIC ROUTES (no auth required)
+// POST /api/schema/extract - Public endpoint for schema grader
+router.post('/extract', extractSchemaFromUrl)
+
+// PROTECTED ROUTES (auth required)
 // POST /api/schema/generate
-router.post('/generate', generateSchema)
+router.post('/generate', authMiddleware, generateSchema)
 
 // POST /api/schema/batch-generate
-router.post('/batch-generate', batchGenerateSchemas)
+router.post('/batch-generate', authMiddleware, batchGenerateSchemas)
 
 // POST /api/schema/refine
-router.post('/refine', refineSchema)
+router.post('/refine', authMiddleware, refineSchema)
 
 // POST /api/schema/refine-library
-router.post('/refine-library', refineLibrarySchema)
+router.post('/refine-library', authMiddleware, refineLibrarySchema)
 
 // POST /api/schema/validate
-router.post('/validate', validateSchema)
+router.post('/validate', authMiddleware, validateSchema)
 
 // POST /api/schema/validate-multiple
-router.post('/validate-multiple', validateMultipleSchemas)
+router.post('/validate-multiple', authMiddleware, validateMultipleSchemas)
 
 // GET /api/schema/history
-router.get('/history', getGenerationHistory)
+router.get('/history', authMiddleware, getGenerationHistory)
 
 // GET /api/schema/stats
-router.get('/stats', getGenerationStats)
+router.get('/stats', authMiddleware, getGenerationStats)
 
 // GET /api/schema/insights
-router.get('/insights', getGenerationInsights)
+router.get('/insights', authMiddleware, getGenerationInsights)
 
 export default router

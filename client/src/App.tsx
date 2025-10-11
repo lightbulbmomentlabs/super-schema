@@ -30,6 +30,7 @@ import BreadcrumbSchemaGeneratorPage from './pages/BreadcrumbSchemaGeneratorPage
 import AEOPillarPage from './pages/AEOPillarPage'
 import AISearchOptimizationPillarPage from './pages/AISearchOptimizationPillarPage'
 import SchemaMarkupPillarPage from './pages/SchemaMarkupPillarPage'
+import SchemaMarkupGraderPage from './pages/SchemaMarkupGraderPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -83,6 +84,9 @@ function App() {
           <Route path="/aeo" element={<AEOPillarPage />} />
           <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />
+
+          {/* Free Tools */}
+          <Route path="/schema-markup-grader" element={<SchemaMarkupGraderPage />} />
 
           {/* Generate - Standalone route at root level */}
           <Route path="/generate" element={

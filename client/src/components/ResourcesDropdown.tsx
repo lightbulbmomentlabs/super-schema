@@ -48,6 +48,10 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
     { name: 'Breadcrumb', path: '/breadcrumb-schema-generator' }
   ]
 
+  const freeTools = [
+    { name: 'Schema Markup Grader', path: '/schema-markup-grader', description: 'Grade and validate your schema quality', requiresAuth: false }
+  ]
+
   const tools = [
     { name: 'Generate Schema', path: '/generate', icon: Zap },
     { name: 'Schema Library', path: '/library', icon: LibraryIcon }
@@ -112,8 +116,32 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
             </div>
           </div>
 
-          {/* Tools Section */}
+          {/* Free Tools Section */}
           <div className="mt-6 pt-6 border-t border-border">
+            <div className="mb-4">
+              <h3 className="font-semibold text-sm text-foreground mb-3">Free Tools</h3>
+              <div className="space-y-2">
+                {freeTools.map((tool, index) => (
+                  <Link
+                    key={index}
+                    to={tool.path}
+                    onClick={() => setIsOpen(false)}
+                    className="block p-2 rounded hover:bg-accent transition-colors group"
+                  >
+                    <div className="font-medium text-sm group-hover:text-primary transition-colors">
+                      {tool.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {tool.description}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* SuperSchema Tools Section */}
+          <div className="mt-4 pt-4 border-t border-border">
             <div className="grid grid-cols-2 gap-3">
               {tools.map((tool, index) => {
                 const Icon = tool.icon

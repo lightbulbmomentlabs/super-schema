@@ -1,4 +1,4 @@
-import { Response } from 'express'
+import { Response, Request } from 'express'
 import { schemaGeneratorService } from '../services/schemaGenerator.js'
 import { validatorService } from '../services/validator.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
@@ -11,6 +11,7 @@ import {
 import { extractPath, calculatePathDepth, extractBaseDomain } from '../utils/urlHelpers.js'
 import { db } from '../services/database.js'
 import { MAX_REFINEMENTS } from 'aeo-schema-generator-shared/config'
+import { scraperService } from '../services/scraper.js'
 
 export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.auth!.userId
@@ -453,6 +454,65 @@ export const batchGenerateSchemas = asyncHandler(async (req: AuthenticatedReques
   } catch (error) {
     throw createError(
       error instanceof Error ? error.message : 'Batch generation failed',
+      500
+    )
+  }
+})
+
+// Extract schema from URL - public endpoint for schema grader tool
+export const extractSchemaFromUrl = asyncHandler(async (req: Request, res: Response) => {
+  const { url } = req.body
+
+  if (!url || typeof url !== 'string') {
+    throw createError('URL is required', 400)
+  }
+
+  // Basic URL validation
+  try {
+    new URL(url)
+  } catch {
+    throw createError('Invalid URL format', 400)
+  }
+
+  console.log('🔍 Extracting schema from URL:', url)
+
+  try {
+    // Scrape the URL to get page content
+    const analysis = await scraperService.scrapeUrl(url)
+
+    // Extract any existing JSON-LD schemas from the page
+    const existingSchemas = analysis.metadata?.existingJsonLd || []
+
+    if (existingSchemas.length === 0) {
+      return res.json({
+        success: false,
+        message: 'No schema markup found on this page',
+        data: {
+          url,
+          schemasFound: 0
+        }
+      })
+    }
+
+    console.log(`✅ Found ${existingSchemas.length} schema(s) on page`)
+
+    res.json({
+      success: true,
+      data: {
+        url,
+        schemas: existingSchemas,
+        schemasFound: existingSchemas.length,
+        metadata: {
+          title: analysis.title,
+          description: analysis.description
+        }
+      },
+      message: `Found ${existingSchemas.length} schema(s) on the page`
+    })
+  } catch (error) {
+    console.error('❌ Schema extraction failed:', error)
+    throw createError(
+      error instanceof Error ? error.message : 'Failed to extract schema from URL',
       500
     )
   }

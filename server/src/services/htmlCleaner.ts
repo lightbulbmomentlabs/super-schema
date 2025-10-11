@@ -1071,7 +1071,8 @@ class HtmlCleaningService {
 
     $('script[type="application/ld+json"]').each((_, script) => {
       try {
-        const data = JSON.parse($(script).html() || '')
+        const scriptContent = $(script).html() || ''
+        const data = JSON.parse(scriptContent)
         jsonLdData.push(data)
       } catch (error) {
         // Skip invalid JSON-LD

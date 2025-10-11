@@ -82,7 +82,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/admin', adminRoutes) // Admin routes include their own auth middleware
-app.use('/api/schema', authMiddleware, schemaRoutes)
+app.use('/api/schema', schemaRoutes) // Schema routes include their own auth middleware (public /extract endpoint)
 app.use('/api/user', authMiddleware, userRoutes)
 app.use('/api/payment', authMiddleware, paymentRoutes)
 app.use('/api/model-test', authMiddleware, modelTestRouter)

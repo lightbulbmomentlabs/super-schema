@@ -157,6 +157,11 @@ class ScraperService {
           // Article sections for schema
           articleSections: structuredContent.metadata.articleSections,
 
+          // Ensure existingJsonLd is explicitly mapped for schema extraction
+          // (htmlCleaner uses existingJsonLd, but we want to ensure it's accessible)
+          existingJsonLd: structuredContent.metadata.existingJsonLd,
+          jsonLdData: structuredContent.metadata.existingJsonLd, // Also map to jsonLdData for compatibility
+
           // Add processing metrics
           originalLength: structuredContent.originalLength,
           processedLength: structuredContent.processedLength,
