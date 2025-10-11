@@ -39,6 +39,7 @@ import EntityBasedSeoStrategiesPage from './pages/EntityBasedSeoStrategiesPage'
 
 // Components
 import ModelTester from './components/ModelTester'
+import ScrollToTop from './components/ScrollToTop'
 
 // Layout
 import Layout from './components/Layout'
@@ -65,6 +66,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ApiProvider>
           <OnboardingProvider>
+            <ScrollToTop />
             <div className="min-h-screen bg-background">
               <Routes>
           {/* Public routes */}
