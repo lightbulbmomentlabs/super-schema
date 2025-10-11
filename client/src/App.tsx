@@ -32,6 +32,8 @@ import AISearchOptimizationPillarPage from './pages/AISearchOptimizationPillarPa
 import SchemaMarkupPillarPage from './pages/SchemaMarkupPillarPage'
 import SchemaMarkupGraderPage from './pages/SchemaMarkupGraderPage'
 import GEOPillarPage from './pages/GEOPillarPage'
+import HowToWinFeaturedSnippetsPage from './pages/HowToWinFeaturedSnippetsPage'
+import JsonLdVsMicrodataPage from './pages/JsonLdVsMicrodataPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -83,9 +85,11 @@ function App() {
 
           {/* Resources - Public pillar pages */}
           <Route path="/aeo" element={<AEOPillarPage />} />
+          <Route path="/aeo/how-to-win-featured-snippets" element={<HowToWinFeaturedSnippetsPage />} />
           <Route path="/geo" element={<GEOPillarPage />} />
           <Route path="/ai-search-optimization" element={<AISearchOptimizationPillarPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />
+          <Route path="/schema-markup/json-ld-vs-microdata" element={<JsonLdVsMicrodataPage />} />
 
           {/* Free Tools */}
           <Route path="/schema-markup-grader" element={<SchemaMarkupGraderPage />} />

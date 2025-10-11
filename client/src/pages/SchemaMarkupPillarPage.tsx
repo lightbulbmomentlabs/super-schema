@@ -782,6 +782,30 @@ export default function SchemaMarkupPillarPage() {
           </div>
         </section>
 
+        {/* Deep Dive Guides */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            Detailed technical guides to master specific schema markup topics and implementation strategies.
+          </p>
+          <div className="grid gap-6">
+            <Link
+              to="/schema-markup/json-ld-vs-microdata"
+              className="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2 text-foreground">JSON-LD vs Microdata</h3>
+                  <p className="text-muted-foreground mb-3">
+                    Complete comparison guide with migration steps and why JSON-LD is better for modern SEO and AEO
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* FAQs */}
         <section>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
