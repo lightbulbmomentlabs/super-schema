@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton, useUser } from '@clerk/clerk-react'
 import {
@@ -6,7 +6,9 @@ import {
   Library,
   Settings,
   Shield,
-  ExternalLink
+  ExternalLink,
+  Menu,
+  X
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
@@ -31,6 +33,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { user } = useUser()
   const isAdmin = useIsAdmin()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,7 +47,8 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
             <ResourcesDropdown />
             <span className="text-sm text-muted-foreground">
               Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
@@ -59,7 +63,125 @@ export default function Layout({ children }: LayoutProps) {
               }}
             />
           </div>
+
+          {/* Mobile Controls */}
+          <div className="flex md:hidden items-center space-x-2">
+            <ThemeToggle />
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "h-8 w-8"
+                }
+              }}
+            />
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-md hover:bg-accent transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-border bg-background">
+            <div className="container mx-auto px-4 py-4 space-y-2">
+              {navigation.map((item) => {
+                const isActive = location.pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </Link>
+                )
+              })}
+
+              {/* HubSpot Link */}
+              <Link
+                to="/hubspot"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                  location.pathname === '/hubspot'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <ExternalLink className="mr-3 h-5 w-5" />
+                HubSpot
+              </Link>
+
+              {/* Admin Link (if admin) */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                    location.pathname === '/admin'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  <Shield className="mr-3 h-5 w-5" />
+                  Admin
+                </Link>
+              )}
+
+              {/* Resources Section */}
+              <div className="pt-3 border-t border-border mt-3">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
+                  Resources
+                </div>
+                <Link
+                  to="/aeo"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  AEO Guide
+                </Link>
+                <Link
+                  to="/geo"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  GEO Guide
+                </Link>
+                <Link
+                  to="/ai-search-optimization"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  AI Search Optimization
+                </Link>
+                <Link
+                  to="/schema-markup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  Schema Markup Guide
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       <div className="flex flex-col h-[calc(100vh-4rem)]">

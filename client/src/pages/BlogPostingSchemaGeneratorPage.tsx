@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Plus, Trash2, Copy, Download, CheckCircle, ArrowRight, Sparkles, Zap, Clock, Target, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import SuperSchemaLogo from '@/components/SuperSchemaLogo'
+import SchemaGeneratorNav from '@/components/SchemaGeneratorNav'
 import FAQItem from '@/components/FAQItem'
 import toast from 'react-hot-toast'
 
@@ -351,21 +351,7 @@ export default function BlogPostingSchemaGeneratorPage() {
 
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <SuperSchemaLogo className="h-8 w-8" />
-              <span className="font-bold text-xl">SuperSchema</span>
-            </Link>
-            <Link
-              to="/sign-up"
-              className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
-            >
-              Try SuperSchema
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </div>
-        </header>
+        <SchemaGeneratorNav />
 
         {/* Hero Section */}
         <section className="py-12 md:py-20 px-4 bg-gradient-to-b from-background to-muted/30">
