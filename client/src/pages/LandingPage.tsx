@@ -140,7 +140,7 @@ export default function LandingPage() {
     },
     {
       question: 'How much does it cost?',
-      answer: 'We use a credit system. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable, way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO.'
+      answer: 'We use a simple credit system: 1 credit per URL generates all relevant schema types for that page (Article, BlogPosting, FAQPage, HowTo, etc.). You can add more schema types to the same URL for free, and each schema type includes 2 AI-powered refinements to perfect your markup. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable—way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO.'
     },
     {
       question: 'Will this work with my [insert platform here]?',
