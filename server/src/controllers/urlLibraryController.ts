@@ -125,6 +125,7 @@ export const deleteDomain = asyncHandler(async (req: AuthenticatedRequest, res: 
 })
 
 // Get schema for a discovered URL
+// BACKWARD COMPATIBLE: Returns first schema to maintain existing frontend compatibility
 export const getUrlSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { urlId } = req.params
 
@@ -132,6 +133,7 @@ export const getUrlSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
     throw createError('URL ID is required', 400)
   }
 
+  // Get first schema (backward compatible with existing frontend)
   const schema = await db.getSchemaByDiscoveredUrlId(urlId)
 
   if (!schema) {
@@ -149,7 +151,28 @@ export const getUrlSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
   })
 })
 
+// Get ALL schemas for a discovered URL (multi-schema support)
+export const getAllUrlSchemas = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { urlId } = req.params
+
+  if (!urlId) {
+    throw createError('URL ID is required', 400)
+  }
+
+  // Get all schemas for this URL
+  const schemas = await db.getSchemasByDiscoveredUrlId(urlId)
+
+  console.log(`📊 getAllUrlSchemas returning ${schemas.length} schemas for URL ${urlId}:`,
+    schemas.map(s => ({ id: s.id, schemaType: s.schemaType })))
+
+  res.json({
+    success: true,
+    data: schemas
+  })
+})
+
 // Update schema for a discovered URL
+// BACKWARD COMPATIBLE: Updates first schema by default
 export const updateUrlSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { urlId } = req.params
   const { schemas } = req.body
@@ -162,7 +185,7 @@ export const updateUrlSchema = asyncHandler(async (req: AuthenticatedRequest, re
     throw createError('Schemas must be an array', 400)
   }
 
-  // Get the schema generation record
+  // Get the schema generation record (returns first schema for backward compatibility)
   const schemaRecord = await db.getSchemaByDiscoveredUrlId(urlId)
 
   if (!schemaRecord) {
@@ -170,7 +193,7 @@ export const updateUrlSchema = asyncHandler(async (req: AuthenticatedRequest, re
   }
 
   // Update the schemas
-  await db.updateSchemaGeneration(schemaRecord.id, schemas)
+  await db.updateSchemaContent(schemaRecord.id, schemas)
 
   res.json({
     success: true,

@@ -9,7 +9,8 @@ import {
   batchGenerateSchemas,
   refineSchema,
   refineLibrarySchema,
-  extractSchemaFromUrl
+  extractSchemaFromUrl,
+  deleteSchemaType
 } from '../controllers/schemaController.js'
 import { authMiddleware } from '../middleware/auth.js'
 
@@ -46,5 +47,8 @@ router.get('/stats', authMiddleware, getGenerationStats)
 
 // GET /api/schema/insights
 router.get('/insights', authMiddleware, getGenerationInsights)
+
+// DELETE /api/schema/:schemaId - Delete a schema type (soft delete for regeneration tracking)
+router.delete('/:schemaId', authMiddleware, deleteSchemaType)
 
 export default router

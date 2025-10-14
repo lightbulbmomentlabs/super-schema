@@ -20,6 +20,7 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
   console.log('🔵 Schema generation request received:', {
     userId,
     url: req.body?.url,
+    schemaType: req.body?.schemaType,
     options: req.body?.options,
     ip: req.ip,
     userAgent: req.get('User-Agent')
@@ -27,19 +28,57 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
 
   // Validate request body
   const validatedData = schemaGenerationRequestSchema.parse(req.body)
+  const schemaType = req.body?.schemaType || 'Auto'
 
   try {
+    // Extract domain and check if URL exists with schemas
+    const baseDomain = extractBaseDomain(validatedData.url)
+    const path = extractPath(validatedData.url)
+    const depth = calculatePathDepth(path)
+
+    // Check if URL exists in library
+    let existingUrl = await db.getDiscoveredUrlByUrl(userId, validatedData.url)
+    let existingSchemas: any[] = []
+
+    if (existingUrl) {
+      // Get all existing schemas for this URL
+      existingSchemas = await db.getSchemasByDiscoveredUrlId(existingUrl.id)
+      console.log(`📚 Found ${existingSchemas.length} existing schemas for URL`)
+
+      // Validate max 10 schema types per URL
+      if (existingSchemas.length >= 10) {
+        throw createError('Maximum 10 schema types per URL reached', 400)
+      }
+
+      // Check if this schema type already exists
+      const existingType = existingSchemas.find(s => s.schemaType === schemaType)
+      if (existingType) {
+        // Check if it was deleted and can be regenerated
+        if (existingType.deletionCount === 0) {
+          throw createError(`Schema type "${schemaType}" already exists for this URL`, 400)
+        } else if (existingType.deletionCount >= 1) {
+          throw createError(`Schema type "${schemaType}" has already been regenerated once`, 400)
+        }
+      }
+    }
+
+    const isFirstSchemaForUrl = existingSchemas.length === 0
+
     const result = await schemaGeneratorService.generateSchemas({
       url: validatedData.url,
       userId,
       options: validatedData.options,
       ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
+      userAgent: req.get('User-Agent'),
+      schemaType,
+      shouldChargeCredits: isFirstSchemaForUrl  // Only charge for first schema
     })
 
     if (result.success) {
       // Save URL to library (background operation, don't fail if it errors)
       console.log('📚 Saving URL to library...', { url: validatedData.url, userId, hasSchemaId: !!result.metadata.schemaId })
+      let urlId: string | undefined = existingUrl?.id
+
       try {
         // Extract domain and create/get domain record
         const baseDomain = extractBaseDomain(validatedData.url)
@@ -57,12 +96,13 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
           depth,
           domain.id // Pass the domain ID
         )
-        console.log('✅ URL saved to library:', discoveredUrl.id)
+        urlId = discoveredUrl.id
+        console.log('✅ URL saved to library:', urlId)
 
         // Link the schema generation to the discovered URL
         if (result.metadata.schemaId) {
-          await db.linkSchemaToDiscoveredUrl(result.metadata.schemaId, discoveredUrl.id)
-          console.log('🔗 Linked schema to URL:', { schemaId: result.metadata.schemaId, urlId: discoveredUrl.id })
+          await db.linkSchemaToDiscoveredUrl(result.metadata.schemaId, urlId)
+          console.log('🔗 Linked schema to URL:', { schemaId: result.metadata.schemaId, urlId })
         } else {
           console.warn('⚠️ No schemaId in metadata, cannot link')
         }
@@ -78,7 +118,8 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
           htmlScriptTags: result.htmlScriptTags, // Add HTML-ready script tags
           metadata: result.metadata,
           validationResults: result.validationResults,
-          schemaScore: result.schemaScore
+          schemaScore: result.schemaScore,
+          urlId // Add URL ID for multi-schema support
         },
         message: `Successfully generated ${result.schemas.length} schema(s)`
       })
@@ -156,7 +197,7 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
     if (result.success) {
       // If we have a schema record, update it with refined version and increment refinement count
       if (schemaRecord) {
-        await db.updateSchemaGeneration(schemaRecord.id, result.schemas)
+        await db.updateSchemaContent(schemaRecord.id, result.schemas)
         await db.incrementRefinementCount(schemaRecord.id)
         currentRefinements++
 
@@ -234,7 +275,7 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
 
   try {
     // Get the schema generation record to check refinement count
-    const schemaRecord = await db.getSchemaByDiscoveredUrlId(schemaId)
+    const schemaRecord = await db.getSchemaById(schemaId)
 
     if (!schemaRecord) {
       throw createError('Schema not found', 404)
@@ -260,7 +301,7 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
 
     if (result.success) {
       // Update the schema in the database with refined version and increment refinement count
-      await db.updateSchemaGeneration(schemaRecord.id, result.schemas)
+      await db.updateSchemaContent(schemaRecord.id, result.schemas)
       await db.incrementRefinementCount(schemaRecord.id)
 
       // Also update the schema score
@@ -513,6 +554,49 @@ export const extractSchemaFromUrl = asyncHandler(async (req: Request, res: Respo
     console.error('❌ Schema extraction failed:', error)
     throw createError(
       error instanceof Error ? error.message : 'Failed to extract schema from URL',
+      500
+    )
+  }
+})
+
+// Delete a schema type (soft delete by incrementing deletion_count)
+// Allows 1 regeneration per schema type
+export const deleteSchemaType = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+  const { schemaId } = req.params
+
+  if (!schemaId) {
+    throw createError('Schema ID is required', 400)
+  }
+
+  try {
+    // Get the schema to verify ownership and check deletion count
+    const schema = await db.getSchemaById(schemaId)
+
+    if (!schema) {
+      throw createError('Schema not found', 404)
+    }
+
+    if (schema.userId !== userId) {
+      throw createError('Unauthorized', 403)
+    }
+
+    if (schema.deletionCount >= 1) {
+      throw createError('This schema type has already been deleted once and cannot be deleted again', 400)
+    }
+
+    // Soft delete by incrementing deletion_count
+    await db.incrementDeletionCount(schemaId)
+
+    console.log(`🗑️ Schema type "${schema.schemaType}" soft deleted for URL: ${schema.url}`)
+
+    res.json({
+      success: true,
+      message: `Schema type "${schema.schemaType}" deleted. You can regenerate this type one more time.`
+    })
+  } catch (error) {
+    throw createError(
+      error instanceof Error ? error.message : 'Failed to delete schema type',
       500
     )
   }

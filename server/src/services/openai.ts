@@ -292,6 +292,9 @@ class OpenAIService {
       }
 
       console.log(`Generated ${schemas.length} schemas successfully`)
+      console.log('🔍 Raw schemas from OpenAI (before enhancement):',
+        schemas.map(s => ({ '@type': s['@type'], hasRequiredProps: !!s['@context'] && !!s['@type'] }))
+      )
 
       // Clean schemas first to remove HTML and fix malformed properties
       const cleanedSchemas = schemas.map(schema => this.cleanSchemaProperties(schema))

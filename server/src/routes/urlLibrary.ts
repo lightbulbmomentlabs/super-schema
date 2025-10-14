@@ -7,6 +7,7 @@ import {
   unhideUrl,
   deleteDomain,
   getUrlSchema,
+  getAllUrlSchemas,
   updateUrlSchema,
   deleteUrl,
   checkUrlExists
@@ -26,8 +27,11 @@ router.post('/urls', saveDiscoveredUrls)
 // GET /api/library/urls - Get user's discovered URLs with optional filters
 router.get('/urls', getUserUrls)
 
-// GET /api/library/urls/:urlId/schema - Get schema for a URL
+// GET /api/library/urls/:urlId/schema - Get schema for a URL (backward compatible - returns first schema)
 router.get('/urls/:urlId/schema', getUrlSchema)
+
+// GET /api/library/urls/:urlId/schemas - Get ALL schemas for a URL (multi-schema support)
+router.get('/urls/:urlId/schemas', getAllUrlSchemas)
 
 // PUT /api/library/urls/:urlId/schema - Update schema for a URL
 router.put('/urls/:urlId/schema', updateUrlSchema)

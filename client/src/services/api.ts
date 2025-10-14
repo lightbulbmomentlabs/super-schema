@@ -78,9 +78,16 @@ class ApiService {
     schemas: JsonLdSchema[]
     metadata: any
     validationResults: any[]
+    htmlScriptTags?: string
+    schemaScore?: any
+    urlId?: string
   }>> {
+    // Extract schemaType from options.requestedSchemaTypes for backend
+    const schemaType = options?.requestedSchemaTypes?.[0] || 'Auto'
+
     const response = await api.post('/schema/generate', {
       url,
+      schemaType,  // Send at top level for backend
       options
     })
     return response.data
@@ -334,6 +341,11 @@ class ApiService {
     return response.data
   }
 
+  async getAllUrlSchemas(urlId: string): Promise<ApiResponse<any[]>> {
+    const response = await api.get(`/library/urls/${urlId}/schemas`)
+    return response.data
+  }
+
   async updateUrlSchema(urlId: string, schemas: any[]): Promise<ApiResponse<{ message: string }>> {
     const response = await api.put(`/library/urls/${urlId}/schema`, { schemas })
     return response.data
@@ -341,6 +353,11 @@ class ApiService {
 
   async deleteUrl(urlId: string): Promise<ApiResponse<{ message: string }>> {
     const response = await api.delete(`/library/urls/${urlId}`)
+    return response.data
+  }
+
+  async deleteSchemaType(schemaId: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.delete(`/schema/${schemaId}`)
     return response.data
   }
 

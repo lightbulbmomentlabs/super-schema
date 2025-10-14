@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles } from 'lucide-react'
+import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles, Plus } from 'lucide-react'
 import { apiService } from '@/services/api'
 import type { DiscoveredUrl, HubSpotContentMatchResult } from '@shared/types'
 import { cn } from '@/utils/cn'
@@ -18,6 +18,7 @@ import { calculateSchemaScore } from '@/utils/calculateSchemaScore'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
 import { hubspotApi } from '@/services/hubspot'
 import { findConnectionByDomain } from '@/utils/domain'
+import { SCHEMA_TYPES } from '@/constants/schemaTypes'
 
 export default function LibraryPage() {
   const navigate = useNavigate()
@@ -27,15 +28,22 @@ export default function LibraryPage() {
   const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
   const [showHidden, setShowHidden] = useState(false)
   const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null)
+  const [selectedSchemaIndex, setSelectedSchemaIndex] = useState<number>(0)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showDeleteSchemaModal, setShowDeleteSchemaModal] = useState(false)
+  const [schemaToDelete, setSchemaToDelete] = useState<{ id: string; type: string } | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
   const [showChangesBanner, setShowChangesBanner] = useState(false)
   const [showHubSpotMatcher, setShowHubSpotMatcher] = useState(false)
   const [selectedHubSpotConnection, setSelectedHubSpotConnection] = useState<string | null>(null)
   const [showUnassociatedDomainModal, setShowUnassociatedDomainModal] = useState(false)
+  const [showAddSchemaType, setShowAddSchemaType] = useState(false)
+  const [isAddingSchemaType, setIsAddingSchemaType] = useState(false)
+  const [pendingSchemaType, setPendingSchemaType] = useState<string | null>(null)
+  const [currentSchemaId, setCurrentSchemaId] = useState<string | null>(null) // Used for refinements
   const queryClient = useQueryClient()
 
   // Set page title
@@ -77,10 +85,10 @@ export default function LibraryPage() {
     refetchOnWindowFocus: true // Refetch when window regains focus
   })
 
-  // Fetch schema for selected URL
-  const { data: schemaResponse, isLoading: schemaLoading, error: schemaError } = useQuery({
-    queryKey: ['urlSchema', selectedUrlId],
-    queryFn: () => selectedUrlId ? apiService.getUrlSchema(selectedUrlId) : null,
+  // Fetch ALL schemas for selected URL (multi-schema support)
+  const { data: schemasResponse, isLoading: schemaLoading, error: schemaError } = useQuery({
+    queryKey: ['urlSchemas', selectedUrlId],
+    queryFn: () => selectedUrlId ? apiService.getAllUrlSchemas(selectedUrlId) : null,
     enabled: !!selectedUrlId
   })
 
@@ -98,8 +106,8 @@ export default function LibraryPage() {
   console.log('📊 Schema query state:', {
     selectedUrlId,
     isLoading: schemaLoading,
-    hasData: !!schemaResponse,
-    data: schemaResponse,
+    hasData: !!schemasResponse,
+    data: schemasResponse,
     error: schemaError
   })
 
@@ -107,50 +115,55 @@ export default function LibraryPage() {
   const urls = urlsResponse?.data || []
   const allUrls = allUrlsResponse?.data || [] // Unfiltered URLs for counts
 
-  // Extract schemas - handle both array and object formats
-  const schemas = schemaResponse?.data?.schemas
-  let schemasArray: any[] = []
+  // Extract schema records (array of schema generations, each with schemaType)
+  const schemaRecords = schemasResponse?.data || []
 
-  if (Array.isArray(schemas)) {
-    // If it's already an array, check if items are wrapped schema objects or actual schemas
-    schemasArray = schemas.map(item => {
-      // If item has a 'schemas' property, unwrap it
-      if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
-        return item.schemas
+  // Get the currently selected schema record
+  const selectedSchemaRecord = schemaRecords[selectedSchemaIndex] || schemaRecords[0]
+
+  // Extract schemas array from selected record
+  let schemasArray: any[] = []
+  if (selectedSchemaRecord?.schemas) {
+    const schemas = selectedSchemaRecord.schemas
+    if (Array.isArray(schemas)) {
+      schemasArray = schemas.map(item => {
+        if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
+          return item.schemas
+        }
+        if (item && typeof item === 'object' && 'schemas' in item && !Array.isArray(item.schemas)) {
+          return [item.schemas]
+        }
+        return item
+      }).flat()
+    } else if (schemas && typeof schemas === 'object') {
+      if (schemas['@type']) {
+        schemasArray = [schemas]
+      } else if ('schemas' in schemas) {
+        schemasArray = Array.isArray(schemas.schemas) ? schemas.schemas : [schemas.schemas]
+      } else {
+        schemasArray = [schemas]
       }
-      // If item has a 'schemas' property that's an object, unwrap it
-      if (item && typeof item === 'object' && 'schemas' in item && !Array.isArray(item.schemas)) {
-        return [item.schemas]
-      }
-      // Otherwise it's already a schema object
-      return item
-    }).flat()
-  } else if (schemas && typeof schemas === 'object') {
-    // If it's a single object, check if it has @type (is a schema) or needs unwrapping
-    if (schemas['@type']) {
-      // It's a direct schema object
-      schemasArray = [schemas]
-    } else if ('schemas' in schemas) {
-      // It's wrapped, unwrap it
-      schemasArray = Array.isArray(schemas.schemas) ? schemas.schemas : [schemas.schemas]
-    } else {
-      schemasArray = [schemas]
     }
   }
 
-  console.log('📋 Extracted schemas:', { schemas, schemasArray })
+  console.log('📋 Multi-schema data:', {
+    schemaRecords,
+    selectedSchemaIndex,
+    selectedSchemaRecord,
+    schemasArray
+  })
 
   // Calculate schema score if not stored in database (for old schemas)
   const displayScore = useMemo(() => {
-    if (schemaResponse?.data?.schemaScore) {
-      return schemaResponse.data.schemaScore
+    if (selectedSchemaRecord?.schemaScore) {
+      return selectedSchemaRecord.schemaScore
     }
     // Fallback: calculate score client-side for old schemas
     if (schemasArray && schemasArray.length > 0) {
       return calculateSchemaScore(schemasArray)
     }
     return null
-  }, [schemaResponse?.data?.schemaScore, schemasArray])
+  }, [selectedSchemaRecord?.schemaScore, schemasArray])
 
   // Auto-select URL from query parameter (e.g., from dashboard navigation or duplicate warning modal)
   useEffect(() => {
@@ -247,7 +260,22 @@ export default function LibraryPage() {
   const handleUrlClick = (urlId: string) => {
     console.log('🖱️ URL clicked:', urlId)
     setSelectedUrlId(urlId)
+    setSelectedSchemaIndex(0) // Reset to first schema when switching URLs
   }
+
+  // Reset selected schema index when schemas change
+  useEffect(() => {
+    if (schemaRecords.length > 0 && selectedSchemaIndex >= schemaRecords.length) {
+      setSelectedSchemaIndex(0)
+    }
+  }, [schemaRecords.length, selectedSchemaIndex])
+
+  // Update currentSchemaId when selected schema changes
+  useEffect(() => {
+    if (schemaRecords.length > 0 && schemaRecords[selectedSchemaIndex]) {
+      setCurrentSchemaId(schemaRecords[selectedSchemaIndex].id)
+    }
+  }, [schemaRecords, selectedSchemaIndex])
 
   // Delete URL mutation
   const deleteUrlMutation = useMutation({
@@ -262,11 +290,43 @@ export default function LibraryPage() {
     }
   })
 
+  // Delete schema type mutation
+  const deleteSchemaTypeMutation = useMutation({
+    mutationFn: (schemaId: string) => apiService.deleteSchemaType(schemaId),
+    onSuccess: async (response) => {
+      // Reset to first schema tab
+      setSelectedSchemaIndex(0)
+      // Close modal and clear state
+      setShowDeleteSchemaModal(false)
+      setSchemaToDelete(null)
+      // Refetch the schemas to update UI
+      await queryClient.invalidateQueries({ queryKey: ['urlSchemas', selectedUrlId] })
+      await queryClient.invalidateQueries({ queryKey: ['urls'] })
+      await queryClient.refetchQueries({ queryKey: ['urlSchemas', selectedUrlId] })
+      toast.success(response.message || 'Schema type deleted successfully')
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to delete schema type')
+      setShowDeleteSchemaModal(false)
+      setSchemaToDelete(null)
+    }
+  })
+
   const handleDeleteUrl = async (urlId: string) => {
     if (!confirm('Are you sure you want to delete this URL?')) {
       return
     }
     deleteUrlMutation.mutate(urlId)
+  }
+
+  const handleDeleteSchemaType = async (schemaId: string, schemaType: string) => {
+    setSchemaToDelete({ id: schemaId, type: schemaType })
+    setShowDeleteSchemaModal(true)
+  }
+
+  const confirmDeleteSchemaType = async () => {
+    if (!schemaToDelete) return
+    deleteSchemaTypeMutation.mutate(schemaToDelete.id)
   }
 
   const handleGenerateSchema = (url: string) => {
@@ -301,7 +361,7 @@ export default function LibraryPage() {
   }
 
   const handleRefineSchema = async () => {
-    if (!selectedUrlId || !schemasArray || schemasArray.length === 0) {
+    if (!selectedUrlId || !schemasArray || schemasArray.length === 0 || !selectedSchemaRecord) {
       toast.error('No schema to refine')
       return
     }
@@ -317,28 +377,33 @@ export default function LibraryPage() {
 
     try {
       const result = await apiService.refineLibrarySchema(
-        selectedUrlId,
+        selectedSchemaRecord.id, // Use schema record ID instead of URL ID
         schemasArray,
         currentUrl
       )
 
       if (result.success && result.data) {
         // Update the schemas and refinement count in the UI
-        queryClient.setQueryData(['urlSchema', selectedUrlId], (old: any) => ({
-          ...old,
-          data: {
-            ...old?.data,
-            schemas: result.data.schemas,
-            schemaScore: result.data.schemaScore,
-            refinementCount: result.data.refinementCount
+        queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
+          if (!old?.data) return old
+          const updatedRecords = [...old.data]
+          updatedRecords[selectedSchemaIndex] = {
+            ...updatedRecords[selectedSchemaIndex],
+            schemas: result.data?.schemas || [],
+            schemaScore: result.data?.schemaScore || null,
+            refinementCount: result.data?.refinementCount || 0
           }
-        }))
+          return {
+            ...old,
+            data: updatedRecords
+          }
+        })
 
         // Show changes banner
-        setHighlightedChanges(result.data.highlightedChanges || [])
+        setHighlightedChanges(result.data?.highlightedChanges || [])
         setShowChangesBanner(true)
 
-        const refinementsLeft = result.data.remainingRefinements
+        const refinementsLeft = result.data?.remainingRefinements || 0
         toast.success(
           `Schema refined successfully! ${refinementsLeft} refinement${refinementsLeft !== 1 ? 's' : ''} remaining.`
         )
@@ -350,6 +415,117 @@ export default function LibraryPage() {
       toast.error(errorMessage)
     } finally {
       setIsRefining(false)
+    }
+  }
+
+  const handleAddSchemaType = async (schemaType: string) => {
+    if (!selectedUrlId) {
+      toast.error('No URL selected')
+      return
+    }
+
+    const currentUrl = urls.find(u => u.id === selectedUrlId)?.url
+    if (!currentUrl) {
+      toast.error('URL not found')
+      return
+    }
+
+    setIsAddingSchemaType(true)
+    setPendingSchemaType(schemaType)
+    setShowAddSchemaType(false)
+
+    const schemaTypeLabel = SCHEMA_TYPES.find(t => t.value === schemaType)?.label || schemaType
+
+    try {
+      const response = await apiService.generateSchema(currentUrl, {
+        requestedSchemaTypes: [schemaType]
+      })
+
+      console.log('🔍 Add Schema Type - API Response:', {
+        schemaType,
+        hasUrlId: !!response.data?.urlId,
+        schemasInResponse: response.data?.schemas?.length,
+        responseSchemaTypes: response.data?.schemas?.map((s: any) => s['@type'])
+      })
+
+      if (response.success && response.data) {
+        // Add small delay to ensure database write completes
+        await new Promise(resolve => setTimeout(resolve, 150))
+
+        // Refetch all schemas to show new tab
+        await queryClient.refetchQueries({ queryKey: ['urlSchemas', selectedUrlId] })
+
+        // Access the fresh data directly from the query
+        const updatedSchemas = queryClient.getQueryData<any>(['urlSchemas', selectedUrlId])
+
+        console.log('🔍 Add Schema Type - After Refetch:', {
+          hasUpdatedSchemas: !!updatedSchemas?.data,
+          totalSchemas: updatedSchemas?.data?.length,
+          schemaTypes: updatedSchemas?.data?.map((s: any) => ({
+            id: s.id,
+            schemaType: s.schemaType,
+            firstSchemaType: Array.isArray(s.schemas) ? s.schemas[0]?.['@type'] : s.schemas?.['@type']
+          }))
+        })
+
+        if (updatedSchemas?.data && Array.isArray(updatedSchemas.data)) {
+          // Find the newly generated schema by matching schemaType value
+          const newSchemaIndex = updatedSchemas.data.findIndex((s: any) => s.schemaType === schemaType)
+
+          console.log('🔍 Add Schema Type - Finding Schema:', {
+            searchingFor: schemaType,
+            foundIndex: newSchemaIndex,
+            foundRecord: newSchemaIndex !== -1 ? {
+              id: updatedSchemas.data[newSchemaIndex].id,
+              schemaType: updatedSchemas.data[newSchemaIndex].schemaType,
+              hasSchemas: !!updatedSchemas.data[newSchemaIndex].schemas
+            } : null
+          })
+
+          if (newSchemaIndex !== -1) {
+            // Set the selected schema index to the new schema
+            setSelectedSchemaIndex(newSchemaIndex)
+            const newRecord = updatedSchemas.data[newSchemaIndex]
+
+            // Update currentSchemaId for refinements
+            setCurrentSchemaId(newRecord.id)
+
+            console.log('🆔 Updated currentSchemaId with new schema ID:', {
+              schemaId: newRecord.id,
+              schemaType: newRecord.schemaType
+            })
+
+            // Validate that we loaded the correct schema type
+            const schemasToValidate = Array.isArray(newRecord.schemas) ? newRecord.schemas : [newRecord.schemas]
+            const loadedTypes = schemasToValidate.map((s: { '@type': string }) => s['@type'])
+            if (!loadedTypes.includes(schemaType)) {
+              console.error('⚠️ Schema type mismatch!', {
+                requested: schemaType,
+                loaded: loadedTypes,
+                recordType: newRecord.schemaType
+              })
+            } else {
+              console.log('✅ Successfully loaded correct schema type:', schemaType)
+            }
+          } else {
+            console.error('⚠️ Could not find schema with type:', schemaType)
+          }
+        }
+
+        // Invalidate library queries to update counts
+        queryClient.invalidateQueries({ queryKey: ['domains'] })
+        queryClient.invalidateQueries({ queryKey: ['urls'] })
+        queryClient.invalidateQueries({ queryKey: ['urls-all'] })
+
+        toast.success(`Successfully generated ${schemaTypeLabel} schema!`)
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to generate schema'
+      toast.error(message)
+      console.error('Schema generation error:', error)
+    } finally {
+      setIsAddingSchemaType(false)
+      setPendingSchemaType(null)
     }
   }
 
@@ -410,14 +586,25 @@ export default function LibraryPage() {
   }
 
   const handleSelectHubSpotContent = (match: HubSpotContentMatchResult) => {
-    if (!selectedHubSpotConnection || !schemasArray || schemasArray.length === 0) {
+    if (!selectedHubSpotConnection || schemaRecords.length === 0) {
       toast.error('Missing connection or schema data')
       return
     }
 
-    // Generate HTML script tags from schemas
-    const schemaHtml = schemasArray
-      .map(schema => `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`)
+    // Generate HTML script tags from ALL schema types (not just selected one)
+    const schemaHtml = schemaRecords
+      .map(record => {
+        // Extract schemas from each record
+        let schemas = record.schemas
+        if (!Array.isArray(schemas)) {
+          schemas = [schemas]
+        }
+
+        // Generate script tags for each schema in this record
+        return schemas
+          .map(schema => `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`)
+          .join('\n')
+      })
       .join('\n')
 
     pushToHubSpotMutation.mutate({
@@ -874,6 +1061,87 @@ export default function LibraryPage() {
                     <span>View Page</span>
                   </a>
                 </div>
+
+                {/* Schema Type Tabs */}
+                {schemaRecords.length >= 1 && (
+                  <div className="flex flex-wrap items-center gap-2 mb-4 p-2 bg-muted/30 rounded-lg">
+                    {schemaRecords.map((record, index) => (
+                      <div
+                        key={record.id}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors group',
+                          selectedSchemaIndex === index
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <button
+                          onClick={() => {
+                            setSelectedSchemaIndex(index)
+                            setCurrentSchemaId(record.id)
+                          }}
+                          className="flex-1"
+                        >
+                          {record.schemaType}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteSchemaType(record.id, record.schemaType)
+                          }}
+                          className={cn(
+                            'opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10',
+                            selectedSchemaIndex === index ? 'text-primary-foreground hover:text-destructive' : 'text-muted-foreground hover:text-destructive'
+                          )}
+                          title="Delete schema type"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Loading Indicator Badge */}
+                    {isAddingSchemaType && pendingSchemaType && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary/5 border border-primary/20 text-primary">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Generating {pendingSchemaType}...</span>
+                      </div>
+                    )}
+
+                    {/* Add Another Schema Type Button */}
+                    {schemaRecords.length < 10 && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowAddSchemaType(!showAddSchemaType)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
+                          disabled={isAddingSchemaType}
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>Add Schema Type</span>
+                          <span className="text-xs opacity-70">(Free)</span>
+                        </button>
+
+                        {showAddSchemaType && !isAddingSchemaType && (
+                          <div className="absolute z-10 top-full mt-1 left-0 min-w-[250px] bg-background border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                            {SCHEMA_TYPES
+                              .filter(st => st.value !== 'Auto' && !schemaRecords.some(r => r.schemaType === st.value))
+                              .map((schemaType) => (
+                                <button
+                                  key={schemaType.value}
+                                  onClick={() => handleAddSchemaType(schemaType.value)}
+                                  className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
+                                >
+                                  <div className="text-sm font-medium">{schemaType.label}</div>
+                                  <div className="text-xs text-muted-foreground">{schemaType.description}</div>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <SchemaEditor
                   schemas={schemasArray}
                   onSchemaChange={handleSchemaChange}
@@ -926,10 +1194,10 @@ export default function LibraryPage() {
                     <h2 className="text-xl font-bold">Schema Quality</h2>
                     <button
                       onClick={handleRefineSchema}
-                      disabled={isRefining || (schemaResponse?.data?.refinementCount || 0) >= MAX_REFINEMENTS}
+                      disabled={isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS}
                       className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                        isRefining || (schemaResponse?.data?.refinementCount || 0) >= MAX_REFINEMENTS
+                        isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS
                           ? 'bg-muted text-muted-foreground cursor-not-allowed'
                           : 'bg-primary text-primary-foreground hover:bg-primary/90'
                       )}
@@ -942,7 +1210,7 @@ export default function LibraryPage() {
                       ) : (
                         <>
                           <Sparkles className="h-3 w-3" />
-                          Refine with AI ({MAX_REFINEMENTS - (schemaResponse?.data?.refinementCount || 0)} left)
+                          Refine with AI ({MAX_REFINEMENTS - (selectedSchemaRecord?.refinementCount || 0)} left)
                         </>
                       )}
                     </button>
@@ -1007,6 +1275,21 @@ export default function LibraryPage() {
         onConfirm={confirmBatchDelete}
         title="Delete URLs"
         message={`Are you sure you want to delete ${selectedUrls.size} URL${selectedUrls.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
+      {/* Delete Schema Type Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteSchemaModal}
+        onClose={() => {
+          setShowDeleteSchemaModal(false)
+          setSchemaToDelete(null)
+        }}
+        onConfirm={confirmDeleteSchemaType}
+        title="Delete Schema Type"
+        message={schemaToDelete ? `Are you sure you want to delete the "${schemaToDelete.type}" schema? You can regenerate it once after deletion.` : ''}
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"

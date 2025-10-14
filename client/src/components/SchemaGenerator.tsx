@@ -11,7 +11,7 @@ import {
   Settings,
   ExternalLink,
   Loader2,
-  Upload
+  Plus
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import LightningBoltIcon from './icons/LightningBoltIcon'
@@ -27,6 +27,7 @@ import { hubspotApi } from '@/services/hubspot'
 import { cn } from '@/utils/cn'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { SCHEMA_TYPES } from '@/constants/schemaTypes'
 import type { JsonLdSchema, SchemaScore as SchemaScoreType, HubSpotContentMatchResult } from '@shared/types'
 
 interface SchemaGeneratorProps {
@@ -43,24 +44,6 @@ interface GenerationOptions {
   includeOrganization: boolean
   includeLocalBusiness: boolean
 }
-
-const SCHEMA_TYPES = [
-  { value: 'Auto', label: 'Auto-Detect', description: 'AI automatically determines the best schema type(s) for your content' },
-  { value: 'Article', label: 'Article', description: 'Blog posts, news articles, and editorial content' },
-  { value: 'BlogPosting', label: 'Blog Post', description: 'Specific type of article for blog content' },
-  { value: 'NewsArticle', label: 'News Article', description: 'News stories and press releases' },
-  { value: 'FAQPage', label: 'FAQ Page', description: 'Frequently asked questions and answers' },
-  { value: 'HowTo', label: 'How-To Guide', description: 'Step-by-step instructional content' },
-  { value: 'LocalBusiness', label: 'Local Business', description: 'Physical business location information' },
-  { value: 'Organization', label: 'Organization', description: 'Company, brand, or organization details' },
-  { value: 'Product', label: 'Product', description: 'Product listings with price and availability' },
-  { value: 'QAPage', label: 'Q&A Page', description: 'Single question and answer pairs' },
-  { value: 'Review', label: 'Review', description: 'Customer reviews and ratings' },
-  { value: 'WebPage', label: 'Web Page', description: 'Basic page structure and metadata' },
-  { value: 'BreadcrumbList', label: 'Breadcrumbs', description: 'Site navigation breadcrumbs' },
-  { value: 'ImageObject', label: 'Images', description: 'Featured images and media' },
-  { value: 'VideoObject', label: 'Videos', description: 'Video content and metadata' }
-] as const
 
 const defaultOptions: GenerationOptions = {
   includeImages: true,
@@ -90,8 +73,15 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [previousScore, setPreviousScore] = useState<number | undefined>(undefined)
   const [refinementCount, setRefinementCount] = useState(0)
   const [isRefining, setIsRefining] = useState(false)
+  const [isAddingSchemaType, setIsAddingSchemaType] = useState(false)
+  const [pendingSchemaType, setPendingSchemaType] = useState<string | null>(null)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
   const urlInputRef = useRef<HTMLInputElement>(null)
+
+  // Multi-schema state
+  const [currentUrlId, setCurrentUrlId] = useState<string | null>(null)
+  const [selectedSchemaIndex, setSelectedSchemaIndex] = useState(0)
+  const [showAddSchemaType, setShowAddSchemaType] = useState(false)
 
   // Duplicate URL modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
@@ -116,6 +106,15 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const hubspotConnections = hubspotConnectionsResponse?.data || []
   const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
 
+  // Fetch all schemas for the current URL (multi-schema support)
+  const { data: allSchemasResponse } = useQuery({
+    queryKey: ['urlSchemas', currentUrlId],
+    queryFn: () => currentUrlId ? apiService.getAllUrlSchemas(currentUrlId) : null,
+    enabled: !!currentUrlId
+  })
+
+  const allSchemaRecords = allSchemasResponse?.data || []
+
   // Get user credits
   const { data: creditsData, refetch: refetchCredits } = useQuery({
     queryKey: ['user-credits'],
@@ -137,12 +136,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             // Check if URL already exists with schema
             try {
               const checkResult = await apiService.checkUrlExists(selectedUrl)
-              if (checkResult.success && checkResult.data.exists && checkResult.data.hasSchema) {
+              if (checkResult.success && checkResult.data?.exists && checkResult.data?.hasSchema) {
                 // Show duplicate URL modal
                 setDuplicateUrlData({
                   url: selectedUrl,
-                  urlId: checkResult.data.urlId,
-                  createdAt: checkResult.data.createdAt
+                  urlId: checkResult.data?.urlId,
+                  createdAt: checkResult.data?.createdAt
                 })
                 setShowDuplicateModal(true)
                 return
@@ -179,7 +178,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const generateMutation = useMutation({
     mutationFn: ({ url, options }: { url: string; options: GenerationOptions & { requestedSchemaTypes?: string[] } }) =>
       apiService.generateSchema(url, options),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       if (response.success && response.data) {
         setGeneratedSchemas(response.data.schemas)
         setHtmlScriptTags(response.data.htmlScriptTags || '') // Store HTML script tags
@@ -188,6 +187,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         setSchemaScore(response.data.schemaScore || null)
         setRefinementCount(0) // Reset refinement count for new schema
         refetchCredits() // Refresh credit balance
+
+        // Store URL ID and fetch all schemas for multi-schema support
+        if (response.data.urlId) {
+          setCurrentUrlId(response.data.urlId)
+          await queryClient.invalidateQueries({ queryKey: ['urlSchemas', response.data.urlId] })
+        }
 
         // Invalidate library queries to reflect new URLs immediately
         queryClient.invalidateQueries({ queryKey: ['domains'] })
@@ -328,12 +333,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     // Check if URL already exists with schema
     try {
       const checkResult = await apiService.checkUrlExists(url)
-      if (checkResult.success && checkResult.data.exists && checkResult.data.hasSchema) {
+      if (checkResult.success && checkResult.data?.exists && checkResult.data?.hasSchema) {
         // Show duplicate URL modal
         setDuplicateUrlData({
           url,
-          urlId: checkResult.data.urlId,
-          createdAt: checkResult.data.createdAt
+          urlId: checkResult.data?.urlId,
+          createdAt: checkResult.data?.createdAt
         })
         setShowDuplicateModal(true)
         return
@@ -392,8 +397,144 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  const handleAddSchemaType = async (schemaType: string) => {
+    if (!url) return
+
+    // Find the label for display purposes
+    const schemaTypeInfo = SCHEMA_TYPES.find(st => st.value === schemaType)
+    const schemaTypeLabel = schemaTypeInfo?.label || schemaType
+
+    setShowAddSchemaType(false)
+    setIsAddingSchemaType(true)
+    setPendingSchemaType(schemaTypeLabel)
+
+    try {
+      const response = await apiService.generateSchema(url, {
+        ...options,
+        requestedSchemaTypes: [schemaType]
+      })
+
+      console.log('🔍 Add Schema Type - API Response:', {
+        schemaType,
+        hasUrlId: !!response.data?.urlId,
+        schemasInResponse: response.data?.schemas?.length,
+        responseSchemaTypes: response.data?.schemas?.map((s: any) => s['@type'])
+      })
+
+      if (response.success && response.data) {
+        // Store URL ID and refetch all schemas to show new tab
+        if (response.data.urlId) {
+          setCurrentUrlId(response.data.urlId)
+
+          // Add small delay to ensure database write completes
+          await new Promise(resolve => setTimeout(resolve, 150))
+
+          // Use refetchQueries instead of invalidateQueries for immediate data access
+          await queryClient.refetchQueries({ queryKey: ['urlSchemas', response.data.urlId] })
+
+          // Access the fresh data directly from the query
+          const updatedSchemas = queryClient.getQueryData<any>(['urlSchemas', response.data.urlId])
+
+          console.log('🔍 Add Schema Type - After Refetch:', {
+            hasUpdatedSchemas: !!updatedSchemas?.data,
+            totalSchemas: updatedSchemas?.data?.length,
+            schemaTypes: updatedSchemas?.data?.map((s: any) => ({
+              id: s.id,
+              schemaType: s.schemaType,
+              firstSchemaType: Array.isArray(s.schemas) ? s.schemas[0]?.['@type'] : s.schemas?.['@type']
+            }))
+          })
+
+          if (updatedSchemas?.data && Array.isArray(updatedSchemas.data)) {
+            // Find the newly generated schema by matching schemaType value
+            const newSchemaIndex = updatedSchemas.data.findIndex((s: any) => s.schemaType === schemaType)
+
+            console.log('🔍 Add Schema Type - Finding Schema:', {
+              searchingFor: schemaType,
+              foundIndex: newSchemaIndex,
+              foundRecord: newSchemaIndex !== -1 ? {
+                id: updatedSchemas.data[newSchemaIndex].id,
+                schemaType: updatedSchemas.data[newSchemaIndex].schemaType,
+                hasSchemas: !!updatedSchemas.data[newSchemaIndex].schemas
+              } : null
+            })
+
+            if (newSchemaIndex !== -1) {
+              setSelectedSchemaIndex(newSchemaIndex)
+              const newRecord = updatedSchemas.data[newSchemaIndex]
+              const schemasToLoad = Array.isArray(newRecord.schemas) ? newRecord.schemas : [newRecord.schemas]
+
+              console.log('🔍 Add Schema Type - Loading Schemas:', {
+                recordId: newRecord.id,
+                recordSchemaType: newRecord.schemaType,
+                schemasCount: schemasToLoad.length,
+                schemaContentTypes: schemasToLoad.map((s: any) => s['@type'])
+              })
+
+              setGeneratedSchemas(schemasToLoad)
+              setSchemaScore(newRecord.schemaScore || null)
+              setRefinementCount(newRecord.refinementCount || 0)
+
+              // Update generationMetadata to include this new schema's ID for refinement
+              setGenerationMetadata({
+                ...generationMetadata,
+                schemaId: newRecord.id,
+                url: url || generationMetadata?.url
+              })
+
+              console.log('🆔 Updated generationMetadata with new schema ID:', {
+                schemaId: newRecord.id,
+                schemaType: newRecord.schemaType
+              })
+
+              // Clear htmlScriptTags to force editor to display the new schema
+              // Otherwise it would show cached HTML from the previous schema
+              setHtmlScriptTags('')
+
+              // Validate that we loaded the correct schema type
+              const loadedTypes = schemasToLoad.map((s: any) => s['@type'])
+              if (!loadedTypes.includes(schemaType)) {
+                console.error('⚠️ Schema type mismatch!', {
+                  requested: schemaType,
+                  loaded: loadedTypes,
+                  recordType: newRecord.schemaType
+                })
+              } else {
+                console.log('✅ Successfully loaded correct schema type:', schemaType)
+              }
+            } else {
+              console.error('⚠️ Could not find schema with type:', schemaType)
+            }
+          }
+        }
+
+        refetchCredits()
+
+        // Invalidate library queries
+        queryClient.invalidateQueries({ queryKey: ['domains'] })
+        queryClient.invalidateQueries({ queryKey: ['urls'] })
+
+        toast.success(`Successfully generated ${schemaTypeLabel} schema!`)
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to generate schema'
+      toast.error(message)
+      console.error('Schema generation error:', error)
+    } finally {
+      setIsAddingSchemaType(false)
+      setPendingSchemaType(null)
+    }
+  }
+
   const handleRefineSchema = async () => {
     if (!generatedSchemas.length || refinementCount >= MAX_REFINEMENTS || isRefining) return
+
+    console.log('🔧 Starting refinement:', {
+      schemaId: generationMetadata?.schemaId,
+      url,
+      currentRefinementCount: refinementCount,
+      schemaTypes: generatedSchemas.map(s => s['@type'])
+    })
 
     setIsRefining(true)
     setPreviousScore(schemaScore?.overallScore)
@@ -405,6 +546,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }, generationMetadata?.schemaId)
 
       if (response.success && response.data) {
+        console.log('✅ Refinement successful:', {
+          schemaId: generationMetadata?.schemaId,
+          newRefinementCount: response.data.refinementCount,
+          schemaTypes: response.data.schemas.map(s => s['@type'])
+        })
+
         setGeneratedSchemas(response.data.schemas)
         setHtmlScriptTags(response.data.htmlScriptTags || '')
         setSchemaScore(response.data.schemaScore || null)
@@ -413,6 +560,11 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         // Update refinement count from server response if available
         const newRefinementCount = response.data.refinementCount ?? (refinementCount + 1)
         setRefinementCount(newRefinementCount)
+
+        // Refetch all schemas for this URL to get updated data
+        if (currentUrlId) {
+          await queryClient.refetchQueries({ queryKey: ['urlSchemas', currentUrlId] })
+        }
 
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
         toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
@@ -711,13 +863,102 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           {generatedSchemas.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Generated Schemas</h2>
+            <h2 className="text-lg font-semibold">Generated Schema</h2>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <span>{generatedSchemas.length} schema{generatedSchemas.length !== 1 ? 's' : ''} generated</span>
+              <span>{allSchemaRecords.length || 1} type{allSchemaRecords.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
 
+          {/* Schema Type Tabs */}
+          {allSchemaRecords.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-lg">
+              {allSchemaRecords.map((record, index) => (
+                <button
+                  key={record.id}
+                  onClick={() => {
+                    console.log('🔄 Tab Click - Switching to schema:', {
+                      index,
+                      schemaType: record.schemaType,
+                      recordId: record.id,
+                      refinementCount: record.refinementCount
+                    })
+
+                    setSelectedSchemaIndex(index)
+                    // Load the schemas from this record
+                    const schemas = Array.isArray(record.schemas)
+                      ? record.schemas
+                      : [record.schemas]
+
+                    setGeneratedSchemas(schemas)
+                    setSchemaScore(record.schemaScore || null)
+                    setRefinementCount(record.refinementCount || 0)
+
+                    // Update generationMetadata to include this record's ID for refinement
+                    setGenerationMetadata({
+                      ...generationMetadata,
+                      schemaId: record.id,
+                      url: url || generationMetadata?.url
+                    })
+
+                    // Clear htmlScriptTags to force editor to display the actual schema for this tab
+                    // Otherwise it would show the cached HTML from a different schema type
+                    setHtmlScriptTags('')
+                  }}
+                  className={cn(
+                    'px-3 py-1.5 text-sm rounded-md transition-colors',
+                    selectedSchemaIndex === index
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {record.schemaType}
+                </button>
+              ))}
+
+              {/* Loading Indicator Badge */}
+              {isAddingSchemaType && pendingSchemaType && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary/5 border border-primary/20 text-primary">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Generating {pendingSchemaType}...</span>
+                </div>
+              )}
+
+              {/* Add Another Schema Type Button */}
+              {allSchemaRecords.length < 10 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAddSchemaType(!showAddSchemaType)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors"
+                    disabled={isAddingSchemaType}
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add Schema Type</span>
+                    <span className="text-xs opacity-70">(Free)</span>
+                  </button>
+
+                  {showAddSchemaType && !isAddingSchemaType && (
+                    <div className="absolute z-10 top-full mt-1 left-0 min-w-[250px] bg-background border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                      {SCHEMA_TYPES
+                        .filter(st => st.value !== 'Auto' && !allSchemaRecords.some(r => r.schemaType === st.value))
+                        .map((schemaType) => (
+                          <button
+                            key={schemaType.value}
+                            onClick={() => handleAddSchemaType(schemaType.value)}
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
+                          >
+                            <div className="text-sm font-medium">{schemaType.label}</div>
+                            <div className="text-xs text-muted-foreground">{schemaType.description}</div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <SchemaEditor
+            key={`schema-editor-${selectedSchemaIndex}-${currentUrlId}`}
             schemas={generatedSchemas}
             htmlScriptTags={htmlScriptTags}
             onSchemaChange={handleSchemaChange}

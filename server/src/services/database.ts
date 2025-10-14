@@ -81,6 +81,8 @@ export interface Database {
           discovered_url_id: string | null
           schema_score: any | null
           refinement_count: number
+          schema_type: string
+          deletion_count: number
           created_at: string
         }
         Insert: {
@@ -94,6 +96,8 @@ export interface Database {
           discovered_url_id?: string | null
           schema_score?: any | null
           refinement_count?: number
+          schema_type?: string
+          deletion_count?: number
         }
         Update: {
           schemas?: any[] | null
@@ -102,6 +106,8 @@ export interface Database {
           processing_time_ms?: number | null
           schema_score?: any | null
           refinement_count?: number
+          schema_type?: string
+          deletion_count?: number
         }
       }
       usage_analytics: {
@@ -512,11 +518,12 @@ class DatabaseService {
   async createSchemaGeneration(
     userId: string,
     url: string,
-    creditsCost: number = 1
+    creditsCost: number = 1,
+    schemaType: string = 'Auto'
   ): Promise<string> {
     if (!this.isDatabaseAvailable()) {
       const generationId = `mock-generation-${Date.now()}`
-      console.log('Mock: createSchemaGeneration', { userId, url, creditsCost, generationId })
+      console.log('Mock: createSchemaGeneration', { userId, url, creditsCost, schemaType, generationId })
       return generationId
     }
 
@@ -525,7 +532,8 @@ class DatabaseService {
       .insert({
         user_id: userId,
         url,
-        credits_cost: creditsCost
+        credits_cost: creditsCost,
+        schema_type: schemaType
       })
       .select('id')
       .single()
@@ -543,6 +551,7 @@ class DatabaseService {
       processingTimeMs?: number
       schemaScore?: any
       refinementCount?: number
+      schema_type?: string
     }
   ): Promise<void> {
     if (!this.isDatabaseAvailable()) {
@@ -563,12 +572,31 @@ class DatabaseService {
       updateData.refinement_count = updates.refinementCount
     }
 
+    // Only include schema_type if it's explicitly provided
+    if (updates.schema_type !== undefined) {
+      updateData.schema_type = updates.schema_type
+      console.log(`✅ updateSchemaGeneration: Adding schema_type="${updates.schema_type}" to update for record ${id}`)
+    } else {
+      console.log(`⚠️ updateSchemaGeneration: schema_type is undefined, not updating for record ${id}`)
+    }
+
+    console.log(`💾 updateSchemaGeneration: Updating record ${id} with:`, {
+      hasSchemas: !!updateData.schemas,
+      status: updateData.status,
+      schema_type: updateData.schema_type
+    })
+
     const { error } = await this.supabase
       .from('schema_generations')
       .update(updateData)
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      console.error(`❌ updateSchemaGeneration: Database update failed for ${id}:`, error)
+      throw error
+    }
+
+    console.log(`✅ updateSchemaGeneration: Successfully updated record ${id}`)
   }
 
   async getSchemaGenerations(
@@ -1051,7 +1079,8 @@ class DatabaseService {
     }
   }
 
-  async updateSchemaGeneration(schemaId: string, schemas: any[]): Promise<void> {
+  // Simplified method to only update schemas array (used by refinement endpoints)
+  async updateSchemaContent(schemaId: string, schemas: any[]): Promise<void> {
     const { error } = await this.supabase
       .from('schema_generations')
       .update({ schemas })
@@ -1459,14 +1488,108 @@ class DatabaseService {
   }
 
   /**
+   * Get ALL schemas for a discovered URL (supports multiple schema types)
+   * Returns array of all schema generation records for this URL
+   */
+  async getSchemasByDiscoveredUrlId(discoveredUrlId: string): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .from('schema_generations')
+      .select('*')
+      .eq('discovered_url_id', discoveredUrlId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    console.log(`🔍 Raw database response for URL ${discoveredUrlId}:`,
+      (data || []).map(row => ({ id: row.id, schema_type: row.schema_type, created_at: row.created_at })))
+
+    return (data || []).map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      url: row.url,
+      schemas: row.schemas,
+      schemaType: row.schema_type,
+      schemaScore: row.schema_score,
+      refinementCount: row.refinement_count,
+      deletionCount: row.deletion_count,
+      status: row.status,
+      creditsCost: row.credits_cost,
+      processingTimeMs: row.processing_time_ms,
+      errorMessage: row.error_message,
+      discoveredUrlId: row.discovered_url_id,
+      createdAt: row.created_at
+    }))
+  }
+
+  /**
+   * Get a specific schema type for a URL
+   * Used to check if a type already exists before generation
+   */
+  async getSchemaByUrlIdAndType(discoveredUrlId: string, schemaType: string): Promise<any | null> {
+    const { data, error } = await this.supabase
+      .from('schema_generations')
+      .select('*')
+      .eq('discovered_url_id', discoveredUrlId)
+      .eq('schema_type', schemaType)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw error
+
+    if (!data) return null
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      url: data.url,
+      schemas: data.schemas,
+      schemaType: data.schema_type,
+      schemaScore: data.schema_score,
+      refinementCount: data.refinement_count,
+      deletionCount: data.deletion_count,
+      status: data.status,
+      creditsCost: data.credits_cost,
+      processingTimeMs: data.processing_time_ms,
+      errorMessage: data.error_message,
+      discoveredUrlId: data.discovered_url_id,
+      createdAt: data.created_at
+    }
+  }
+
+  /**
+   * Increment deletion count for schema type (tracks regeneration attempts)
+   * Used to enforce max 1 regeneration per schema type
+   */
+  async incrementDeletionCount(schemaId: string): Promise<void> {
+    // Get current count
+    const { data, error: fetchError } = await this.supabase
+      .from('schema_generations')
+      .select('deletion_count')
+      .eq('id', schemaId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    // Increment count
+    const { error: updateError } = await this.supabase
+      .from('schema_generations')
+      .update({ deletion_count: (data.deletion_count || 0) + 1 })
+      .eq('id', schemaId)
+
+    if (updateError) throw updateError
+  }
+
+  /**
    * Check if a normalized URL exists in the user's library with schema
-   * Returns the URL ID and creation date if found
+   * Returns the URL ID, creation date, and array of existing schema types
    */
   async checkUrlExists(userId: string, normalizedUrl: string): Promise<{
     exists: boolean
     urlId?: string
     createdAt?: string
     hasSchema: boolean
+    schemaTypes?: string[]
   }> {
     const { data, error} = await this.supabase
       .from('discovered_urls')
@@ -1481,11 +1604,19 @@ class DatabaseService {
       return { exists: false, hasSchema: false }
     }
 
+    // If URL has schemas, get all schema types
+    let schemaTypes: string[] = []
+    if (data.has_schema) {
+      const schemas = await this.getSchemasByDiscoveredUrlId(data.id)
+      schemaTypes = schemas.map(s => s.schemaType).filter(Boolean)
+    }
+
     return {
       exists: true,
       urlId: data.id,
       createdAt: data.created_at,
-      hasSchema: data.has_schema
+      hasSchema: data.has_schema,
+      schemaTypes
     }
   }
 

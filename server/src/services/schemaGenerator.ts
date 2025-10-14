@@ -2,6 +2,7 @@ import { scraperService } from './scraper.js'
 import { openaiService, type SchemaGenerationOptions } from './openai.js'
 import { validatorService } from './validator.js'
 import { db } from './database.js'
+import { extractSchemaType } from '../utils/schemaTypeDetector.js'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 
 export interface SchemaGenerationResult {
@@ -30,6 +31,8 @@ export interface GenerationRequest {
   options?: SchemaGenerationOptions
   ipAddress?: string
   userAgent?: string
+  schemaType?: string
+  shouldChargeCredits?: boolean
 }
 
 class SchemaGeneratorService {
@@ -44,20 +47,27 @@ class SchemaGeneratorService {
         throw new Error(`URL not accessible: ${urlValidation.error}`)
       }
 
-      // 2. Check if user has sufficient credits (skip in localhost/development)
+      // 2. Check if user has sufficient credits (skip in localhost/development or if not charging)
       const isLocalhost = process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL
+      const shouldChargeCredits = request.shouldChargeCredits !== false  // Default to true
 
-      if (!isLocalhost) {
+      if (!isLocalhost && shouldChargeCredits) {
         const user = await db.getUser(request.userId)
         if (!user || user.creditBalance < 1) {
           throw new Error('Insufficient credits')
         }
       } else {
-        console.log('🚀 Development mode: Skipping credit check for localhost testing')
+        if (isLocalhost) {
+          console.log('🚀 Development mode: Skipping credit check for localhost testing')
+        } else {
+          console.log('💰 Additional schema for URL: Skipping credit check (URL already paid for)')
+        }
       }
 
-      // 3. Create schema generation record
-      generationId = await db.createSchemaGeneration(request.userId, request.url, 1)
+      // 3. Create schema generation record with schema type
+      const schemaType = request.schemaType || 'Auto'
+      const creditsCost = (!isLocalhost && shouldChargeCredits) ? 1 : 0
+      generationId = await db.createSchemaGeneration(request.userId, request.url, creditsCost, schemaType)
 
       // 4. Track usage analytics
       await db.trackUsage(
@@ -82,8 +92,21 @@ class SchemaGeneratorService {
       // TODO: Re-implement content validation with better logic
       console.log('⚠️ Skipping content validation to allow schema generation')
 
-      // 7. Generate schemas using AI
-      const schemas = await openaiService.generateSchemas(contentAnalysis, request.options)
+      // 7. Generate schemas using AI with requested schema type
+      const optionsToPass = {
+        ...request.options,
+        // Only pass requestedSchemaTypes if user explicitly requested a specific type (not Auto)
+        requestedSchemaTypes: schemaType !== 'Auto' ? [schemaType] : undefined
+      }
+
+      console.log('🎯 Calling OpenAI with options:', {
+        schemaType,
+        isAutoMode: schemaType === 'Auto',
+        requestedSchemaTypes: optionsToPass.requestedSchemaTypes,
+        fullOptions: optionsToPass
+      })
+
+      const schemas = await openaiService.generateSchemas(contentAnalysis, optionsToPass)
 
       if (!schemas || schemas.length === 0) {
         throw new Error('No schemas could be generated from the provided content')
@@ -124,19 +147,23 @@ class SchemaGeneratorService {
         console.warn(`🚨 Development mode: Using all ${schemasToUse.length} schemas (${validSchemas.length} passed strict validation)`)
       }
 
-      // 9. Consume credits only on successful generation (skip in localhost/development)
-      if (!isLocalhost) {
+      // 9. Consume credits only on successful generation (skip in localhost/development or if not charging)
+      if (!isLocalhost && shouldChargeCredits) {
         const creditsConsumed = await db.consumeCredits(
           request.userId,
           1,
-          `Schema generation for ${request.url}`
+          `Schema generation (${schemaType}) for ${request.url}`
         )
 
         if (!creditsConsumed) {
           throw new Error('Failed to consume credits')
         }
       } else {
-        console.log('🚀 Development mode: Skipping credit consumption for localhost testing')
+        if (isLocalhost) {
+          console.log('🚀 Development mode: Skipping credit consumption for localhost testing')
+        } else {
+          console.log('💰 Additional schema: No credits charged (URL already paid for)')
+        }
       }
 
       // 10. Schema quality calculation removed for simplified version
@@ -152,14 +179,20 @@ class SchemaGeneratorService {
       // Calculate schema quality score
       const schemaScore = this.calculateBasicScore(schemasToUse)
 
+      // Detect actual schema type from generated schemas ONLY if request was "Auto"
+      // Otherwise use the explicitly requested type
+      const finalSchemaType = schemaType === 'Auto' ? extractSchemaType(schemasToUse) : schemaType
+      console.log(`🔍 Final schema type: "${finalSchemaType}" (original request: "${schemaType}", auto-detected: "${extractSchemaType(schemasToUse)}")`)
+
       await db.updateSchemaGeneration(generationId, {
         schemas: schemasToUse,
         status: 'success',
         processingTimeMs: processingTime,
-        schemaScore: schemaScore
+        schemaScore: schemaScore,
+        schema_type: finalSchemaType  // Store the explicitly requested type or auto-detected type
       })
 
-      console.log(`💾 Database update: Saving ${schemasToUse.length} schemas with quality score`)
+      console.log(`💾 Database update: Saving ${schemasToUse.length} schemas with quality score and type "${finalSchemaType}"`)
 
       // Generate HTML-ready script tags for easy copy-pasting
       const htmlScriptTags = this.generateHtmlScriptTags(schemasToUse)
@@ -174,7 +207,8 @@ class SchemaGeneratorService {
           schemaId: generationId, // Include schema ID for linking to library
           url: request.url,
           processingTimeMs: processingTime,
-          creditsUsed: isLocalhost ? 0 : 1,
+          creditsUsed: (!isLocalhost && shouldChargeCredits) ? 1 : 0,
+          schemaType: finalSchemaType, // Return final type (explicitly requested or auto-detected)
           contentAnalysis: contentAnalysis,
           contentQualitySuggestions: (contentAnalysis as any).contentQualitySuggestions || []
         }
