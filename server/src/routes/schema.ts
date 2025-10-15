@@ -7,6 +7,7 @@ import {
   getGenerationStats,
   getGenerationInsights,
   batchGenerateSchemas,
+  batchGenerateSchemasStream,
   refineSchema,
   refineLibrarySchema,
   extractSchemaFromUrl,
@@ -26,6 +27,9 @@ router.post('/generate', authMiddleware, generateSchema)
 
 // POST /api/schema/batch-generate
 router.post('/batch-generate', authMiddleware, batchGenerateSchemas)
+
+// POST /api/schema/batch-generate-stream - SSE streaming for real-time progress
+router.post('/batch-generate-stream', authMiddleware, batchGenerateSchemasStream)
 
 // POST /api/schema/refine
 router.post('/refine', authMiddleware, refineSchema)

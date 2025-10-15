@@ -479,10 +479,52 @@ export const batchGenerateSchemas = asyncHandler(async (req: AuthenticatedReques
     const successCount = results.filter(r => r.success).length
     const totalCreditsUsed = results.reduce((sum, r) => sum + r.metadata.creditsUsed, 0)
 
+    // Save successful URLs to library and link schemas
+    const transformedResults = await Promise.all(results.map(async (r) => {
+      let discoveredUrlId: string | undefined = undefined
+
+      if (r.success && r.metadata.schemaId) {
+        try {
+          // Extract domain and save/update domain record
+          const baseDomain = extractBaseDomain(r.metadata.url)
+          const domain = await db.saveOrUpdateDomain(userId, baseDomain)
+
+          // Extract path and depth
+          const path = extractPath(r.metadata.url)
+          const depth = calculatePathDepth(path)
+
+          // Save URL to library
+          const discoveredUrl = await db.saveSingleUrlToLibrary(
+            userId,
+            r.metadata.url,
+            path,
+            depth,
+            domain.id
+          )
+          discoveredUrlId = discoveredUrl.id
+
+          // Link schema to discovered URL
+          await db.linkSchemaToDiscoveredUrl(r.metadata.schemaId, discoveredUrlId)
+          console.log(`✅ Linked schema ${r.metadata.schemaId} to URL ${discoveredUrlId}`)
+        } catch (error) {
+          console.error('❌ Failed to save URL to library:', error)
+          // Don't fail the request, just log the error
+        }
+      }
+
+      return {
+        url: r.metadata.url,
+        status: r.success ? 'success' : 'failed' as 'success' | 'failed',
+        schemas: r.schemas,
+        error: r.metadata.errorMessage,
+        urlId: discoveredUrlId // Use discovered URL ID, not schema generation ID
+      }
+    }))
+
     res.json({
       success: true,
       data: {
-        results,
+        results: transformedResults,
         summary: {
           total: results.length,
           successful: successCount,
@@ -499,6 +541,145 @@ export const batchGenerateSchemas = asyncHandler(async (req: AuthenticatedReques
     )
   }
 })
+
+// Batch generate schemas with SSE streaming for real-time progress
+export const batchGenerateSchemasStream = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+  const { urls, options } = req.body
+
+  if (!Array.isArray(urls) || urls.length === 0) {
+    res.status(400).json({ error: 'Request must contain an array of URLs' })
+    return
+  }
+
+  if (urls.length > 10) {
+    res.status(400).json({ error: 'Maximum 10 URLs allowed per batch request' })
+    return
+  }
+
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const sendEvent = (event: string, data: any) => {
+    res.write(`event: ${event}\n`)
+    res.write(`data: ${JSON.stringify(data)}\n\n`)
+  }
+
+  try {
+    let totalCreditsUsed = 0
+    let successCount = 0
+    let failedCount = 0
+
+    // Process URLs sequentially and stream results
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i]
+
+      try {
+        // Send processing event
+        sendEvent('progress', {
+          index: i,
+          url,
+          status: 'processing',
+          completed: i,
+          total: urls.length
+        })
+
+        // Generate schema for single URL
+        const request = {
+          url,
+          userId,
+          options,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+
+        const result = await schemaGeneratorService.generateSchemas(request)
+        totalCreditsUsed += result.metadata.creditsUsed
+
+        let discoveredUrlId: string | undefined = undefined
+
+        // Save to library if successful
+        if (result.success && result.metadata.schemaId) {
+          try {
+            const baseDomain = extractBaseDomain(url)
+            const domain = await db.saveOrUpdateDomain(userId, baseDomain)
+            const path = extractPath(url)
+            const depth = calculatePathDepth(path)
+
+            const discoveredUrl = await db.saveSingleUrlToLibrary(
+              userId,
+              url,
+              path,
+              depth,
+              domain.id
+            )
+            discoveredUrlId = discoveredUrl.id
+
+            await db.linkSchemaToDiscoveredUrl(result.metadata.schemaId, discoveredUrlId)
+            successCount++
+          } catch (error) {
+            console.error('❌ Failed to save URL to library:', error)
+          }
+        } else {
+          failedCount++
+        }
+
+        // Send completion event for this URL
+        sendEvent('progress', {
+          index: i,
+          url,
+          status: result.success ? 'success' : 'failed',
+          schemas: result.schemas,
+          error: result.metadata.errorMessage,
+          urlId: discoveredUrlId,
+          completed: i + 1,
+          total: urls.length
+        })
+
+        // Add delay between requests (except for the last one)
+        if (i < urls.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+
+      } catch (error) {
+        failedCount++
+        sendEvent('progress', {
+          index: i,
+          url,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          completed: i + 1,
+          total: urls.length
+        })
+
+        // Continue with next URL even if this one failed
+        if (i < urls.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      }
+    }
+
+    // Send final completion event
+    sendEvent('complete', {
+      summary: {
+        total: urls.length,
+        successful: successCount,
+        failed: failedCount,
+        creditsUsed: totalCreditsUsed
+      }
+    })
+
+    res.end()
+  } catch (error) {
+    sendEvent('error', {
+      message: error instanceof Error ? error.message : 'Batch generation failed'
+    })
+    res.end()
+  }
+}
 
 // Extract schema from URL - public endpoint for schema grader tool
 export const extractSchemaFromUrl = asyncHandler(async (req: Request, res: Response) => {
