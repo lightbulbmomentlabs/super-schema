@@ -14,6 +14,7 @@ import HubSpotPage from './pages/HubSpotPage'
 import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
+import WelcomePage from './pages/WelcomePage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import DocsPage from './pages/DocsPage'
@@ -73,6 +74,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/docs" element={<DocsPage />} />
