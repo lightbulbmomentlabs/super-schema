@@ -16,16 +16,11 @@ export default function WelcomePage() {
   // Fire Google Ads conversion tracking on mount
   useEffect(() => {
     // Google Ads Conversion Tracking
-    // Replace with your actual Google Ads conversion snippet
     if (typeof window !== 'undefined' && (window as any).gtag) {
-      // Example conversion tracking - replace with your actual conversion ID and label
-      // (window as any).gtag('event', 'conversion', {
-      //   'send_to': 'AW-CONVERSION_ID/CONVERSION_LABEL',
-      //   'value': 1.0,
-      //   'currency': 'USD'
-      // });
-
-      console.log('🎉 Conversion tracking fired for new sign-up')
+      (window as any).gtag('event', 'conversion_event_page_view_1', {
+        // event_parameters can be added here if needed
+      });
+      console.log('🎉 Google Ads conversion tracking fired: conversion_event_page_view_1')
     }
   }, [])
 
