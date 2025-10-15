@@ -115,6 +115,20 @@ export default function LibraryPage() {
   const urls = urlsResponse?.data || []
   const allUrls = allUrlsResponse?.data || [] // Unfiltered URLs for counts
 
+  // Handle URL pre-selection from query parameter
+  useEffect(() => {
+    const urlParam = searchParams.get('url')
+    if (urlParam && urls.length > 0) {
+      // Find matching URL in the list
+      const matchingUrl = urls.find(u => u.url === urlParam)
+      if (matchingUrl) {
+        setSelectedUrlId(matchingUrl.id)
+        // Clear the query parameter
+        setSearchParams({})
+      }
+    }
+  }, [searchParams, urls, setSearchParams])
+
   // Extract schema records (array of schema generations, each with schemaType)
   const schemaRecords = schemasResponse?.data || []
 

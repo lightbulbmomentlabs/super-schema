@@ -1584,6 +1584,44 @@ class DatabaseService {
    * Check if a normalized URL exists in the user's library with schema
    * Returns the URL ID, creation date, and array of existing schema types
    */
+  /**
+   * Batch check hasSchema status for multiple URLs
+   */
+  async batchCheckHasSchema(userId: string, urls: string[]): Promise<Map<string, boolean>> {
+    if (!this.isDatabaseAvailable()) {
+      return new Map(urls.map(url => [url, false]))
+    }
+
+    if (urls.length === 0) {
+      return new Map()
+    }
+
+    const { data, error } = await this.supabase
+      .from('discovered_urls')
+      .select('url, has_schema')
+      .eq('user_id', userId)
+      .in('url', urls)
+
+    if (error) {
+      console.error('Error batch checking hasSchema:', error)
+      return new Map(urls.map(url => [url, false]))
+    }
+
+    const resultMap = new Map<string, boolean>()
+    data?.forEach(row => {
+      resultMap.set(row.url, row.has_schema || false)
+    })
+
+    // Add false for URLs not found in database
+    urls.forEach(url => {
+      if (!resultMap.has(url)) {
+        resultMap.set(url, false)
+      }
+    })
+
+    return resultMap
+  }
+
   async checkUrlExists(userId: string, normalizedUrl: string): Promise<{
     exists: boolean
     urlId?: string

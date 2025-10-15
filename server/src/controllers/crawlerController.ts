@@ -1,13 +1,39 @@
 import { Request, Response } from 'express'
 import { siteCrawlerService, type DiscoveredUrl, type CrawlResult } from '../services/siteCrawler.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
+import { db } from '../services/database.js'
 
 export interface AuthenticatedRequest extends Request {
   userId?: string
 }
 
+// Extended DiscoveredUrl with hasSchema flag
+interface DiscoveredUrlWithSchema extends DiscoveredUrl {
+  hasSchema?: boolean
+}
+
 // In-memory storage for crawl results (will be replaced with database in production)
 const crawlCache = new Map<string, CrawlResult>()
+
+/**
+ * Helper function to enrich URLs with hasSchema status
+ */
+async function enrichUrlsWithSchemaStatus(
+  userId: string,
+  urls: DiscoveredUrl[]
+): Promise<DiscoveredUrlWithSchema[]> {
+  if (urls.length === 0) {
+    return []
+  }
+
+  const urlStrings = urls.map(u => u.url)
+  const hasSchemaMap = await db.batchCheckHasSchema(userId, urlStrings)
+
+  return urls.map(url => ({
+    ...url,
+    hasSchema: hasSchemaMap.get(url.url) || false
+  }))
+}
 
 /**
  * Start URL discovery for a domain
@@ -79,6 +105,9 @@ export const discoverUrls = asyncHandler(async (req: AuthenticatedRequest, res: 
 
     await waitForInitialUrls()
 
+    // Enrich URLs with hasSchema status
+    const enrichedUrls = await enrichUrlsWithSchemaStatus(userId, crawlResult.urls)
+
     // Return response with current URLs
     const hasMore = crawlResult.status === 'in_progress'
 
@@ -86,7 +115,7 @@ export const discoverUrls = asyncHandler(async (req: AuthenticatedRequest, res: 
       success: true,
       data: {
         crawlId,
-        urls: crawlResult.urls,
+        urls: enrichedUrls,
         totalFound: crawlResult.totalFound,
         status: hasMore ? 'in_progress' : 'completed',
         hasMore
@@ -111,6 +140,7 @@ export const discoverUrls = asyncHandler(async (req: AuthenticatedRequest, res: 
  */
 export const getCrawlResults = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { crawlId } = req.params
+  const userId = req.userId || 'test-user-id'
 
   if (!crawlId) {
     res.status(400).json({
@@ -130,11 +160,14 @@ export const getCrawlResults = asyncHandler(async (req: AuthenticatedRequest, re
     return
   }
 
+  // Enrich URLs with hasSchema status
+  const enrichedUrls = await enrichUrlsWithSchemaStatus(userId, crawlResult.urls)
+
   res.json({
     success: true,
     data: {
       crawlId,
-      urls: crawlResult.urls,
+      urls: enrichedUrls,
       totalFound: crawlResult.totalFound,
       status: crawlResult.status,
       error: crawlResult.error,
@@ -149,6 +182,7 @@ export const getCrawlResults = asyncHandler(async (req: AuthenticatedRequest, re
  */
 export const getCachedCrawl = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { domain } = req.params
+  const userId = req.userId || 'test-user-id'
 
   if (!domain) {
     res.status(400).json({
@@ -167,11 +201,14 @@ export const getCachedCrawl = asyncHandler(async (req: AuthenticatedRequest, res
       // Check if crawl is within 24 hours
       const crawlTime = parseInt(crawlId.split('_')[1])
       if (now - crawlTime < twentyFourHours) {
+        // Enrich URLs with hasSchema status
+        const enrichedUrls = await enrichUrlsWithSchemaStatus(userId, crawlResult.urls)
+
         res.json({
           success: true,
           data: {
             crawlId,
-            urls: crawlResult.urls,
+            urls: enrichedUrls,
             totalFound: crawlResult.totalFound,
             status: crawlResult.status,
             cached: true

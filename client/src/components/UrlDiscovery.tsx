@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Search, Loader2, AlertCircle, CheckCircle, ChevronDown, ChevronRight, ExternalLink, Compass } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Loader2, AlertCircle, CheckCircle, ChevronDown, ChevronRight, ExternalLink, Compass, Eye } from 'lucide-react'
 import LightningBoltIcon from './icons/LightningBoltIcon'
 import { cn } from '@/utils/cn'
 import { apiService } from '@/services/api'
@@ -9,6 +10,7 @@ interface DiscoveredUrl {
   url: string
   path: string
   depth: number
+  hasSchema?: boolean
 }
 
 interface UrlDiscoveryProps {
@@ -22,6 +24,7 @@ interface GroupedUrls {
 
 export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryProps) {
   const { getToken } = useAuth()
+  const navigate = useNavigate()
   const [domain, setDomain] = useState('')
   const [isDiscovering, setIsDiscovering] = useState(false)
   const [discoveredUrls, setDiscoveredUrls] = useState<DiscoveredUrl[]>([])
@@ -362,14 +365,14 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                     <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
                   </div>
                 </div>
-                <div className="bg-info/50">
+                <div className="bg-muted/20">
                   {priorityPages.map((urlData, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 px-4 hover:bg-accent/50 transition-colors group border-b border-border/50 last:border-b-0"
                     >
                       <div className="flex items-center space-x-2 flex-1 mr-2">
-                        <span className="text-sm font-medium text-gray-800 truncate">
+                        <span className="text-sm font-medium text-foreground truncate">
                           {urlData.path}
                         </span>
                         <button
@@ -380,14 +383,25 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                           <ExternalLink className="h-3 w-3 text-gray-600" />
                         </button>
                       </div>
-                      <button
-                        onClick={() => handleUrlClick(urlData.url)}
-                        className="flex items-center px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                        title="Generate schema for this URL"
-                      >
-                        <LightningBoltIcon className="h-3 w-3 mr-1" />
-                        <span className="text-xs font-medium">Generate</span>
-                      </button>
+                      {urlData.hasSchema ? (
+                        <button
+                          onClick={() => navigate(`/library?url=${encodeURIComponent(urlData.url)}`)}
+                          className="flex items-center px-3 py-1.5 rounded border border-primary text-primary bg-transparent hover:bg-primary/10 transition-colors"
+                          title="View existing schema"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          <span className="text-xs font-medium">View Schema</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUrlClick(urlData.url)}
+                          className="flex items-center px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                          title="Generate schema for this URL"
+                        >
+                          <LightningBoltIcon className="h-3 w-3 mr-1" />
+                          <span className="text-xs font-medium">Generate</span>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -437,13 +451,23 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                               <ExternalLink className="h-3 w-3 text-gray-600" />
                             </button>
                           </div>
-                          <button
-                            onClick={() => handleUrlClick(urlData.url)}
-                            className="flex items-center px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Generate schema for this URL"
-                          >
-                            <LightningBoltIcon className="h-3 w-3" />
-                          </button>
+                          {urlData.hasSchema ? (
+                            <button
+                              onClick={() => navigate(`/library?url=${encodeURIComponent(urlData.url)}`)}
+                              className="flex items-center px-2 py-1 rounded border border-primary text-primary bg-transparent hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                              title="View existing schema"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleUrlClick(urlData.url)}
+                              className="flex items-center px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Generate schema for this URL"
+                            >
+                              <LightningBoltIcon className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
