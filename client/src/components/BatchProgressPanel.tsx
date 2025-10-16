@@ -165,12 +165,12 @@ export default function BatchProgressPanel({ results, isProcessing, onClose }: B
         <div className={cn(
           "mt-4 p-3 rounded-md border",
           successCount === totalUrls
-            ? "bg-success/10 border-success/30 dark:bg-success/5 dark:border-success/20"
-            : "bg-warning/10 border-warning/30 dark:bg-warning/5 dark:border-warning/20"
+            ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+            : "bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800"
         )}>
           <p className={cn(
             "text-sm font-medium",
-            successCount === totalUrls ? "text-success-foreground" : "text-warning-foreground"
+            successCount === totalUrls ? "text-green-700 dark:text-green-400" : "text-orange-700 dark:text-orange-400"
           )}>
             {successCount === totalUrls
               ? '🎉 All schemas generated successfully!'
