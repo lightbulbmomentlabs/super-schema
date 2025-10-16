@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 // Pages
 import LandingPage from './pages/LandingPage'
+import PricingPage from './pages/PricingPage'
 import DashboardPage from './pages/DashboardPage'
 import GeneratePage from './pages/GeneratePage'
 import CreditsPage from './pages/CreditsPage'
@@ -72,6 +73,7 @@ function App() {
               <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
           <Route path="/welcome" element={<WelcomePage />} />

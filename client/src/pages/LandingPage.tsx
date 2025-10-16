@@ -216,6 +216,12 @@ export default function LandingPage() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
+            <Link
+              to="/pricing"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Pricing
+            </Link>
             <ResourcesDropdown />
             {isSignedIn ? (
               <Link
@@ -270,6 +276,13 @@ export default function LandingPage() {
             >
               <div className="container mx-auto px-4 py-4 space-y-4">
                 <div className="flex flex-col space-y-3">
+                  <Link
+                    to="/pricing"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"
+                  >
+                    Pricing
+                  </Link>
                   <Link
                     to="/aeo"
                     onClick={() => setIsMobileMenuOpen(false)}

@@ -7,7 +7,7 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js'
-import { CreditCard, Check, Star, Loader2, X } from 'lucide-react'
+import { CreditCard, Check, Star, Loader2, X, Sparkles } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { apiService } from '@/services/api'
 import { cn } from '@/utils/cn'
@@ -298,8 +298,9 @@ export default function CreditPurchase({ onSuccess, onCancel }: CreditPurchasePr
                     Save {pack.savings}%
                   </div>
                 ) : (
-                  <div className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
-                    Standard Price
+                  <div className="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Perfect for testing
                   </div>
                 )}
               </div>
@@ -311,7 +312,7 @@ export default function CreditPurchase({ onSuccess, onCancel }: CreditPurchasePr
                 </div>
                 <div className="flex items-center justify-center text-sm">
                   <Check className="h-4 w-4 text-success-foreground mr-2" />
-                  Generate {pack.credits} schemas
+                  Generate schemas for {pack.credits} web pages
                 </div>
                 <div className="flex items-center justify-center text-sm">
                   <Check className="h-4 w-4 text-success-foreground mr-2" />
