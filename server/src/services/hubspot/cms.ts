@@ -317,44 +317,143 @@ export class HubSpotCMSService {
   }
 
   /**
-   * Normalize URL for comparison (remove protocol, trailing slash, www)
+   * Parse URL into components for intelligent matching
+   */
+  private parseUrl(url: string): {
+    protocol: string
+    subdomain: string
+    domain: string
+    path: string
+    fullDomain: string
+  } {
+    try {
+      const urlObj = new URL(url)
+      const hostname = urlObj.hostname.toLowerCase()
+      const path = (urlObj.pathname + urlObj.search).replace(/\/$/, '') || '/'
+
+      // Split hostname into parts
+      const parts = hostname.split('.')
+
+      // Handle different domain structures
+      let subdomain = ''
+      let domain = hostname
+
+      if (parts.length >= 2) {
+        // Extract base domain (last 2 parts for .com, .org, etc.)
+        domain = parts.slice(-2).join('.')
+
+        // Extract subdomain if exists
+        if (parts.length > 2) {
+          subdomain = parts.slice(0, -2).join('.')
+        }
+      }
+
+      return {
+        protocol: urlObj.protocol,
+        subdomain,
+        domain,
+        path,
+        fullDomain: hostname
+      }
+    } catch (error) {
+      // Fallback for invalid URLs
+      return {
+        protocol: '',
+        subdomain: '',
+        domain: url.toLowerCase(),
+        path: '/',
+        fullDomain: url.toLowerCase()
+      }
+    }
+  }
+
+  /**
+   * Normalize URL for comparison (remove protocol, trailing slash)
+   * Note: Preserves subdomain for accurate matching
    */
   private normalizeUrl(url: string): string {
     return url
       .toLowerCase()
       .replace(/^https?:\/\//, '')
-      .replace(/^www\./, '')
       .replace(/\/$/, '')
   }
 
   /**
-   * Calculate similarity between two URLs (0-1)
+   * Calculate similarity between two URLs with domain-aware scoring (0-1)
    */
   private calculateUrlSimilarity(url1: string, url2: string): number {
-    // Exact match
-    if (url1 === url2) {
+    const parsed1 = this.parseUrl(url1)
+    const parsed2 = this.parseUrl(url2)
+
+    // Different base domains = no match
+    if (parsed1.domain !== parsed2.domain) {
+      return 0.0
+    }
+
+    // Exact full URL match
+    if (parsed1.fullDomain === parsed2.fullDomain && parsed1.path === parsed2.path) {
       return 1.0
     }
 
-    // Check if one contains the other
-    if (url1.includes(url2) || url2.includes(url1)) {
-      return 0.9
+    // Calculate subdomain similarity
+    let subdomainScore = 0
+
+    if (parsed1.subdomain === parsed2.subdomain) {
+      // Exact subdomain match (including both empty = bare domain)
+      subdomainScore = 1.0
+    } else if (
+      (parsed1.subdomain === 'www' && parsed2.subdomain === '') ||
+      (parsed1.subdomain === '' && parsed2.subdomain === 'www')
+    ) {
+      // www vs non-www are considered close variants
+      subdomainScore = 0.85
+    } else {
+      // Different subdomains (e.g., www vs blog)
+      subdomainScore = 0.3
     }
 
-    // Path similarity (split by / and compare segments)
-    const segments1 = url1.split('/')
-    const segments2 = url2.split('/')
+    // Calculate path similarity
+    let pathScore = 0
 
-    let matchingSegments = 0
-    const maxSegments = Math.max(segments1.length, segments2.length)
+    if (parsed1.path === parsed2.path) {
+      // Exact path match
+      pathScore = 1.0
+    } else if (parsed1.path.startsWith(parsed2.path) || parsed2.path.startsWith(parsed1.path)) {
+      // One path is a prefix of the other
+      const shorterPath = parsed1.path.length < parsed2.path.length ? parsed1.path : parsed2.path
+      const longerPath = parsed1.path.length >= parsed2.path.length ? parsed1.path : parsed2.path
 
-    for (let i = 0; i < Math.min(segments1.length, segments2.length); i++) {
-      if (segments1[i] === segments2[i]) {
-        matchingSegments++
+      // Calculate how much of the longer path is matched
+      pathScore = 0.7 + (0.2 * (shorterPath.length / longerPath.length))
+    } else {
+      // Compare path segments
+      const segments1 = parsed1.path.split('/').filter(s => s)
+      const segments2 = parsed2.path.split('/').filter(s => s)
+
+      let matchingSegments = 0
+      const minSegments = Math.min(segments1.length, segments2.length)
+
+      for (let i = 0; i < minSegments; i++) {
+        if (segments1[i] === segments2[i]) {
+          matchingSegments++
+        } else {
+          break // Stop at first non-matching segment
+        }
+      }
+
+      if (matchingSegments > 0) {
+        const maxSegments = Math.max(segments1.length, segments2.length)
+        pathScore = 0.4 + (0.3 * (matchingSegments / maxSegments))
+      } else {
+        pathScore = 0.1
       }
     }
 
-    return matchingSegments / maxSegments
+    // Combine scores with weighting
+    // Subdomain is very important (60%), path is important (40%)
+    const finalScore = (subdomainScore * 0.6) + (pathScore * 0.4)
+
+    return Math.min(finalScore, 1.0)
   }
 }
 
