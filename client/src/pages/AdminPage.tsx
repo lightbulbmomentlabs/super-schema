@@ -19,6 +19,7 @@ import {
 import { apiService } from '@/services/api'
 import type { User, SupportTicket } from '@shared/types'
 import ConfirmModal from '@/components/ConfirmModal'
+import TicketDetailsModal from '@/components/TicketDetailsModal'
 
 export default function AdminPage() {
   const { user: currentUser, isLoaded, isSignedIn } = useUser()
@@ -47,6 +48,7 @@ export default function AdminPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set())
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
+  const [viewingTicket, setViewingTicket] = useState<SupportTicket | null>(null)
 
   // Set page title
   useEffect(() => {
@@ -556,8 +558,15 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {filteredTickets.map((ticket) => (
-                  <tr key={ticket.id} className="border-b border-border hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
+                  <tr
+                    key={ticket.id}
+                    className="border-b border-border hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => setViewingTicket(ticket)}
+                  >
+                    <td
+                      className="px-4 py-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedTickets.has(ticket.id)}
@@ -587,7 +596,10 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {new Date(ticket.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td
+                      className="px-4 py-3 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => deleteSingleTicket.mutate(ticket.id)}
                         disabled={deleteSingleTicket.isPending}
@@ -725,6 +737,13 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Ticket Details Modal */}
+      <TicketDetailsModal
+        ticket={viewingTicket}
+        isOpen={viewingTicket !== null}
+        onClose={() => setViewingTicket(null)}
+      />
     </div>
   )
 }

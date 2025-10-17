@@ -22,6 +22,7 @@ import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
+import JokeDisplay from './JokeDisplay'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
 import { cn } from '@/utils/cn'
@@ -1034,7 +1035,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             </div>
           )}
 
-          {/* Help Text */}
+          {/* Loading State with Dad Jokes */}
+          {generatedSchemas.length === 0 && isGenerating && (
+            <JokeDisplay />
+          )}
+
+          {/* Help Text - Ready State */}
           {generatedSchemas.length === 0 && !isGenerating && (
             <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-lg">
               <LightningBoltIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
