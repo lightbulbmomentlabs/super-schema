@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { hubspotApi } from '@/services/hubspot'
 import { apiService } from '@/services/api'
-import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function HubSpotPage() {
@@ -143,6 +143,17 @@ export default function HubSpotPage() {
           <p className="text-muted-foreground">
             Connect your HubSpot account to automatically push schema markup to your blog posts and website pages.
           </p>
+        </div>
+
+        {/* Beta Notice */}
+        <div className="mb-8 flex items-start gap-2 p-4 bg-info/10 border border-info/20 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-info mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Private Beta</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              This feature is currently in private beta. Contact support to request access if you encounter any issues.
+            </p>
+          </div>
         </div>
 
         {/* Connect Button */}
