@@ -23,6 +23,12 @@ services:
   # Build-time environment variables for Vite frontend
   # CRITICAL: These MUST have BUILD_TIME scope to be embedded into client bundle
   # Without BUILD_TIME scope, the client will have 'undefined' for these values
+  - key: VITE_APP_URL
+    value: "https://superschema.ai"
+    scope: BUILD_TIME
+  - key: VITE_API_URL
+    value: "https://superschema.ai"
+    scope: BUILD_TIME
   - key: VITE_CLERK_PUBLISHABLE_KEY
     scope: BUILD_TIME
     type: SECRET
@@ -32,6 +38,29 @@ services:
   - key: VITE_HUBSPOT_CLIENT_ID
     scope: BUILD_TIME
     type: SECRET
+  - key: VITE_PUBLIC_CLERK_SIGN_IN_URL
+    value: "/sign-in"
+    scope: BUILD_TIME
+  - key: VITE_PUBLIC_CLERK_SIGN_UP_URL
+    value: "/sign-up"
+    scope: BUILD_TIME
+  - key: VITE_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+    value: "/generate"
+    scope: BUILD_TIME
+  - key: VITE_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+    value: "/welcome"
+    scope: BUILD_TIME
+  - key: VITE_PUBLIC_SUPABASE_URL
+    scope: BUILD_TIME
+    type: SECRET
+  - key: VITE_PUBLIC_SUPABASE_ANON_KEY
+    scope: BUILD_TIME
+    type: SECRET
+
+  # Server runtime configuration
+  - key: CLIENT_URL
+    value: "https://superschema.ai"
+    scope: RUN_TIME
 
   # Server runtime secrets
   - key: CLERK_SECRET_KEY

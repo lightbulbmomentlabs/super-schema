@@ -37,7 +37,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.CLIENT_URL || 'https://aioschemagenerator.com']
+    ? [process.env.CLIENT_URL || 'https://superschema.ai']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }))
