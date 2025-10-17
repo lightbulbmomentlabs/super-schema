@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth } from '@clerk/clerk-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CreditCard, TrendingUp, Database, ExternalLink, Library as LibraryIcon, Sparkles } from 'lucide-react'
@@ -13,6 +13,7 @@ import OnboardingWelcomeModal from '@/components/OnboardingWelcomeModal'
 export default function DashboardPage() {
   // Use real Clerk user
   const { user } = useUser()
+  const { isLoaded } = useAuth()
   const navigate = useNavigate()
 
   // Set page title
@@ -23,30 +24,34 @@ export default function DashboardPage() {
   // Onboarding state
   const onboarding = useOnboarding()
 
-  // Get user stats
+  // Get user stats - Wait for Clerk to load before firing
   const statsQuery = useQuery({
     queryKey: ['user-stats'],
-    queryFn: () => apiService.getUserStats()
+    queryFn: () => apiService.getUserStats(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get user credits
+  // Get user credits - Wait for Clerk to load before firing
   const creditsQuery = useQuery({
     queryKey: ['user-credits'],
-    queryFn: () => apiService.getCredits()
+    queryFn: () => apiService.getCredits(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get recent generations
+  // Get recent generations - Wait for Clerk to load before firing
   const { data: historyData } = useQuery({
     queryKey: ['generation-history'],
-    queryFn: () => apiService.getGenerationHistory(1, 5)
+    queryFn: () => apiService.getGenerationHistory(1, 5),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get library URLs for dashboard stats
+  // Get library URLs for dashboard stats - Wait for Clerk to load before firing
   const { data: libraryUrlsData } = useQuery({
     queryKey: ['dashboard-urls'],
     queryFn: () => apiService.getUserUrls({
       isHidden: false
-    })
+    }),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const recentGenerations = historyData?.data?.data || []

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@clerk/clerk-react'
 import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles, Plus } from 'lucide-react'
 import { apiService } from '@/services/api'
 import type { DiscoveredUrl, HubSpotContentMatchResult } from '@shared/types'
@@ -22,6 +23,7 @@ import { SCHEMA_TYPES } from '@/constants/schemaTypes'
 
 export default function LibraryPage() {
   const navigate = useNavigate()
+  const { isLoaded } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
@@ -51,15 +53,16 @@ export default function LibraryPage() {
     document.title = 'Super Schema | Library'
   }, [])
 
-  // Fetch domains
+  // Fetch domains - Wait for Clerk to load before firing
   const { data: domainsResponse, isLoading: domainsLoading } = useQuery({
     queryKey: ['domains'],
     queryFn: () => apiService.getUserDomains(),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true // Refetch when window regains focus
   })
 
-  // Fetch all URLs for counts (unfiltered by schema status)
+  // Fetch all URLs for counts (unfiltered by schema status) - Wait for Clerk to load before firing
   const { data: allUrlsResponse, refetch: refetchAllUrls } = useQuery({
     queryKey: ['urls-all', selectedDomainId, showHidden, searchQuery],
     queryFn: () => apiService.getUserUrls({
@@ -68,11 +71,12 @@ export default function LibraryPage() {
       isHidden: showHidden ? undefined : false,
       search: searchQuery || undefined
     }),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchOnMount: 'always',
     refetchOnWindowFocus: true
   })
 
-  // Fetch URLs with filters (for display)
+  // Fetch URLs with filters (for display) - Wait for Clerk to load before firing
   const { data: urlsResponse, isLoading: urlsLoading, refetch: refetchUrls } = useQuery({
     queryKey: ['urls', selectedDomainId, schemaFilter, showHidden, searchQuery],
     queryFn: () => apiService.getUserUrls({
@@ -81,21 +85,23 @@ export default function LibraryPage() {
       isHidden: showHidden ? undefined : false,
       search: searchQuery || undefined
     }),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true // Refetch when window regains focus
   })
 
-  // Fetch ALL schemas for selected URL (multi-schema support)
+  // Fetch ALL schemas for selected URL (multi-schema support) - Wait for Clerk to load before firing
   const { data: schemasResponse, isLoading: schemaLoading, error: schemaError } = useQuery({
     queryKey: ['urlSchemas', selectedUrlId],
     queryFn: () => selectedUrlId ? apiService.getAllUrlSchemas(selectedUrlId) : null,
-    enabled: !!selectedUrlId
+    enabled: isLoaded && !!selectedUrlId  // Prevents race condition with Clerk auth
   })
 
-  // Fetch HubSpot connections
+  // Fetch HubSpot connections - Wait for Clerk to load before firing
   const { data: hubspotConnectionsResponse } = useQuery({
     queryKey: ['hubspot-connections'],
     queryFn: () => hubspotApi.getConnections(),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchOnMount: 'always'
   })
 

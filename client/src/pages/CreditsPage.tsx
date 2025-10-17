@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth } from '@clerk/clerk-react'
 import { useSearchParams } from 'react-router-dom'
 import {
   CreditCard,
@@ -18,6 +18,7 @@ import { cn } from '@/utils/cn'
 
 export default function CreditsPage() {
   const { user } = useUser()
+  const { isLoaded } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [showPurchase, setShowPurchase] = useState(false)
 
@@ -36,29 +37,33 @@ export default function CreditsPage() {
     }
   }, [searchParams, setSearchParams])
 
-  // Get user credits
+  // Get user credits - Wait for Clerk to load before firing
   const { data: creditsData, refetch: refetchCredits } = useQuery({
     queryKey: ['user-credits'],
     queryFn: () => apiService.getCredits(),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchInterval: 30000
   })
 
-  // Get user stats
+  // Get user stats - Wait for Clerk to load before firing
   const { data: statsData } = useQuery({
     queryKey: ['user-stats'],
-    queryFn: () => apiService.getUserStats()
+    queryFn: () => apiService.getUserStats(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get credit transactions
+  // Get credit transactions - Wait for Clerk to load before firing
   const { data: transactionsData } = useQuery({
     queryKey: ['credit-transactions'],
-    queryFn: () => apiService.getCreditTransactions(1, 10)
+    queryFn: () => apiService.getCreditTransactions(1, 10),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get payment history
+  // Get payment history - Wait for Clerk to load before firing
   const { data: paymentHistoryData } = useQuery({
     queryKey: ['payment-history'],
-    queryFn: () => apiService.getPaymentHistory(1, 10)
+    queryFn: () => apiService.getPaymentHistory(1, 10),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const creditBalance = creditsData?.data?.creditBalance || 0

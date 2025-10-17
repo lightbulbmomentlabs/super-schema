@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import {
@@ -16,6 +16,7 @@ import { hubspotApi } from '@/services/hubspot'
 
 export default function SettingsPage() {
   const { user } = useUser()
+  const { isLoaded } = useAuth()
   const navigate = useNavigate()
 
   // Set page title
@@ -23,30 +24,34 @@ export default function SettingsPage() {
     document.title = 'Super Schema | Settings'
   }, [])
 
-  // Get user stats
+  // Get user stats - Wait for Clerk to load before firing
   const { data: statsData } = useQuery({
     queryKey: ['user-stats'],
-    queryFn: () => apiService.getUserStats()
+    queryFn: () => apiService.getUserStats(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get user credits
+  // Get user credits - Wait for Clerk to load before firing
   const { data: creditsData } = useQuery({
     queryKey: ['user-credits'],
-    queryFn: () => apiService.getCredits()
+    queryFn: () => apiService.getCredits(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get library URLs for stats
+  // Get library URLs for stats - Wait for Clerk to load before firing
   const { data: libraryUrlsData } = useQuery({
     queryKey: ['dashboard-urls'],
     queryFn: () => apiService.getUserUrls({
       isHidden: false
-    })
+    }),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
-  // Get HubSpot connections
+  // Get HubSpot connections - Wait for Clerk to load before firing
   const { data: hubspotConnectionsResponse } = useQuery({
     queryKey: ['hubspot-connections'],
-    queryFn: () => hubspotApi.getConnections()
+    queryFn: () => hubspotApi.getConnections(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const stats = statsData?.data || {}

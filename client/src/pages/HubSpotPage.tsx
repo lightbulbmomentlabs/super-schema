@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@clerk/clerk-react'
 import { hubspotApi } from '@/services/hubspot'
 import { apiService } from '@/services/api'
 import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe, AlertTriangle } from 'lucide-react'
@@ -7,22 +8,25 @@ import toast from 'react-hot-toast'
 
 export default function HubSpotPage() {
   const queryClient = useQueryClient()
+  const { isLoaded } = useAuth()
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [newDomain, setNewDomain] = useState<{ [key: string]: string }>({})
   const [showAddDomain, setShowAddDomain] = useState<{ [key: string]: boolean }>({})
 
-  // Fetch connections
+  // Fetch connections - Wait for Clerk to load before firing
   const { data: connectionsResponse, isLoading, error } = useQuery({
     queryKey: ['hubspot-connections'],
-    queryFn: () => hubspotApi.getConnections()
+    queryFn: () => hubspotApi.getConnections(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const connections = connectionsResponse?.data || []
 
-  // Fetch user domains
+  // Fetch user domains - Wait for Clerk to load before firing
   const { data: domainsResponse } = useQuery({
     queryKey: ['user-domains'],
-    queryFn: () => apiService.getUserDomains()
+    queryFn: () => apiService.getUserDomains(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const userDomains = domainsResponse?.data || []
