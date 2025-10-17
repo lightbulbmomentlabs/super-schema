@@ -122,15 +122,6 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <div className="pt-2">
-              <button
-                onClick={() => window.open('https://accounts.clerk.com/user', '_blank')}
-                className="inline-flex items-center gap-2 text-xs text-primary hover:underline"
-              >
-                Manage account details
-                <ExternalLink className="h-3 w-3" />
-              </button>
-            </div>
           </div>
         </div>
 
