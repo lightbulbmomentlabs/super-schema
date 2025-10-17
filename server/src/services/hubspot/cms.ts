@@ -60,45 +60,60 @@ export class HubSpotCMSService {
 
   /**
    * List all blog posts for connected portal
+   * Fetches up to 500 posts using pagination (HubSpot limit is 100 per request)
    */
-  async listBlogPosts(connectionId: string, limit: number = 100): Promise<HubSpotBlogPost[]> {
+  async listBlogPosts(connectionId: string, maxPosts: number = 500): Promise<HubSpotBlogPost[]> {
     try {
-      console.log('📚 [HubSpot CMS] Fetching blog posts')
+      console.log('📚 [HubSpot CMS] Fetching blog posts (up to', maxPosts, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
+      const allPosts: HubSpotBlogPost[] = []
+      let offset = 0
+      const limit = 100 // HubSpot's maximum
 
-      // Try fetching without state filter first
-      console.log('🔍 [HubSpot CMS] Making request to:', BLOG_POSTS_V2_URL)
-      const response = await client.get<{ objects: HubSpotBlogPostV2[] }>(
-        BLOG_POSTS_V2_URL,
-        {
-          params: {
-            limit
-            // Removed state filter to see all posts
+      while (allPosts.length < maxPosts) {
+        console.log(`🔍 [HubSpot CMS] Fetching blog posts batch (offset: ${offset})`)
+
+        const response = await client.get<{
+          objects: HubSpotBlogPostV2[]
+          total?: number
+          total_count?: number
+        }>(
+          BLOG_POSTS_V2_URL,
+          {
+            params: {
+              limit,
+              offset
+            }
           }
-        }
-      )
+        )
 
-      console.log('📦 [HubSpot CMS] Raw response:', {
-        hasObjects: !!response.data.objects,
-        objectCount: response.data.objects?.length || 0,
-        rawData: JSON.stringify(response.data).substring(0, 500)
-      })
+        const batch = response.data.objects || []
+        if (batch.length === 0) break // No more results
 
-      const posts: HubSpotBlogPost[] = response.data.objects.map(post => ({
-        id: post.id,
-        name: post.name,
-        slug: post.slug,
-        url: post.url,
-        state: post.state as any,
-        publicAccessRulesEnabled: false,
-        publishDate: post.publish_date ? new Date(post.publish_date).toISOString() : undefined,
-        createdAt: new Date(post.created).toISOString(),
-        updatedAt: new Date(post.updated).toISOString()
-      }))
+        const posts: HubSpotBlogPost[] = batch.map(post => ({
+          id: post.id,
+          name: post.name,
+          slug: post.slug,
+          url: post.url,
+          state: post.state as any,
+          publicAccessRulesEnabled: false,
+          publishDate: post.publish_date ? new Date(post.publish_date).toISOString() : undefined,
+          createdAt: new Date(post.created).toISOString(),
+          updatedAt: new Date(post.updated).toISOString()
+        }))
 
-      console.log(`✅ [HubSpot CMS] Retrieved ${posts.length} blog posts`)
-      return posts
+        allPosts.push(...posts)
+        offset += batch.length
+
+        // Stop if we got fewer than requested (last page)
+        if (batch.length < limit) break
+        // Stop if we've reached our max
+        if (allPosts.length >= maxPosts) break
+      }
+
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total`)
+      return allPosts.slice(0, maxPosts) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list blog posts:', error)
       if (axios.isAxiosError(error)) {
@@ -117,39 +132,67 @@ export class HubSpotCMSService {
 
   /**
    * List all pages for connected portal
+   * Fetches up to 500 pages using pagination (HubSpot limit is 100 per request)
    */
-  async listPages(connectionId: string, limit: number = 100): Promise<HubSpotPage[]> {
+  async listPages(connectionId: string, maxPages: number = 500): Promise<HubSpotPage[]> {
     try {
-      console.log('📄 [HubSpot CMS] Fetching pages')
+      console.log('📄 [HubSpot CMS] Fetching pages (up to', maxPages, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
+      const allPages: HubSpotPage[] = []
+      let offset = 0
+      const limit = 100 // HubSpot's maximum
 
-      const response = await client.get<{ results: HubSpotPageV3[] }>(
-        PAGES_V3_URL,
-        {
-          params: {
-            limit
+      while (allPages.length < maxPages) {
+        console.log(`🔍 [HubSpot CMS] Fetching pages batch (offset: ${offset})`)
+
+        const response = await client.get<{
+          results: HubSpotPageV3[]
+          total?: number
+        }>(
+          PAGES_V3_URL,
+          {
+            params: {
+              limit,
+              offset
+            }
           }
-        }
-      )
+        )
 
-      const pages: HubSpotPage[] = response.data.results.map(page => ({
-        id: page.id,
-        name: page.name,
-        slug: page.slug,
-        url: page.url,
-        state: page.state as any,
-        publicAccessRulesEnabled: page.publicAccessRulesEnabled,
-        publishDate: page.publishDate,
-        createdAt: page.createdAt,
-        updatedAt: page.updatedAt
-      }))
+        const batch = response.data.results || []
+        if (batch.length === 0) break // No more results
 
-      console.log(`✅ [HubSpot CMS] Retrieved ${pages.length} pages`)
-      return pages
+        const pages: HubSpotPage[] = batch.map(page => ({
+          id: page.id,
+          name: page.name,
+          slug: page.slug,
+          url: page.url,
+          state: page.state as any,
+          publicAccessRulesEnabled: page.publicAccessRulesEnabled,
+          publishDate: page.publishDate,
+          createdAt: page.createdAt,
+          updatedAt: page.updatedAt
+        }))
+
+        allPages.push(...pages)
+        offset += batch.length
+
+        // Stop if we got fewer than requested (last page)
+        if (batch.length < limit) break
+        // Stop if we've reached our max
+        if (allPages.length >= maxPages) break
+      }
+
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total`)
+      return allPages.slice(0, maxPages) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
       if (axios.isAxiosError(error)) {
+        console.error('❌ [HubSpot CMS] API Error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        })
         throw new Error(
           error.response?.data?.message || 'Failed to retrieve pages'
         )
@@ -269,14 +312,19 @@ export class HubSpotCMSService {
       ])
 
       const matches: HubSpotContentMatchResult[] = []
-
-      // Normalize target URL for comparison
-      const normalizedTarget = this.normalizeUrl(targetUrl)
+      let exactMatchFound = false
 
       // Check blog posts
+      // Note: Pass full URLs with protocol to calculateUrlSimilarity
+      // The parseUrl function inside needs the protocol for proper parsing
       for (const post of posts) {
-        const normalizedPostUrl = this.normalizeUrl(post.url)
-        const confidence = this.calculateUrlSimilarity(normalizedTarget, normalizedPostUrl)
+        const confidence = this.calculateUrlSimilarity(targetUrl, post.url)
+
+        // Log high confidence or exact matches for debugging
+        if (confidence >= 0.95) {
+          console.log(`🎯 [HubSpot CMS] High confidence match (${(confidence * 100).toFixed(1)}%): ${post.url}`)
+          exactMatchFound = true
+        }
 
         if (confidence > 0.5) {
           matches.push({
@@ -291,8 +339,13 @@ export class HubSpotCMSService {
 
       // Check pages
       for (const page of pages) {
-        const normalizedPageUrl = this.normalizeUrl(page.url)
-        const confidence = this.calculateUrlSimilarity(normalizedTarget, normalizedPageUrl)
+        const confidence = this.calculateUrlSimilarity(targetUrl, page.url)
+
+        // Log high confidence or exact matches for debugging
+        if (confidence >= 0.95) {
+          console.log(`🎯 [HubSpot CMS] High confidence match (${(confidence * 100).toFixed(1)}%): ${page.url}`)
+          exactMatchFound = true
+        }
 
         if (confidence > 0.5) {
           matches.push({
@@ -307,6 +360,10 @@ export class HubSpotCMSService {
 
       // Sort by confidence descending
       matches.sort((a, b) => b.confidence - a.confidence)
+
+      if (!exactMatchFound && matches.length > 0) {
+        console.log(`⚠️ [HubSpot CMS] No exact match found. Best match: ${matches[0].url} (${(matches[0].confidence * 100).toFixed(1)}%)`)
+      }
 
       console.log(`✅ [HubSpot CMS] Found ${matches.length} matches`)
       return matches.slice(0, 5) // Return top 5 matches
@@ -416,20 +473,16 @@ export class HubSpotCMSService {
     let pathScore = 0
 
     if (parsed1.path === parsed2.path) {
-      // Exact path match
+      // Exact path match - only this gets a high score
       pathScore = 1.0
-    } else if (parsed1.path.startsWith(parsed2.path) || parsed2.path.startsWith(parsed1.path)) {
-      // One path is a prefix of the other
-      const shorterPath = parsed1.path.length < parsed2.path.length ? parsed1.path : parsed2.path
-      const longerPath = parsed1.path.length >= parsed2.path.length ? parsed1.path : parsed2.path
-
-      // Calculate how much of the longer path is matched
-      pathScore = 0.7 + (0.2 * (shorterPath.length / longerPath.length))
     } else {
-      // Compare path segments
+      // For non-exact matches, use strict segment-based comparison
+      // This prevents child paths (e.g., /ditto/page) from matching parent paths (e.g., /ditto)
       const segments1 = parsed1.path.split('/').filter(s => s)
       const segments2 = parsed2.path.split('/').filter(s => s)
 
+      // Only award points if there are matching initial segments
+      // AND the paths are not parent/child relationships
       let matchingSegments = 0
       const minSegments = Math.min(segments1.length, segments2.length)
 
@@ -441,11 +494,13 @@ export class HubSpotCMSService {
         }
       }
 
+      // Award minimal score only if some segments match
+      // Reduced from 0.4 base to 0.1 to heavily penalize non-exact matches
       if (matchingSegments > 0) {
         const maxSegments = Math.max(segments1.length, segments2.length)
-        pathScore = 0.4 + (0.3 * (matchingSegments / maxSegments))
+        pathScore = 0.1 + (0.15 * (matchingSegments / maxSegments))
       } else {
-        pathScore = 0.1
+        pathScore = 0.0
       }
     }
 
