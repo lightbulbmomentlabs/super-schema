@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
 import validator from 'validator'
+import * as cheerio from 'cheerio'
 import type { ContentAnalysis } from './openai.js'
 import { htmlCleaningService, type StructuredContent } from './htmlCleaner.js'
 
@@ -102,19 +103,123 @@ class ScraperService {
         }
       })
 
-      // Navigate to URL
-      await page.goto(url, {
+      // Track redirects
+      const redirectChain: string[] = []
+      page.on('response', (response) => {
+        const status = response.status()
+        if (status >= 300 && status < 400) {
+          redirectChain.push(`${response.url()} -> ${status} -> ${response.headers()['location'] || 'unknown'}`)
+        }
+      })
+
+      // Navigate to URL and capture response
+      const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: options.timeout || 30000
       })
+
+      // IMMEDIATELY capture initial URL and HTML before any JS redirects
+      const initialUrl = page.url()
+      const initialHtml = await page.content()
 
       // Wait for page to stabilize and dismiss any overlays
       await page.waitForSelector('body', { timeout: 10000 })
       await this.delay(1500)
       await this.dismissOverlays(page, 1)
 
-      // Get the final HTML content
-      const html = await page.content()
+      // Get the final HTML content after waiting
+      const finalHtml = await page.content()
+      const finalUrl = page.url()
+
+      // Choose which HTML to use based on whether redirect happened
+      let html = finalHtml
+      let urlAfterJsCheck = finalUrl
+
+      // If URL changed after waiting, use initial HTML (before redirect)
+      if (initialUrl !== finalUrl) {
+        console.log('🔀 JavaScript redirect detected after page load!')
+        console.log(`   ${initialUrl} → ${finalUrl}`)
+        console.log('   Using initial HTML before redirect to get correct metadata')
+        html = initialHtml
+        urlAfterJsCheck = initialUrl
+      }
+
+      // ============================================
+      // DIAGNOSTIC LOGGING FOR URL SCRAPING ISSUES
+      // ============================================
+      console.log('\n🔍 ========== SCRAPING DIAGNOSTICS ==========')
+      console.log('📍 Original URL requested:', url)
+      console.log('📍 Initial URL (after HTTP redirects):', initialUrl)
+      console.log('📍 Final URL (after JS execution):', finalUrl)
+      console.log('📊 HTTP Response Status:', response?.status() || 'N/A')
+      console.log('📊 HTTP Response Status Text:', response?.statusText() || 'N/A')
+
+      // Log redirect chain
+      if (redirectChain.length > 0) {
+        console.log('🔀 HTTP Redirect Chain:')
+        redirectChain.forEach((redirect, index) => {
+          console.log(`   ${index + 1}. ${redirect}`)
+        })
+      }
+
+      // Check if URL changed during execution
+      if (initialUrl !== finalUrl) {
+        console.log('⚠️ WARNING: JavaScript redirect detected!')
+        console.log(`   ${initialUrl} → ${finalUrl}`)
+        console.log('   ✅ Using HTML from BEFORE redirect to preserve correct metadata')
+      }
+
+      // Check if initial URL differs from original (HTTP redirect)
+      if (initialUrl !== url) {
+        console.log('⚠️ WARNING: HTTP redirect detected!')
+        console.log('   This could be due to:')
+        console.log('   - HTTP redirect (301, 302, 307, 308)')
+        console.log('   - HubSpot redirect rule or domain setting')
+      }
+
+      // Parse HTML with Cheerio to extract raw metadata
+      const $diagnostic = cheerio.load(html)
+      const rawTitle = $diagnostic('title').text().trim()
+      const rawOgTitle = $diagnostic('meta[property="og:title"]').attr('content')
+      const rawTwitterTitle = $diagnostic('meta[name="twitter:title"]').attr('content')
+      const rawDescription = $diagnostic('meta[name="description"]').attr('content')
+      const rawOgDescription = $diagnostic('meta[property="og:description"]').attr('content')
+      const rawTwitterDescription = $diagnostic('meta[name="twitter:description"]').attr('content')
+
+      // Check for meta refresh redirects
+      const metaRefresh = $diagnostic('meta[http-equiv="refresh"]').attr('content')
+      if (metaRefresh) {
+        console.log('🔀 Meta Refresh Redirect Found:', metaRefresh)
+      }
+
+      // Check for JavaScript redirects in the HTML
+      const scriptContent = $diagnostic('script').text()
+      const jsRedirectPatterns = [
+        /window\.location\s*=\s*['"]([^'"]+)['"]/,
+        /window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
+        /window\.location\.replace\(['"]([^'"]+)['"]\)/,
+        /location\.href\s*=\s*['"]([^'"]+)['"]/
+      ]
+
+      for (const pattern of jsRedirectPatterns) {
+        const match = scriptContent.match(pattern)
+        if (match) {
+          console.log('🔀 JavaScript Redirect Found:', match[1])
+          break
+        }
+      }
+
+      console.log('\n📄 RAW HTML METADATA EXTRACTED BY PUPPETEER:')
+      console.log('  <title> tag:', rawTitle || '[EMPTY]')
+      console.log('  og:title:', rawOgTitle || '[EMPTY]')
+      console.log('  twitter:title:', rawTwitterTitle || '[EMPTY]')
+      console.log('  <meta name="description">:', rawDescription || '[EMPTY]')
+      console.log('  og:description:', rawOgDescription || '[EMPTY]')
+      console.log('  twitter:description:', rawTwitterDescription || '[EMPTY]')
+
+      console.log('\n📏 HTML Size:', html.length, 'characters')
+      console.log('📝 HTML Preview (first 200 chars):', html.substring(0, 200).replace(/\s+/g, ' '))
+      console.log('🔍 ========================================\n')
 
       console.log('🔄 Processing HTML with advanced cleaning service...')
 

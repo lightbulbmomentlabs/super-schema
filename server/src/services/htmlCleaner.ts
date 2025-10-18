@@ -213,14 +213,63 @@ class HtmlCleaningService {
    * Covers Open Graph, Twitter Cards, JSON-LD, and more
    */
   private async extractEnhancedMetadata($: CheerioAPI, url: string): Promise<EnhancedMetadata> {
-    // Core page metadata
-    const title = $('title').text().trim() ||
-                  $('meta[property="og:title"]').attr('content') ||
-                  $('meta[name="twitter:title"]').attr('content') || ''
+    // Core page metadata with diagnostic logging
+    console.log('\n🔍 ========== HTML CLEANER METADATA EXTRACTION ==========')
 
-    const description = $('meta[name="description"]').attr('content') ||
-                       $('meta[property="og:description"]').attr('content') ||
-                       $('meta[name="twitter:description"]').attr('content') || ''
+    // Title extraction with source tracking
+    const titleTag = $('title').text().trim()
+    const ogTitle = $('meta[property="og:title"]').attr('content')
+    const twitterTitle = $('meta[name="twitter:title"]').attr('content')
+
+    let title = ''
+    let titleSource = ''
+
+    if (titleTag) {
+      title = titleTag
+      titleSource = '<title> tag'
+    } else if (ogTitle) {
+      title = ogTitle
+      titleSource = 'og:title'
+    } else if (twitterTitle) {
+      title = twitterTitle
+      titleSource = 'twitter:title'
+    }
+
+    console.log('📄 TITLE EXTRACTION:')
+    console.log('  Source used:', titleSource || '[NONE FOUND]')
+    console.log('  Extracted value:', title || '[EMPTY]')
+    console.log('  Available sources:')
+    console.log('    <title> tag:', titleTag || '[EMPTY]')
+    console.log('    og:title:', ogTitle || '[EMPTY]')
+    console.log('    twitter:title:', twitterTitle || '[EMPTY]')
+
+    // Description extraction with source tracking
+    const metaDescription = $('meta[name="description"]').attr('content')
+    const ogDescription = $('meta[property="og:description"]').attr('content')
+    const twitterDescription = $('meta[name="twitter:description"]').attr('content')
+
+    let description = ''
+    let descriptionSource = ''
+
+    if (metaDescription) {
+      description = metaDescription
+      descriptionSource = 'meta[name="description"]'
+    } else if (ogDescription) {
+      description = ogDescription
+      descriptionSource = 'og:description'
+    } else if (twitterDescription) {
+      description = twitterDescription
+      descriptionSource = 'twitter:description'
+    }
+
+    console.log('\n📝 DESCRIPTION EXTRACTION:')
+    console.log('  Source used:', descriptionSource || '[NONE FOUND]')
+    console.log('  Extracted value:', description || '[EMPTY]')
+    console.log('  Available sources:')
+    console.log('    meta[name="description"]:', metaDescription || '[EMPTY]')
+    console.log('    og:description:', ogDescription || '[EMPTY]')
+    console.log('    twitter:description:', twitterDescription || '[EMPTY]')
+    console.log('🔍 =====================================================\n')
 
     const canonicalUrl = $('link[rel="canonical"]').attr('href') || url
     const language = $('html').attr('lang') || $('meta[property="og:locale"]').attr('content') || 'en'
