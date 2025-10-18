@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import { findConnectionByDomain } from '@/utils/domain'
 import {
@@ -59,6 +59,7 @@ const defaultOptions: GenerationOptions = {
 export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: SchemaGeneratorProps = {}) {
   // Use real Clerk user
   const { user } = useUser()
+  const { isLoaded } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const isAdmin = useIsAdmin()
@@ -116,10 +117,11 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
   const allSchemaRecords = allSchemasResponse?.data || []
 
-  // Get user credits
+  // Get user credits - Wait for Clerk to load before firing
   const { data: creditsData, refetch: refetchCredits } = useQuery({
     queryKey: ['user-credits'],
     queryFn: () => apiService.getCredits(),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchInterval: 30000 // Refetch every 30 seconds
   })
 
@@ -783,10 +785,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                 </>
               ) : generationMetadata?.isValidationError ? (
                 <>
-                  <AlertCircle className="h-5 w-5 text-warning-foreground mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-medium text-warning-foreground">Content Analysis Feedback</p>
-                    <p className="text-sm text-warning-foreground mt-1 leading-relaxed">
+                    <p className="font-medium text-foreground">Content Analysis Feedback</p>
+                    <p className="text-sm text-foreground mt-1 leading-relaxed">
                       {generationMetadata.error}
                     </p>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-2">
@@ -794,7 +796,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                         <Clock className="h-3 w-3 mr-1" />
                         {generationMetadata.processingTimeMs}ms
                       </span>
-                      <span className="flex items-center text-success-foreground">
+                      <span className="flex items-center text-green-600 dark:text-green-400">
                         <CreditCard className="h-3 w-3 mr-1" />
                         No credits used
                       </span>

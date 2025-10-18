@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@clerk/clerk-react'
 import { AlertTriangle, CreditCard, X, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiService } from '@/services/api'
@@ -10,20 +11,23 @@ interface LowCreditWarningProps {
 }
 
 export default function LowCreditWarning({ threshold = 5, onDismiss }: LowCreditWarningProps) {
+  const { isLoaded } = useAuth()
   const [isDismissed, setIsDismissed] = useState(false)
   const [isNewUser, setIsNewUser] = useState(false)
 
-  // Get user credits
+  // Get user credits - Wait for Clerk to load before firing
   const { data: creditsData } = useQuery({
     queryKey: ['user-credits'],
     queryFn: () => apiService.getCredits(),
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
     refetchInterval: 30000
   })
 
-  // Get payment history to determine if user has ever purchased
+  // Get payment history to determine if user has ever purchased - Wait for Clerk to load before firing
   const { data: paymentHistory } = useQuery({
     queryKey: ['payment-history'],
     queryFn: () => apiService.getPaymentHistory(1, 1), // Only need to know if ANY purchases exist
+    enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
   const creditBalance = creditsData?.data?.creditBalance || 0
