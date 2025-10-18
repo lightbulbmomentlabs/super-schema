@@ -202,6 +202,9 @@ export default function HubSpotPage() {
             <p className="text-sm text-muted-foreground mt-0.5">
               This feature is currently in private beta. Contact support to request access if you encounter any issues.
             </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              <strong>Note:</strong> This feature requires HubSpot Marketing Hub Professional/Enterprise or Content Hub Professional/Enterprise.
+            </p>
           </div>
         </div>
 
