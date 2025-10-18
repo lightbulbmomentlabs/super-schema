@@ -593,17 +593,6 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                   : `Discovered ${discoveredUrls.length} URLs`}
               </span>
             </div>
-
-            {/* Search Box */}
-            {discoveredUrls.length > 10 && (
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter URLs..."
-                className="px-3 py-1 text-sm border border-info rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-info"
-              />
-            )}
           </div>
         )}
 
@@ -618,10 +607,10 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
 
         {/* Discovered URLs - Priority Pages and Grouped */}
         {discoveredUrls.length > 0 && (
-          <div className="border border-border rounded-md max-h-96 overflow-y-auto">
+          <div className="border border-border rounded-md overflow-hidden">
             {/* Fallback: Show all URLs if no categorization worked */}
             {priorityPages.length === 0 && sortedGroups.length === 0 && (
-              <div className="p-4">
+              <div className="p-4 max-h-96 overflow-y-auto">
                 <p className="text-sm text-muted-foreground mb-3">All Discovered URLs:</p>
                 {filteredUrls.map((urlData, index) => (
                   <div
@@ -646,12 +635,26 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
 
             {/* Priority Pages (depth 1 - always visible) */}
             {priorityPages.length > 0 && (
-              <div className="border-b border-border">
-                <div className="p-3 bg-accent/30">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold text-sm">⭐ Priority Pages</span>
-                      <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
+              <div className="flex flex-col">
+                {/* Fixed Header */}
+                <div className="p-3 bg-accent/30 border-b border-border sticky top-0 z-10">
+                  <div className="flex items-center justify-between w-full gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-semibold text-sm">⭐ Priority Pages</span>
+                        <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
+                      </div>
+
+                      {/* Search Box */}
+                      {discoveredUrls.length > 10 && (
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Filter URLs..."
+                          className="px-3 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      )}
                     </div>
 
                     {/* Batch button aligned right */}
@@ -711,7 +714,10 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                     </div>
                   )}
                 </div>
-                <div className="bg-muted/20">
+
+                {/* Scrollable URL List */}
+                <div className="max-h-80 overflow-y-auto">
+                  <div className="bg-muted/20">
                   {priorityPages.map((urlData, index) => (
                     <div
                       key={index}
@@ -768,12 +774,10 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                       )}
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {/* Subdirectory Groups (collapsible) */}
-            {sortedGroups.map((groupKey) => {
+                  {/* Subdirectory Groups (collapsible) - inside scrollable container */}
+                  {sortedGroups.map((groupKey) => {
               const urls = subdirectoryGroups[groupKey]
               const isExpanded = expandedGroups.has(groupKey)
 
@@ -857,6 +861,9 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                 </div>
               )
             })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
