@@ -74,6 +74,9 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
   const [showBatchProgress, setShowBatchProgress] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 
+  // Status bar visibility state
+  const [showStatusBar, setShowStatusBar] = useState(true)
+
   // Persist state to localStorage whenever it changes
   useEffect(() => {
     try {
@@ -90,6 +93,18 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
       console.error('Failed to persist state:', error)
     }
   }, [domain, discoveredUrls, crawlId, status, hasMore, expandedGroups])
+
+  // Auto-hide status bar 5 seconds after discovery completes
+  useEffect(() => {
+    if (status === 'completed') {
+      const timer = setTimeout(() => {
+        setShowStatusBar(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    } else if (status === 'discovering') {
+      setShowStatusBar(true) // Show again if new discovery starts
+    }
+  }, [status])
 
   // Poll for more URLs in background
   useEffect(() => {
@@ -559,8 +574,13 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
         )}
 
         {/* Status Message */}
-        {(status === 'discovering' || status === 'completed') && discoveredUrls.length > 0 && (
-          <div className="flex items-center justify-between p-3 bg-info border border-info rounded-md">
+        {(status === 'discovering' || status === 'completed') && discoveredUrls.length > 0 && showStatusBar && (
+          <div
+            className={cn(
+              "flex items-center justify-between p-3 bg-info border border-info rounded-md transition-opacity duration-500",
+              !showStatusBar && "opacity-0"
+            )}
+          >
             <div className="flex items-center space-x-2">
               {status === 'discovering' ? (
                 <Loader2 className="h-4 w-4 text-info-foreground animate-spin" />
@@ -583,62 +603,6 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
                 placeholder="Filter URLs..."
                 className="px-3 py-1 text-sm border border-info rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-info"
               />
-            )}
-          </div>
-        )}
-
-        {/* Batch Mode Controls */}
-        {status === 'completed' && discoveredUrls.length > 0 && getSelectableUrls().length > 0 && (
-          <div className="flex items-center justify-between p-4 bg-accent/30 border border-border rounded-md">
-            <div className="flex items-center gap-3">
-              {!batchMode ? (
-                <button
-                  onClick={toggleBatchMode}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-sm"
-                >
-                  <SuperSchemaIcon className="h-3 w-3" />
-                  Batch Generate
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={handleStartBatch}
-                    disabled={selectedUrls.size === 0 || isBatchProcessing}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isBatchProcessing ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <SuperSchemaIcon className="h-3 w-3" />
-                        Start Batch ({selectedUrls.size} of {MAX_BATCH_URLS})
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={clearSelection}
-                    disabled={selectedUrls.size === 0}
-                    className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md hover:bg-accent transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Clear Selection
-                  </button>
-                  <button
-                    onClick={toggleBatchMode}
-                    className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-md hover:bg-accent transition-colors text-sm"
-                  >
-                    <X className="h-3 w-3" />
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-            {batchMode && (
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedUrls.size}</span> of <span className="font-medium">{MAX_BATCH_URLS}</span> URLs selected
-              </div>
             )}
           </div>
         )}
@@ -684,10 +648,68 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
             {priorityPages.length > 0 && (
               <div className="border-b border-border">
                 <div className="p-3 bg-accent/30">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-sm">⭐ Priority Pages</span>
-                    <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-sm">⭐ Priority Pages</span>
+                      <span className="text-xs text-muted-foreground">({priorityPages.length})</span>
+                    </div>
+
+                    {/* Batch button aligned right */}
+                    {status === 'completed' && discoveredUrls.length > 0 && getSelectableUrls().length > 0 && (
+                      <div className="flex items-center gap-3">
+                        {!batchMode ? (
+                          <button
+                            onClick={toggleBatchMode}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-sm"
+                          >
+                            <SuperSchemaIcon className="h-3 w-3" />
+                            Batch Generate
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={handleStartBatch}
+                              disabled={selectedUrls.size === 0 || isBatchProcessing}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isBatchProcessing ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <SuperSchemaIcon className="h-3 w-3" />
+                                  Start Batch ({selectedUrls.size} of {MAX_BATCH_URLS})
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={clearSelection}
+                              disabled={selectedUrls.size === 0}
+                              className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md hover:bg-accent transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Clear Selection
+                            </button>
+                            <button
+                              onClick={toggleBatchMode}
+                              className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-md hover:bg-accent transition-colors text-sm"
+                            >
+                              <X className="h-3 w-3" />
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  {/* URL count text when in batch mode */}
+                  {batchMode && (
+                    <div className="text-sm text-muted-foreground mt-2">
+                      <span className="font-medium">{selectedUrls.size}</span> of <span className="font-medium">{MAX_BATCH_URLS}</span> URLs selected
+                    </div>
+                  )}
                 </div>
                 <div className="bg-muted/20">
                   {priorityPages.map((urlData, index) => (

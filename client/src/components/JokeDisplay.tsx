@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Laugh } from 'lucide-react'
 import { JOKES } from '@/constants/jokes'
 
 interface JokeDisplayProps {
@@ -85,7 +84,11 @@ export default function JokeDisplay({
               transform: isTransitioning ? 'scale(0.8) rotate(-10deg)' : 'scale(1) rotate(0deg)'
             }}
           >
-            <Laugh className="h-12 w-12 text-primary" />
+            <img
+              src="/super-dad-jokes.png"
+              alt="Super Dad Jokes"
+              className="max-w-[80px] h-auto object-contain"
+            />
           </div>
         </div>
 
