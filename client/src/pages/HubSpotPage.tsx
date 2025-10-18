@@ -16,11 +16,56 @@ export default function HubSpotPage() {
   // Fetch connections - Wait for Clerk to load before firing
   const { data: connectionsResponse, isLoading, error } = useQuery({
     queryKey: ['hubspot-connections'],
-    queryFn: () => hubspotApi.getConnections(),
-    enabled: isLoaded  // Prevents race condition with Clerk auth
+    queryFn: async () => {
+      console.log('🔍 [HubSpotPage] Fetching connections', {
+        isLoaded,
+        timestamp: new Date().toISOString()
+      })
+      try {
+        const response = await hubspotApi.getConnections()
+        console.log('✅ [HubSpotPage] Connections fetched', {
+          count: response.data?.length || 0
+        })
+        return response
+      } catch (error: any) {
+        console.error('❌ [HubSpotPage] Failed to fetch connections', {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText,
+          errorData: error?.response?.data,
+          errorMessage: error.message
+        })
+        throw error
+      }
+    },
+    enabled: isLoaded,  // Prevents race condition with Clerk auth
+    retry: 2,  // Retry failed requests twice
+    retryDelay: 1000  // Wait 1 second between retries
   })
 
   const connections = connectionsResponse?.data || []
+
+  // Get detailed error message
+  const getErrorMessage = () => {
+    if (!error) return ''
+
+    const err = error as any
+    if (err?.response?.status === 401) {
+      return 'Authentication required. Please sign in again.'
+    }
+    if (err?.response?.status === 403) {
+      return 'Access denied. Please check your permissions.'
+    }
+    if (err?.response?.status === 500) {
+      return 'Server error. Please try again later.'
+    }
+    if (err?.response?.data?.error) {
+      return err.response.data.error
+    }
+    if (err?.message) {
+      return err.message
+    }
+    return 'Failed to load connections'
+  }
 
   // Fetch user domains - Wait for Clerk to load before firing
   const { data: domainsResponse } = useQuery({
@@ -179,9 +224,18 @@ export default function HubSpotPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : error ? (
-            <div className="flex items-center space-x-2 text-destructive py-8">
-              <AlertCircle className="h-5 w-5" />
-              <span>Failed to load connections</span>
+            <div className="py-8">
+              <div className="flex items-center space-x-2 text-destructive mb-3">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-semibold">Failed to load connections</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">{getErrorMessage()}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Reload Page
+              </button>
             </div>
           ) : connections.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
