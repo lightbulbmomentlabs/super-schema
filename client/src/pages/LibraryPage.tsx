@@ -36,6 +36,10 @@ export default function LibraryPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showDeleteSchemaModal, setShowDeleteSchemaModal] = useState(false)
   const [schemaToDelete, setSchemaToDelete] = useState<{ id: string; type: string } | null>(null)
+  const [showDeleteUrlModal, setShowDeleteUrlModal] = useState(false)
+  const [urlToDelete, setUrlToDelete] = useState<{ id: string; url: string } | null>(null)
+  const [showDeleteDomainModal, setShowDeleteDomainModal] = useState(false)
+  const [domainToDelete, setDomainToDelete] = useState<{ id: string; domain: string } | null>(null)
   const [isRefining, setIsRefining] = useState(false)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
   const [showChangesBanner, setShowChangesBanner] = useState(false)
@@ -232,17 +236,24 @@ export default function LibraryPage() {
     }
   }
 
-  const handleDeleteDomain = async (domainId: string) => {
-    if (!confirm('Are you sure you want to delete this domain and all its URLs?')) {
-      return
-    }
+  const handleDeleteDomain = (domainId: string, domainName: string) => {
+    setDomainToDelete({ id: domainId, domain: domainName })
+    setShowDeleteDomainModal(true)
+  }
+
+  const confirmDeleteDomain = async () => {
+    if (!domainToDelete) return
 
     try {
-      await apiService.deleteDomain(domainId)
+      await apiService.deleteDomain(domainToDelete.id)
+      toast.success('Domain deleted successfully')
       refetchUrls()
       refetchAllUrls()
+      setShowDeleteDomainModal(false)
+      setDomainToDelete(null)
     } catch (error) {
       console.error('Failed to delete domain:', error)
+      toast.error('Failed to delete domain')
     }
   }
 
@@ -332,11 +343,16 @@ export default function LibraryPage() {
     }
   })
 
-  const handleDeleteUrl = async (urlId: string) => {
-    if (!confirm('Are you sure you want to delete this URL?')) {
-      return
-    }
-    deleteUrlMutation.mutate(urlId)
+  const handleDeleteUrl = (urlId: string, urlPath: string) => {
+    setUrlToDelete({ id: urlId, url: urlPath })
+    setShowDeleteUrlModal(true)
+  }
+
+  const confirmDeleteUrl = async () => {
+    if (!urlToDelete) return
+    deleteUrlMutation.mutate(urlToDelete.id)
+    setShowDeleteUrlModal(false)
+    setUrlToDelete(null)
   }
 
   const handleDeleteSchemaType = async (schemaId: string, schemaType: string) => {
@@ -855,7 +871,7 @@ export default function LibraryPage() {
                             </p>
                           </div>
                           <button
-                            onClick={() => handleDeleteDomain(domain.id)}
+                            onClick={() => handleDeleteDomain(domain.id, domain.domain)}
                             className="text-destructive hover:text-destructive/80 transition-colors"
                             title="Delete domain"
                           >
@@ -936,7 +952,7 @@ export default function LibraryPage() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      handleDeleteUrl(url.id)
+                                      handleDeleteUrl(url.id, url.path)
                                     }}
                                     className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
                                     title="Delete URL"
@@ -1012,7 +1028,7 @@ export default function LibraryPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleDeleteUrl(url.id)
+                                handleDeleteUrl(url.id, url.url)
                               }}
                               className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80"
                               title="Delete URL"
@@ -1310,6 +1326,36 @@ export default function LibraryPage() {
         onConfirm={confirmDeleteSchemaType}
         title="Delete Schema Type"
         message={schemaToDelete ? `Are you sure you want to delete the "${schemaToDelete.type}" schema? You can regenerate it once after deletion.` : ''}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
+      {/* Delete URL Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteUrlModal}
+        onClose={() => {
+          setShowDeleteUrlModal(false)
+          setUrlToDelete(null)
+        }}
+        onConfirm={confirmDeleteUrl}
+        title="Delete URL"
+        message={urlToDelete ? `Are you sure you want to delete "${urlToDelete.url}"? This action cannot be undone.` : ''}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
+      {/* Delete Domain Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteDomainModal}
+        onClose={() => {
+          setShowDeleteDomainModal(false)
+          setDomainToDelete(null)
+        }}
+        onConfirm={confirmDeleteDomain}
+        title="Delete Domain"
+        message={domainToDelete ? `Are you sure you want to delete "${domainToDelete.domain}" and all its URLs? This action cannot be undone.` : ''}
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
