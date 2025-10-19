@@ -13,7 +13,8 @@ import type {
   UserDomain,
   DiscoveredUrl,
   UrlLibraryFilters,
-  SupportTicket
+  SupportTicket,
+  ReleaseNote
 } from 'aeo-schema-generator-shared/types'
 
 // Database types for Supabase
@@ -1763,6 +1764,166 @@ class DatabaseService {
       .from('support_tickets')
       .delete()
       .in('id', ticketIds)
+
+    if (error) throw error
+  }
+
+  // ===================
+  // RELEASE NOTES METHODS
+  // ===================
+
+  async getPublishedReleaseNotes(): Promise<any[]> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getPublishedReleaseNotes')
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('release_notes')
+      .select('*')
+      .eq('is_published', true)
+      .order('release_date', { ascending: false })
+
+    if (error) throw error
+
+    return data.map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      releaseDate: row.release_date,
+      isPublished: row.is_published,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+  }
+
+  async getAllReleaseNotes(): Promise<any[]> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getAllReleaseNotes')
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('release_notes')
+      .select('*')
+      .order('release_date', { ascending: false })
+
+    if (error) throw error
+
+    return data.map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      releaseDate: row.release_date,
+      isPublished: row.is_published,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }))
+  }
+
+  async createReleaseNote(params: {
+    title: string
+    description: string
+    category: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
+    releaseDate: string
+    isPublished: boolean
+  }): Promise<any> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createReleaseNote', params)
+      return {
+        id: `mock-release-note-${Date.now()}`,
+        ...params,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }
+
+    const { data, error } = await this.supabase
+      .from('release_notes')
+      .insert({
+        title: params.title,
+        description: params.description,
+        category: params.category,
+        release_date: params.releaseDate,
+        is_published: params.isPublished
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      releaseDate: data.release_date,
+      isPublished: data.is_published,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+
+  async updateReleaseNote(
+    noteId: string,
+    updates: {
+      title?: string
+      description?: string
+      category?: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
+      releaseDate?: string
+      isPublished?: boolean
+    }
+  ): Promise<any> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateReleaseNote', { noteId, updates })
+      return {
+        id: noteId,
+        ...updates,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }
+
+    const updateData: any = {}
+    if (updates.title !== undefined) updateData.title = updates.title
+    if (updates.description !== undefined) updateData.description = updates.description
+    if (updates.category !== undefined) updateData.category = updates.category
+    if (updates.releaseDate !== undefined) updateData.release_date = updates.releaseDate
+    if (updates.isPublished !== undefined) updateData.is_published = updates.isPublished
+
+    const { data, error } = await this.supabase
+      .from('release_notes')
+      .update(updateData)
+      .eq('id', noteId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      releaseDate: data.release_date,
+      isPublished: data.is_published,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+
+  async deleteReleaseNote(noteId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteReleaseNote', { noteId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('release_notes')
+      .delete()
+      .eq('id', noteId)
 
     if (error) throw error
   }

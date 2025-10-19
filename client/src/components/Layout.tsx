@@ -6,13 +6,14 @@ import {
   Library,
   Settings,
   Shield,
-  ExternalLink,
   Menu,
-  X
+  X,
+  Bell
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
 import LightningBoltIcon from './icons/LightningBoltIcon'
+import HubSpotIcon from './icons/HubSpotIcon'
 import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
 import ResourcesDropdown from './ResourcesDropdown'
@@ -25,7 +26,7 @@ interface LayoutProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Generate', href: '/generate', icon: LightningBoltIcon },
-  { name: 'Library', href: '/library', icon: Library },
+  { name: 'URL Library', href: '/library', icon: Library },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -124,8 +125,23 @@ export default function Layout({ children }: LayoutProps) {
                     : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <ExternalLink className="mr-3 h-5 w-5" />
+                <HubSpotIcon className="mr-3 h-5 w-5" />
                 HubSpot
+              </Link>
+
+              {/* What's New Link */}
+              <Link
+                to="/whats-new"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                  location.pathname === '/whats-new'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <Bell className="mr-3 h-5 w-5" />
+                What's New
               </Link>
 
               {/* Admin Link (if admin) */}
@@ -228,13 +244,32 @@ export default function Layout({ children }: LayoutProps) {
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <ExternalLink
+                    <HubSpotIcon
                       className={cn(
                         'mr-3 flex-shrink-0 h-5 w-5',
                         location.pathname === '/hubspot' ? 'text-primary-foreground' : 'text-muted-foreground'
                       )}
                     />
                     HubSpot
+                  </Link>
+
+                  {/* What's New - Available to all users */}
+                  <Link
+                    to="/whats-new"
+                    className={cn(
+                      'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                      location.pathname === '/whats-new'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <Bell
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    />
+                    What's New
                   </Link>
 
                   {/* Admin-Only Links */}

@@ -24,6 +24,7 @@ import urlLibraryRoutes from './routes/urlLibrary.js'
 import adminRoutes from './routes/admin.js'
 import supportRoutes from './routes/support.js'
 import hubspotRoutes from './routes/hubspot.js'
+import releaseNotesRoutes from './routes/releaseNotes.js'
 
 const app = express()
 const PORT = process.env.PORT || 8080
@@ -90,6 +91,7 @@ app.use('/api/crawler', authMiddleware, crawlerRoutes)
 app.use('/api/library', authMiddleware, urlLibraryRoutes)
 app.use('/api/support', supportRoutes) // Support routes include their own auth middleware
 app.use('/api/hubspot', hubspotRoutes) // HubSpot routes include their own auth middleware
+app.use('/api/release-notes', releaseNotesRoutes) // Release notes routes include their own auth middleware
 
 // Serve static files from client build
 // In production, client/dist is copied to server/dist/client during build

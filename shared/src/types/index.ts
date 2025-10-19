@@ -284,6 +284,34 @@ export interface FindConnectionByDomainRequest {
   domain: string
 }
 
+// Release Notes Types
+export interface ReleaseNote {
+  id: string
+  title: string
+  description: string
+  category: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
+  releaseDate: string
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateReleaseNoteRequest {
+  title: string
+  description: string
+  category: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
+  releaseDate: string
+  isPublished?: boolean
+}
+
+export interface UpdateReleaseNoteRequest {
+  title?: string
+  description?: string
+  category?: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
+  releaseDate?: string
+  isPublished?: boolean
+}
+
 // Configuration Types
 export interface AppConfig {
   creditPacks: CreditPack[]

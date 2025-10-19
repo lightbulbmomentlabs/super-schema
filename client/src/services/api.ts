@@ -12,7 +12,10 @@ import type {
   UrlLibraryFilters,
   SaveDiscoveredUrlsRequest,
   SupportTicket,
-  CreateSupportTicketRequest
+  CreateSupportTicketRequest,
+  ReleaseNote,
+  CreateReleaseNoteRequest,
+  UpdateReleaseNoteRequest
 } from '@shared/types'
 
 // In production, API is served from same origin as the client
@@ -443,6 +446,33 @@ class ApiService {
 
   async batchDeleteSupportTickets(ticketIds: string[]): Promise<ApiResponse<{ message: string }>> {
     const response = await api.post('/support/tickets/batch-delete', { ticketIds })
+    return response.data
+  }
+
+  // Release notes endpoints
+  async getReleaseNotes(): Promise<ApiResponse<ReleaseNote[]>> {
+    const response = await api.get('/release-notes')
+    return response.data
+  }
+
+  // Admin release notes endpoints
+  async getAllReleaseNotes(): Promise<ApiResponse<ReleaseNote[]>> {
+    const response = await api.get('/release-notes/admin/all')
+    return response.data
+  }
+
+  async createReleaseNote(data: CreateReleaseNoteRequest): Promise<ApiResponse<ReleaseNote>> {
+    const response = await api.post('/release-notes/admin', data)
+    return response.data
+  }
+
+  async updateReleaseNote(noteId: string, data: UpdateReleaseNoteRequest): Promise<ApiResponse<ReleaseNote>> {
+    const response = await api.put(`/release-notes/admin/${noteId}`, data)
+    return response.data
+  }
+
+  async deleteReleaseNote(noteId: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.delete(`/release-notes/admin/${noteId}`)
     return response.data
   }
 }

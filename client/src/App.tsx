@@ -13,6 +13,7 @@ import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
 import HubSpotPage from './pages/HubSpotPage'
 import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
+import WhatsNewPage from './pages/WhatsNewPage'
 import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import WelcomePage from './pages/WelcomePage'
@@ -127,6 +128,13 @@ function App() {
 
           {/* HubSpot OAuth Callback - No layout needed */}
           <Route path="/hubspot/callback" element={<HubSpotCallbackPage />} />
+
+          {/* What's New - Standalone route at root level */}
+          <Route path="/whats-new" element={
+            <Layout>
+              <WhatsNewPage />
+            </Layout>
+          } />
 
           {/* Settings - Standalone route at root level */}
           <Route path="/settings" element={
