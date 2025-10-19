@@ -20,6 +20,7 @@ import WelcomePage from './pages/WelcomePage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import DocsPage from './pages/DocsPage'
+import FreeSchemaGeneratorPage from './pages/FreeSchemaGeneratorPage'
 import FAQSchemaGeneratorPage from './pages/FAQSchemaGeneratorPage'
 import ArticleSchemaGeneratorPage from './pages/ArticleSchemaGeneratorPage'
 import BlogPostingSchemaGeneratorPage from './pages/BlogPostingSchemaGeneratorPage'
@@ -81,6 +82,7 @@ function App() {
           <Route path="/terms" element={<TermsOfServicePage />} />
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/docs" element={<DocsPage />} />
+          <Route path="/free-schema-generator" element={<FreeSchemaGeneratorPage />} />
           <Route path="/faq-schema-generator" element={<FAQSchemaGeneratorPage />} />
           <Route path="/article-schema-generator" element={<ArticleSchemaGeneratorPage />} />
           <Route path="/blogposting-schema-generator" element={<BlogPostingSchemaGeneratorPage />} />
