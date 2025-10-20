@@ -3,6 +3,7 @@ import type { ReleaseNote } from '@shared/types'
 
 const STORAGE_KEY = 'whatsNew_lastVisit'
 const NEW_THRESHOLD_DAYS = 7
+const UPDATE_EVENT = 'whatsNewUpdated'
 
 /**
  * Custom hook for managing What's New notification state
@@ -11,6 +12,16 @@ const NEW_THRESHOLD_DAYS = 7
 export function useWhatsNewNotifications(notes: ReleaseNote[] = []) {
   // State to trigger re-renders when localStorage changes
   const [lastReadTime, setLastReadTime] = useState<number>(Date.now())
+
+  // Listen for updates from other component instances
+  useEffect(() => {
+    const handleUpdate = () => {
+      setLastReadTime(Date.now())
+    }
+
+    window.addEventListener(UPDATE_EVENT, handleUpdate)
+    return () => window.removeEventListener(UPDATE_EVENT, handleUpdate)
+  }, [])
   /**
    * Get the last visit timestamp from localStorage
    */
@@ -31,7 +42,10 @@ export function useWhatsNewNotifications(notes: ReleaseNote[] = []) {
     try {
       const now = new Date().toISOString()
       localStorage.setItem(STORAGE_KEY, now)
-      setLastReadTime(Date.now()) // Trigger re-render
+      setLastReadTime(Date.now()) // Trigger re-render in this instance
+
+      // Notify other hook instances across components
+      window.dispatchEvent(new Event(UPDATE_EVENT))
     } catch (error) {
       console.error('Failed to save last visit timestamp:', error)
     }
