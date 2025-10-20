@@ -114,9 +114,13 @@ export class HubSpotCMSService {
         if (allPosts.length >= maxPosts) break
       }
 
-      // Filter to only PUBLISHED posts (excludes DRAFT and archived posts)
-      const filteredPosts = allPosts.filter(post => post.state === 'PUBLISHED')
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} published)`)
+      // Log actual state values to understand what HubSpot returns
+      const stateValues = new Set(allPosts.map(p => p.state))
+      console.log(`🔍 [DEBUG] Unique state values found: ${Array.from(stateValues).join(', ')}`)
+
+      // Filter out posts with "-archived-" in URL (temporary heuristic until we understand state values)
+      const filteredPosts = allPosts.filter(post => !post.url.includes('-archived-'))
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} non-archived by URL)`)
       return filteredPosts.slice(0, maxPosts) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list blog posts:', error)
@@ -187,9 +191,13 @@ export class HubSpotCMSService {
         if (allPages.length >= maxPages) break
       }
 
-      // Filter to only PUBLISHED pages (excludes DRAFT and archived pages)
-      const filteredPages = allPages.filter(page => page.state === 'PUBLISHED')
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} published)`)
+      // Log actual state values to understand what HubSpot returns
+      const stateValues = new Set(allPages.map(p => p.state))
+      console.log(`🔍 [DEBUG] Unique state values found: ${Array.from(stateValues).join(', ')}`)
+
+      // Filter out pages with "-archived-" in URL (temporary heuristic until we understand state values)
+      const filteredPages = allPages.filter(page => !page.url.includes('-archived-'))
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} non-archived by URL)`)
       return filteredPages.slice(0, maxPages) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
