@@ -5,6 +5,8 @@ import { Bell, Sparkles, Zap, TrendingUp, Bug, Send, X, Lightbulb } from 'lucide
 import { apiService } from '@/services/api'
 import type { ReleaseNote } from '@shared/types'
 import { cn } from '@/utils/cn'
+import { NewPill } from '@/components/NewPill'
+import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
 
 export default function WhatsNewPage() {
   const { user } = useUser()
@@ -24,6 +26,16 @@ export default function WhatsNewPage() {
   })
 
   const notes = notesData?.data || []
+
+  // Track what's new notifications
+  const { isNoteNew, markAllAsRead } = useWhatsNewNotifications(notes)
+
+  // Mark all notes as read when the page is viewed
+  useEffect(() => {
+    if (notes.length > 0) {
+      markAllAsRead()
+    }
+  }, [notes.length, markAllAsRead])
 
   // Submit feature request mutation
   const submitFeatureRequest = useMutation({
@@ -163,9 +175,12 @@ export default function WhatsNewPage() {
           >
             {/* Date and Category */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground font-medium">
-                {formatDate(note.releaseDate)}
-              </span>
+              <div className="flex items-center">
+                <span className="text-sm text-muted-foreground font-medium">
+                  {formatDate(note.releaseDate)}
+                </span>
+                {isNoteNew(note) && <NewPill />}
+              </div>
               <span
                 className={cn(
                   'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full',

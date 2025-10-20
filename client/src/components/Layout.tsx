@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton, useUser } from '@clerk/clerk-react'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard,
   Library,
@@ -17,7 +18,10 @@ import HubSpotIcon from './icons/HubSpotIcon'
 import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
 import ResourcesDropdown from './ResourcesDropdown'
+import { NotificationBadge } from './NotificationBadge'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
+import { apiService } from '@/services/api'
 
 interface LayoutProps {
   children: ReactNode
@@ -35,6 +39,16 @@ export default function Layout({ children }: LayoutProps) {
   const { user } = useUser()
   const isAdmin = useIsAdmin()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Fetch release notes for notification badge
+  const { data: notesData } = useQuery({
+    queryKey: ['release-notes'],
+    queryFn: () => apiService.getReleaseNotes(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+
+  const notes = notesData?.data || []
+  const { unreadCount } = useWhatsNewNotifications(notes)
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,7 +154,10 @@ export default function Layout({ children }: LayoutProps) {
                     : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Bell className="mr-3 h-5 w-5" />
+                <span className="relative mr-3">
+                  <Bell className="h-5 w-5" />
+                  <NotificationBadge count={unreadCount} />
+                </span>
                 What's New
               </Link>
 
@@ -263,12 +280,15 @@ export default function Layout({ children }: LayoutProps) {
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <Bell
-                      className={cn(
-                        'mr-3 flex-shrink-0 h-5 w-5',
-                        location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
-                      )}
-                    />
+                    <span className="relative mr-3 flex-shrink-0">
+                      <Bell
+                        className={cn(
+                          'h-5 w-5',
+                          location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
+                        )}
+                      />
+                      <NotificationBadge count={unreadCount} />
+                    </span>
                     What's New
                   </Link>
 
