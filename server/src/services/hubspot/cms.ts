@@ -188,8 +188,26 @@ export class HubSpotCMSService {
       }
 
       // Filter out archived pages using the archived boolean field
+      // DEBUG: Log the first few pages to see what HubSpot returns
+      console.log('🔍 [DEBUG] Sample pages from HubSpot API:')
+      allPages.slice(0, 3).forEach(page => {
+        console.log(`  - "${page.name}" (${page.url})`)
+        console.log(`    state: ${page.state}, archived: ${page.archived}`)
+      })
+
       const filteredPages = allPages.filter(page => !page.archived)
       console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} non-archived)`)
+
+      // DEBUG: Check if any pages with "archived" in URL are getting through
+      const archivedUrlPages = filteredPages.filter(p => p.url.includes('archived'))
+      if (archivedUrlPages.length > 0) {
+        console.log('⚠️ [DEBUG] Pages with "archived" in URL that passed filter:')
+        archivedUrlPages.forEach(page => {
+          console.log(`  - "${page.name}" (${page.url})`)
+          console.log(`    state: ${page.state}, archived: ${page.archived}`)
+        })
+      }
+
       return filteredPages.slice(0, maxPages) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
