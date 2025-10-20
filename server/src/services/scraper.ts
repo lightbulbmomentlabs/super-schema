@@ -50,7 +50,8 @@ class ScraperService {
           '--no-zygote',
           '--disable-gpu',
           '--disable-software-rasterizer',
-          '--disable-extensions'
+          '--disable-extensions',
+          '--disable-cache' // Prevent HTTP caching (including 404s)
         ]
       }
 
@@ -91,6 +92,9 @@ class ScraperService {
 
       // Set viewport
       await page.setViewport(options.viewport || { width: 1920, height: 1080 })
+
+      // Disable cache at page level to ensure fresh responses
+      await page.setCacheEnabled(false)
 
       // Block unnecessary resources for faster loading
       await page.setRequestInterception(true)
