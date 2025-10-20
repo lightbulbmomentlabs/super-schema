@@ -28,12 +28,16 @@ export default function WhatsNewPage() {
   const notes = notesData?.data || []
 
   // Track what's new notifications
-  const { isNoteNew, markAllAsRead } = useWhatsNewNotifications(notes)
+  const { isNoteNew, isNoteUnread, markAllAsRead } = useWhatsNewNotifications(notes)
 
-  // Mark all notes as read when the page is viewed
+  // Mark all as read when navigating away from the page (cleanup)
+  // This ensures pills disappear when user returns
   useEffect(() => {
-    if (notes.length > 0) {
-      markAllAsRead()
+    return () => {
+      // Only mark as read if we have notes to avoid unnecessary updates
+      if (notes.length > 0) {
+        markAllAsRead()
+      }
     }
   }, [notes.length, markAllAsRead])
 
@@ -179,7 +183,7 @@ export default function WhatsNewPage() {
                 <span className="text-sm text-muted-foreground font-medium">
                   {formatDate(note.releaseDate)}
                 </span>
-                {isNoteNew(note) && <NewPill />}
+                {isNoteNew(note) && isNoteUnread(note) && <NewPill />}
               </div>
               <span
                 className={cn(
