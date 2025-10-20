@@ -45,11 +45,16 @@ export const getAllReleaseNotes = asyncHandler(async (req: AuthenticatedRequest,
 export const createReleaseNote = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { title, description, category, releaseDate, isPublished } = createReleaseNoteSchema.parse(req.body)
 
+  // Add noon UTC time to prevent timezone display issues
+  // Date picker gives us YYYY-MM-DD, we append T12:00:00.000Z to ensure
+  // the date displays correctly regardless of user timezone
+  const releaseDateWithTime = `${releaseDate}T12:00:00.000Z`
+
   const note = await db.createReleaseNote({
     title,
     description,
     category,
-    releaseDate,
+    releaseDate: releaseDateWithTime,
     isPublished: isPublished ?? false
   })
 
@@ -64,6 +69,11 @@ export const createReleaseNote = asyncHandler(async (req: AuthenticatedRequest, 
 export const updateReleaseNote = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { noteId } = req.params
   const updates = updateReleaseNoteSchema.parse(req.body)
+
+  // If updating releaseDate, add noon UTC time to prevent timezone display issues
+  if (updates.releaseDate) {
+    updates.releaseDate = `${updates.releaseDate}T12:00:00.000Z`
+  }
 
   const note = await db.updateReleaseNote(noteId, updates)
 
