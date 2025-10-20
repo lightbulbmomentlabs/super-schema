@@ -114,9 +114,9 @@ export class HubSpotCMSService {
         if (allPosts.length >= maxPosts) break
       }
 
-      // Filter out archived posts using the archived boolean field
-      const filteredPosts = allPosts.filter(post => !post.archived)
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} non-archived)`)
+      // Filter to only PUBLISHED posts (excludes DRAFT and archived posts)
+      const filteredPosts = allPosts.filter(post => post.state === 'PUBLISHED')
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} published)`)
       return filteredPosts.slice(0, maxPosts) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list blog posts:', error)
@@ -187,27 +187,9 @@ export class HubSpotCMSService {
         if (allPages.length >= maxPages) break
       }
 
-      // Filter out archived pages using the archived boolean field
-      // DEBUG: Log the first few pages to see what HubSpot returns
-      console.log('🔍 [DEBUG] Sample pages from HubSpot API:')
-      allPages.slice(0, 3).forEach(page => {
-        console.log(`  - "${page.name}" (${page.url})`)
-        console.log(`    state: ${page.state}, archived: ${page.archived}`)
-      })
-
-      const filteredPages = allPages.filter(page => !page.archived)
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} non-archived)`)
-
-      // DEBUG: Check if any pages with "archived" in URL are getting through
-      const archivedUrlPages = filteredPages.filter(p => p.url.includes('archived'))
-      if (archivedUrlPages.length > 0) {
-        console.log('⚠️ [DEBUG] Pages with "archived" in URL that passed filter:')
-        archivedUrlPages.forEach(page => {
-          console.log(`  - "${page.name}" (${page.url})`)
-          console.log(`    state: ${page.state}, archived: ${page.archived}`)
-        })
-      }
-
+      // Filter to only PUBLISHED pages (excludes DRAFT and archived pages)
+      const filteredPages = allPages.filter(page => page.state === 'PUBLISHED')
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} published)`)
       return filteredPages.slice(0, maxPages) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
