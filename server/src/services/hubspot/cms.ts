@@ -83,7 +83,9 @@ export class HubSpotCMSService {
           {
             params: {
               limit,
-              offset
+              offset,
+              archived: false,
+              state: 'PUBLISHED'
             }
           }
         )
@@ -154,7 +156,9 @@ export class HubSpotCMSService {
           {
             params: {
               limit,
-              offset
+              offset,
+              archived: false,
+              state: 'PUBLISHED'
             }
           }
         )

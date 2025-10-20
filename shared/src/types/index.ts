@@ -232,7 +232,7 @@ export interface HubSpotBlogPost {
   name: string
   slug: string
   url: string
-  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED' | 'ARCHIVED'
   publicAccessRulesEnabled: boolean
   publishDate?: string
   createdAt: string
@@ -244,7 +244,7 @@ export interface HubSpotPage {
   name: string
   slug: string
   url: string
-  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED'
+  state: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED' | 'ARCHIVED'
   publicAccessRulesEnabled: boolean
   publishDate?: string
   createdAt: string
