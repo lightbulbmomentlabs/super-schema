@@ -112,8 +112,10 @@ export class HubSpotCMSService {
         if (allPosts.length >= maxPosts) break
       }
 
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total`)
-      return allPosts.slice(0, maxPosts) // Trim to max
+      // Filter out archived posts
+      const filteredPosts = allPosts.filter(post => post.state !== 'ARCHIVED')
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} non-archived)`)
+      return filteredPosts.slice(0, maxPosts) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list blog posts:', error)
       if (axios.isAxiosError(error)) {
@@ -183,8 +185,10 @@ export class HubSpotCMSService {
         if (allPages.length >= maxPages) break
       }
 
-      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total`)
-      return allPages.slice(0, maxPages) // Trim to max
+      // Filter out archived pages
+      const filteredPages = allPages.filter(page => page.state !== 'ARCHIVED')
+      console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} non-archived)`)
+      return filteredPages.slice(0, maxPages) // Trim to max
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
       if (axios.isAxiosError(error)) {
