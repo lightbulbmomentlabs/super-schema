@@ -25,6 +25,7 @@ interface HubSpotBlogPostV2 {
   slug: string
   url: string
   state: string
+  archived?: boolean
   head_html?: string
   publish_date?: number
   created: number
@@ -37,6 +38,7 @@ interface HubSpotPageV3 {
   slug: string
   url: string
   state: string
+  archived: boolean
   publicAccessRulesEnabled: boolean
   publishDate?: string
   createdAt: string
@@ -112,8 +114,8 @@ export class HubSpotCMSService {
         if (allPosts.length >= maxPosts) break
       }
 
-      // Filter out archived posts
-      const filteredPosts = allPosts.filter(post => post.state !== 'ARCHIVED')
+      // Filter out archived posts using the archived boolean field
+      const filteredPosts = allPosts.filter(post => !post.archived)
       console.log(`✅ [HubSpot CMS] Retrieved ${allPosts.length} blog posts total (${filteredPosts.length} non-archived)`)
       return filteredPosts.slice(0, maxPosts) // Trim to max
     } catch (error) {
@@ -185,8 +187,8 @@ export class HubSpotCMSService {
         if (allPages.length >= maxPages) break
       }
 
-      // Filter out archived pages
-      const filteredPages = allPages.filter(page => page.state !== 'ARCHIVED')
+      // Filter out archived pages using the archived boolean field
+      const filteredPages = allPages.filter(page => !page.archived)
       console.log(`✅ [HubSpot CMS] Retrieved ${allPages.length} pages total (${filteredPages.length} non-archived)`)
       return filteredPages.slice(0, maxPages) // Trim to max
     } catch (error) {
