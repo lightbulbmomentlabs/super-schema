@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUser, useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
@@ -109,25 +109,72 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
 
   // Fetch all schemas for the current URL (multi-schema support)
+  // Configuration matches LibraryPage exactly to ensure optimistic updates work correctly
   const { data: allSchemasResponse } = useQuery({
     queryKey: ['urlSchemas', currentUrlId],
     queryFn: () => currentUrlId ? apiService.getAllUrlSchemas(currentUrlId) : null,
-    enabled: !!currentUrlId,
-    refetchOnMount: false,          // Prevent refetch on mount that could override optimistic updates
-    refetchOnWindowFocus: false,    // Prevent refetch on window focus
-    staleTime: Infinity,            // Keep data fresh indefinitely - cache is source of truth
+    enabled: !!currentUrlId
   })
 
-  const allSchemaRecords = allSchemasResponse?.data || []
+  // CRITICAL FIX: Read directly from cache instead of using query hook result
+  // The query hook can have stale data even after optimistic updates
+  const cacheData = currentUrlId
+    ? queryClient.getQueryData<any>(['urlSchemas', currentUrlId])
+    : null
+
+  const allSchemaRecords = cacheData?.data || allSchemasResponse?.data || []
 
   // Get the currently selected schema record
   const selectedSchemaRecord = allSchemaRecords[selectedSchemaIndex] || allSchemaRecords[0]
+
+  console.log('🔍 [GeneratePage] Raw cache data:', {
+    hasResponse: !!allSchemasResponse,
+    hasCacheData: !!cacheData,
+    hasData: !!allSchemasResponse?.data,
+    recordsCount: allSchemaRecords.length,
+    selectedIndex: selectedSchemaIndex,
+    usingCache: !!cacheData,
+    selectedRecord: selectedSchemaRecord ? {
+      id: selectedSchemaRecord.id,
+      schemaType: selectedSchemaRecord.schemaType,
+      schemasType: typeof selectedSchemaRecord.schemas,
+      schemasIsArray: Array.isArray(selectedSchemaRecord.schemas),
+      schemasKeys: selectedSchemaRecord.schemas && typeof selectedSchemaRecord.schemas === 'object'
+        ? Object.keys(selectedSchemaRecord.schemas)
+        : null,
+      schemasHasWrapperStructure: selectedSchemaRecord.schemas &&
+        typeof selectedSchemaRecord.schemas === 'object' &&
+        'schemas' in selectedSchemaRecord.schemas &&
+        !('@type' in selectedSchemaRecord.schemas),
+      schemasPreview: selectedSchemaRecord.schemas && typeof selectedSchemaRecord.schemas === 'object' && 'schemas' in selectedSchemaRecord.schemas
+        ? (Array.isArray(selectedSchemaRecord.schemas.schemas)
+            ? selectedSchemaRecord.schemas.schemas.slice(0, 1).map((s: any) => ({
+                type: s['@type'],
+                hasName: !!s.name,
+                namePreview: s.name?.substring(0, 30)
+              }))
+            : { type: selectedSchemaRecord.schemas.schemas?.['@type'] })
+        : null
+    } : null
+  })
 
   // Extract schemas array from selected record (similar to LibraryPage)
   // This ensures schemas are derived from query data and sync with cache updates
   let schemasFromQuery: any[] = []
   if (selectedSchemaRecord?.schemas) {
     const schemas = selectedSchemaRecord.schemas
+
+    console.log('🔎 [GeneratePage] Extraction input:', {
+      schemasType: typeof schemas,
+      isArray: Array.isArray(schemas),
+      hasAtType: schemas && typeof schemas === 'object' && '@type' in schemas,
+      hasSchemas: schemas && typeof schemas === 'object' && 'schemas' in schemas,
+      descriptionPreview: schemas && typeof schemas === 'object' && 'description' in schemas
+        ? schemas.description?.substring(0, 50)
+        : 'N/A',
+      fullSchemas: schemas
+    })
+
     if (Array.isArray(schemas)) {
       schemasFromQuery = schemas.map(item => {
         if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
@@ -149,6 +196,17 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  console.log('🔍 [GeneratePage] Extracted schemasFromQuery:', {
+    count: schemasFromQuery.length,
+    preview: schemasFromQuery.slice(0, 1).map(s => ({
+      type: s['@type'],
+      hasName: !!s.name,
+      namePreview: s.name?.substring(0, 30),
+      hasDescription: !!s.description,
+      descriptionPreview: s.description?.substring(0, 30)
+    }))
+  })
+
   // Use schemas from query when available (syncs with cache), fallback to local state
   const displaySchemas = schemasFromQuery.length > 0 ? schemasFromQuery : generatedSchemas
 
@@ -157,7 +215,13 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     hasLocalSchemas: generatedSchemas.length > 0,
     usingSource: schemasFromQuery.length > 0 ? 'query' : 'local',
     selectedSchemaIndex,
-    allSchemaRecords: allSchemaRecords.length
+    allSchemaRecords: allSchemaRecords.length,
+    displaySchemasPreview: displaySchemas.slice(0, 1).map(s => ({
+      type: s?.['@type'],
+      namePreview: s?.name?.substring(0, 30),
+      descriptionPreview: s?.description?.substring(0, 80) + '...'
+    })),
+    fullDisplaySchemas: displaySchemas
   })
 
   // Get user credits - Wait for Clerk to load before firing
@@ -691,6 +755,13 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         }
       })
 
+      // Force React Query to re-read from cache (but don't refetch from server)
+      // This ensures the query result reflects the optimistic update immediately
+      queryClient.invalidateQueries({
+        queryKey: ['urlSchemas', variables.urlId],
+        refetchType: 'none'
+      })
+
       // Return context for rollback on error
       return { previousData }
     },
@@ -702,40 +773,43 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }
       toast.error('Failed to save schema changes')
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       console.log('✅ [GeneratePage onSuccess] Schema saved to server successfully')
-      // Optionally invalidate to sync with server (in case server modified data)
-      // queryClient.invalidateQueries({ queryKey: ['urlSchemas', variables.urlId] })
     }
   })
 
-  const handleSchemaChange = (schemas: JsonLdSchema[]) => {
-    // Save to database if we have a URL ID
-    if (currentUrlId) {
-      console.log('💾 [GeneratePage handleSchemaChange] Saving schema changes:', {
-        currentUrlId,
-        selectedSchemaIndex,
-        schemasCount: schemas.length,
-        schemasPreview: schemas.map(s => ({
-          type: s['@type'],
-          hasName: !!s.name,
-          hasDescription: !!s.description
-        }))
-      })
+  const handleSchemaChange = useCallback(
+    (schemas: JsonLdSchema[]) => {
+      // Save to database if we have a URL ID
+      if (currentUrlId) {
+        console.log('💾 [GeneratePage handleSchemaChange] Saving schema changes:', {
+          currentUrlId,
+          selectedSchemaIndex,
+          schemasCount: schemas.length,
+          schemasPreview: schemas.map(s => ({
+            type: s['@type'],
+            hasName: !!s.name,
+            hasDescription: !!s.description
+          }))
+        })
 
-      // DON'T update local state - let the mutation's optimistic update handle it
-      // This prevents a race where local state triggers a re-render showing old query data
-      // before the cache is updated
-      updateSchemaMutation.mutate({
-        urlId: currentUrlId,
-        schemas,
-        schemaIndex: selectedSchemaIndex
-      })
-    } else {
-      // No URL ID yet (not saved to database) - use local state
-      setGeneratedSchemas(schemas)
-    }
-  }
+        // CRITICAL FIX: Clear htmlScriptTags when user edits
+        // This forces the editor to display the actual JSON being edited
+        // instead of stale HTML from the initial schema generation
+        setHtmlScriptTags('')
+
+        updateSchemaMutation.mutate({
+          urlId: currentUrlId,
+          schemas,
+          schemaIndex: selectedSchemaIndex
+        })
+      } else {
+        // No URL ID yet (not saved to database) - use local state
+        setGeneratedSchemas(schemas)
+      }
+    },
+    [currentUrlId, selectedSchemaIndex, updateSchemaMutation]
+  )
 
   const handleValidate = async (schemas: JsonLdSchema[]) => {
     return validateMutation.mutateAsync(schemas)

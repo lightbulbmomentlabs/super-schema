@@ -80,13 +80,38 @@ export default function SchemaEditor({
     // Only update editor value if user is not actively editing
     // This prevents cursor jumping during auto-save
     if (schemas.length > 0 && !isUserEditing) {
-      // If htmlScriptTags is available from API, show that in the editor
-      // Otherwise, show raw JSON
+      console.log('🔄 [SchemaEditor] Resetting editor value:', {
+        isUserEditing,
+        schemasCount: schemas.length,
+        currentSchemaIndex,
+        schemaDescription: schemas[currentSchemaIndex]?.description?.substring(0, 80) || 'N/A',
+        hasEditorRef: !!editorRef.current
+      })
+
+      // Determine the new value
+      let newValue: string
       if (htmlScriptTags) {
-        setEditorValue(htmlScriptTags)
+        newValue = htmlScriptTags
       } else {
         const currentSchema = schemas[currentSchemaIndex] || schemas[0]
-        setEditorValue(JSON.stringify(currentSchema, null, 2))
+        newValue = JSON.stringify(currentSchema, null, 2)
+      }
+
+      // Update React state
+      setEditorValue(newValue)
+
+      // CRITICAL FIX: Directly update Monaco's internal value
+      // Monaco Editor doesn't always respond to React's controlled value prop
+      // So we need to imperatively set the value using the editor instance
+      if (editorRef.current) {
+        const currentMonacoValue = editorRef.current.getValue()
+        if (currentMonacoValue !== newValue) {
+          console.log('🔧 [SchemaEditor] Forcing Monaco to update value', {
+            currentValuePreview: currentMonacoValue.substring(0, 100),
+            newValuePreview: newValue.substring(0, 100)
+          })
+          editorRef.current.setValue(newValue)
+        }
       }
     }
   }, [schemas, currentSchemaIndex, htmlScriptTags, isUserEditing])
