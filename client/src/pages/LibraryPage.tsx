@@ -174,7 +174,12 @@ export default function LibraryPage() {
     schemaRecords,
     selectedSchemaIndex,
     selectedSchemaRecord,
-    schemasArray
+    schemasArray,
+    schemasArrayPreview: schemasArray.map(s => ({
+      type: s?.['@type'],
+      hasName: !!s?.name,
+      hasDescription: !!s?.description
+    }))
   })
 
   // Calculate schema score if not stored in database (for old schemas)
@@ -259,20 +264,65 @@ export default function LibraryPage() {
 
   // Mutation for updating schema
   const updateSchemaMutation = useMutation({
-    mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[] }) =>
+    mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[]; schemaIndex: number }) =>
       apiService.updateUrlSchema(urlId, schemas),
     onSuccess: (_, variables) => {
+      console.log('✅ [Mutation Success] Schema saved to server:', {
+        urlId: variables.urlId,
+        schemasCount: variables.schemas.length,
+        schemaIndex: variables.schemaIndex
+      })
+
+      // Get current cache data BEFORE update
+      const currentCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
+      console.log('📦 [Cache Before Update]:', {
+        hasCache: !!currentCache,
+        cacheData: currentCache
+      })
+
       // Update the cache optimistically to reflect the saved changes
       // This prevents the editor from reverting to old data
       queryClient.setQueryData(['urlSchemas', variables.urlId], (oldData: any) => {
-        if (!oldData) return oldData
-        return {
-          ...oldData,
-          data: {
-            ...oldData.data,
-            schemas: variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
-          }
+        if (!oldData) {
+          console.warn('⚠️ [Cache Update] No old data in cache!')
+          return oldData
         }
+
+        // oldData.data is an ARRAY of schema records, not a single object
+        // We need to update the specific record at the correct index
+        const updatedRecords = Array.isArray(oldData.data)
+          ? oldData.data.map((record: any, index: number) => {
+              // Update the selected record's schemas field
+              if (index === variables.schemaIndex) {
+                return {
+                  ...record,
+                  schemas: variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
+                }
+              }
+              return record
+            })
+          : oldData.data
+
+        const newData = {
+          ...oldData,
+          data: updatedRecords
+        }
+
+        console.log('🔄 [Cache Update] Updating cache:', {
+          schemaIndex: variables.schemaIndex,
+          oldRecord: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex] : null,
+          newRecord: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex] : null,
+          totalRecords: Array.isArray(updatedRecords) ? updatedRecords.length : 0
+        })
+
+        return newData
+      })
+
+      // Verify cache was updated
+      const updatedCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
+      console.log('📦 [Cache After Update]:', {
+        hasCache: !!updatedCache,
+        cacheData: updatedCache
       })
     },
     onError: () => {
@@ -283,9 +333,23 @@ export default function LibraryPage() {
   const handleSchemaChange = useCallback(
     (schemas: any[]) => {
       if (!selectedUrlId) return
-      updateSchemaMutation.mutate({ urlId: selectedUrlId, schemas })
+      console.log('💾 [handleSchemaChange] Saving schema changes:', {
+        selectedUrlId,
+        selectedSchemaIndex,
+        schemasCount: schemas.length,
+        schemasPreview: schemas.map(s => ({
+          type: s['@type'],
+          hasName: !!s.name,
+          hasDescription: !!s.description
+        }))
+      })
+      updateSchemaMutation.mutate({
+        urlId: selectedUrlId,
+        schemas,
+        schemaIndex: selectedSchemaIndex
+      })
     },
-    [selectedUrlId, updateSchemaMutation]
+    [selectedUrlId, selectedSchemaIndex, updateSchemaMutation]
   )
 
   const handleUrlClick = (urlId: string) => {
