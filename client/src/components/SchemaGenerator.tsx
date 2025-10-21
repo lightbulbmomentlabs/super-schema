@@ -580,8 +580,94 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  // Mutation for updating schema
+  const updateSchemaMutation = useMutation({
+    mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[]; schemaIndex: number }) =>
+      apiService.updateUrlSchema(urlId, schemas),
+    onSuccess: (_, variables) => {
+      console.log('✅ [GeneratePage Mutation Success] Schema saved to server:', {
+        urlId: variables.urlId,
+        schemasCount: variables.schemas.length,
+        schemaIndex: variables.schemaIndex
+      })
+
+      // Get current cache data BEFORE update
+      const currentCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
+      console.log('📦 [GeneratePage Cache Before Update]:', {
+        hasCache: !!currentCache,
+        cacheData: currentCache
+      })
+
+      // Update the cache optimistically to reflect the saved changes
+      queryClient.setQueryData(['urlSchemas', variables.urlId], (oldData: any) => {
+        if (!oldData) {
+          console.warn('⚠️ [GeneratePage Cache Update] No old data in cache!')
+          return oldData
+        }
+
+        // oldData.data is an ARRAY of schema records, not a single object
+        // We need to update the specific record at the correct index
+        const updatedRecords = Array.isArray(oldData.data)
+          ? oldData.data.map((record: any, index: number) => {
+              if (index === variables.schemaIndex) {
+                return {
+                  ...record,
+                  schemas: variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
+                }
+              }
+              return record
+            })
+          : oldData.data
+
+        const newData = {
+          ...oldData,
+          data: updatedRecords
+        }
+
+        console.log('🔄 [GeneratePage Cache Update] Updating cache:', {
+          schemaIndex: variables.schemaIndex,
+          oldRecord: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex] : null,
+          newRecord: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex] : null,
+          totalRecords: Array.isArray(updatedRecords) ? updatedRecords.length : 0
+        })
+
+        return newData
+      })
+
+      // Verify cache was updated
+      const updatedCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
+      console.log('📦 [GeneratePage Cache After Update]:', {
+        hasCache: !!updatedCache,
+        cacheData: updatedCache
+      })
+    },
+    onError: () => {
+      toast.error('Failed to save schema changes')
+    }
+  })
+
   const handleSchemaChange = (schemas: JsonLdSchema[]) => {
     setGeneratedSchemas(schemas)
+
+    // Save to database if we have a URL ID
+    if (currentUrlId) {
+      console.log('💾 [GeneratePage handleSchemaChange] Saving schema changes:', {
+        currentUrlId,
+        selectedSchemaIndex,
+        schemasCount: schemas.length,
+        schemasPreview: schemas.map(s => ({
+          type: s['@type'],
+          hasName: !!s.name,
+          hasDescription: !!s.description
+        }))
+      })
+
+      updateSchemaMutation.mutate({
+        urlId: currentUrlId,
+        schemas,
+        schemaIndex: selectedSchemaIndex
+      })
+    }
   }
 
   const handleValidate = async (schemas: JsonLdSchema[]) => {
