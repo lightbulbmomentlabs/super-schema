@@ -522,6 +522,40 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Account Information */}
+              <div className="pt-4 border-t border-border">
+                <h3 className="font-semibold mb-2">Account Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">User ID</span>
+                    <span className="font-mono text-xs">{userDetails.user.id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Member Since</span>
+                    <span className="font-medium">
+                      {new Date(userDetails.user.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Age</span>
+                    <span className="font-medium">
+                      {(() => {
+                        const accountAge = Math.floor(
+                          (Date.now() - new Date(userDetails.user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+                        )
+                        if (accountAge < 30) return `${accountAge} days`
+                        if (accountAge < 365) return `${Math.floor(accountAge / 30)} months`
+                        return `${Math.floor(accountAge / 365)} years`
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Recent Activity */}
               {userDetails.activity && userDetails.activity.length > 0 && (
                 <div className="pt-4 border-t border-border">
@@ -529,10 +563,23 @@ export default function AdminPage() {
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {userDetails.activity.slice(0, 5).map((activity: any, index: number) => (
                       <div key={index} className="p-2 border border-border rounded-md bg-muted/20 text-xs">
-                        <p className="font-medium">{activity.activity_type}</p>
-                        <p className="text-muted-foreground">{activity.description}</p>
+                        <p className="font-medium capitalize">
+                          {activity.action.replace(/_/g, ' ')}
+                        </p>
+                        {activity.metadata && (
+                          <p className="text-muted-foreground">
+                            {JSON.stringify(activity.metadata)}
+                          </p>
+                        )}
                         <p className="text-muted-foreground mt-1">
-                          {new Date(activity.created_at).toLocaleString()}
+                          {new Date(activity.createdAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
                         </p>
                       </div>
                     ))}
