@@ -266,33 +266,30 @@ export default function LibraryPage() {
   const updateSchemaMutation = useMutation({
     mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[]; schemaIndex: number }) =>
       apiService.updateUrlSchema(urlId, schemas),
-    onSuccess: (_, variables) => {
-      console.log('✅ [Mutation Success] Schema saved to server:', {
+    // Use onMutate for IMMEDIATE optimistic update (before server responds)
+    onMutate: async (variables) => {
+      console.log('⚡ [LibraryPage onMutate] Starting optimistic update:', {
         urlId: variables.urlId,
         schemasCount: variables.schemas.length,
         schemaIndex: variables.schemaIndex
       })
 
-      // Get current cache data BEFORE update
-      const currentCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
-      console.log('📦 [Cache Before Update]:', {
-        hasCache: !!currentCache,
-        cacheData: currentCache
-      })
+      // Cancel any outgoing refetches to prevent them from overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['urlSchemas', variables.urlId] })
 
-      // Update the cache optimistically to reflect the saved changes
-      // This prevents the editor from reverting to old data
+      // Get current cache data for rollback
+      const previousData = queryClient.getQueryData(['urlSchemas', variables.urlId])
+
+      // Optimistically update the cache IMMEDIATELY
       queryClient.setQueryData(['urlSchemas', variables.urlId], (oldData: any) => {
         if (!oldData) {
-          console.warn('⚠️ [Cache Update] No old data in cache!')
+          console.warn('⚠️ [LibraryPage onMutate] No old data in cache!')
           return oldData
         }
 
-        // oldData.data is an ARRAY of schema records, not a single object
-        // We need to update the specific record at the correct index
+        // oldData.data is an ARRAY of schema records
         const updatedRecords = Array.isArray(oldData.data)
           ? oldData.data.map((record: any, index: number) => {
-              // Update the selected record's schemas field
               if (index === variables.schemaIndex) {
                 return {
                   ...record,
@@ -303,30 +300,31 @@ export default function LibraryPage() {
             })
           : oldData.data
 
-        const newData = {
+        console.log('🔄 [LibraryPage onMutate] Cache updated optimistically:', {
+          schemaIndex: variables.schemaIndex,
+          oldSchemas: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex]?.schemas : null,
+          newSchemas: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex]?.schemas : null
+        })
+
+        return {
           ...oldData,
           data: updatedRecords
         }
-
-        console.log('🔄 [Cache Update] Updating cache:', {
-          schemaIndex: variables.schemaIndex,
-          oldRecord: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex] : null,
-          newRecord: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex] : null,
-          totalRecords: Array.isArray(updatedRecords) ? updatedRecords.length : 0
-        })
-
-        return newData
       })
 
-      // Verify cache was updated
-      const updatedCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
-      console.log('📦 [Cache After Update]:', {
-        hasCache: !!updatedCache,
-        cacheData: updatedCache
-      })
+      // Return context for rollback on error
+      return { previousData }
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      console.error('❌ [LibraryPage onError] Mutation failed, rolling back:', err)
+      // Rollback to previous data on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['urlSchemas', variables.urlId], context.previousData)
+      }
       toast.error('Failed to update schema')
+    },
+    onSuccess: () => {
+      console.log('✅ [LibraryPage onSuccess] Schema saved to server successfully')
     }
   })
 

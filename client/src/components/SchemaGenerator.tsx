@@ -624,29 +624,28 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const updateSchemaMutation = useMutation({
     mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[]; schemaIndex: number }) =>
       apiService.updateUrlSchema(urlId, schemas),
-    onSuccess: (_, variables) => {
-      console.log('✅ [GeneratePage Mutation Success] Schema saved to server:', {
+    // Use onMutate for IMMEDIATE optimistic update (before server responds)
+    onMutate: async (variables) => {
+      console.log('⚡ [GeneratePage onMutate] Starting optimistic update:', {
         urlId: variables.urlId,
         schemasCount: variables.schemas.length,
         schemaIndex: variables.schemaIndex
       })
 
-      // Get current cache data BEFORE update
-      const currentCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
-      console.log('📦 [GeneratePage Cache Before Update]:', {
-        hasCache: !!currentCache,
-        cacheData: currentCache
-      })
+      // Cancel any outgoing refetches to prevent them from overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['urlSchemas', variables.urlId] })
 
-      // Update the cache optimistically to reflect the saved changes
+      // Get current cache data for rollback
+      const previousData = queryClient.getQueryData(['urlSchemas', variables.urlId])
+
+      // Optimistically update the cache IMMEDIATELY
       queryClient.setQueryData(['urlSchemas', variables.urlId], (oldData: any) => {
         if (!oldData) {
-          console.warn('⚠️ [GeneratePage Cache Update] No old data in cache!')
+          console.warn('⚠️ [GeneratePage onMutate] No old data in cache!')
           return oldData
         }
 
-        // oldData.data is an ARRAY of schema records, not a single object
-        // We need to update the specific record at the correct index
+        // oldData.data is an ARRAY of schema records
         const updatedRecords = Array.isArray(oldData.data)
           ? oldData.data.map((record: any, index: number) => {
               if (index === variables.schemaIndex) {
@@ -659,30 +658,33 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             })
           : oldData.data
 
-        const newData = {
+        console.log('🔄 [GeneratePage onMutate] Cache updated optimistically:', {
+          schemaIndex: variables.schemaIndex,
+          oldSchemas: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex]?.schemas : null,
+          newSchemas: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex]?.schemas : null
+        })
+
+        return {
           ...oldData,
           data: updatedRecords
         }
-
-        console.log('🔄 [GeneratePage Cache Update] Updating cache:', {
-          schemaIndex: variables.schemaIndex,
-          oldRecord: Array.isArray(oldData.data) ? oldData.data[variables.schemaIndex] : null,
-          newRecord: Array.isArray(updatedRecords) ? updatedRecords[variables.schemaIndex] : null,
-          totalRecords: Array.isArray(updatedRecords) ? updatedRecords.length : 0
-        })
-
-        return newData
       })
 
-      // Verify cache was updated
-      const updatedCache = queryClient.getQueryData(['urlSchemas', variables.urlId])
-      console.log('📦 [GeneratePage Cache After Update]:', {
-        hasCache: !!updatedCache,
-        cacheData: updatedCache
-      })
+      // Return context for rollback on error
+      return { previousData }
     },
-    onError: () => {
+    onError: (err, variables, context) => {
+      console.error('❌ [GeneratePage onError] Mutation failed, rolling back:', err)
+      // Rollback to previous data on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['urlSchemas', variables.urlId], context.previousData)
+      }
       toast.error('Failed to save schema changes')
+    },
+    onSuccess: (_, variables) => {
+      console.log('✅ [GeneratePage onSuccess] Schema saved to server successfully')
+      // Optionally invalidate to sync with server (in case server modified data)
+      // queryClient.invalidateQueries({ queryKey: ['urlSchemas', variables.urlId] })
     }
   })
 
