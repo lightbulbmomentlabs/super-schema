@@ -291,9 +291,27 @@ export default function LibraryPage() {
         const updatedRecords = Array.isArray(oldData.data)
           ? oldData.data.map((record: any, index: number) => {
               if (index === variables.schemaIndex) {
+                const newSchemas = variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
+
+                // Check if old data uses wrapper structure {schemas: [...], status, processingTimeMs}
+                // If so, preserve the wrapper and only update the schemas inside
+                let updatedSchemas
+                if (record.schemas && typeof record.schemas === 'object' && 'schemas' in record.schemas && !('@type' in record.schemas)) {
+                  // Wrapper structure exists, preserve it
+                  console.log('🔧 [LibraryPage] Preserving wrapper structure')
+                  updatedSchemas = {
+                    ...record.schemas,
+                    schemas: newSchemas
+                  }
+                } else {
+                  // Direct schema structure, replace it
+                  console.log('🔧 [LibraryPage] Using direct schema structure')
+                  updatedSchemas = newSchemas
+                }
+
                 return {
                   ...record,
-                  schemas: variables.schemas.length === 1 ? variables.schemas[0] : variables.schemas
+                  schemas: updatedSchemas
                 }
               }
               return record
