@@ -124,7 +124,13 @@ export default function WhatsNewPage() {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // Parse date in local timezone to avoid timezone offset issues
+    // Database returns YYYY-MM-DD which JS interprets as UTC midnight
+    // In timezones behind UTC (PST/PDT), this shows as previous day
+    const dateOnly = dateString.split('T')[0] // Get just the date part
+    const [year, month, day] = dateOnly.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
