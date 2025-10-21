@@ -117,6 +117,46 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
   const allSchemaRecords = allSchemasResponse?.data || []
 
+  // Get the currently selected schema record
+  const selectedSchemaRecord = allSchemaRecords[selectedSchemaIndex] || allSchemaRecords[0]
+
+  // Extract schemas array from selected record (similar to LibraryPage)
+  // This ensures schemas are derived from query data and sync with cache updates
+  let schemasFromQuery: any[] = []
+  if (selectedSchemaRecord?.schemas) {
+    const schemas = selectedSchemaRecord.schemas
+    if (Array.isArray(schemas)) {
+      schemasFromQuery = schemas.map(item => {
+        if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
+          return item.schemas
+        }
+        if (item && typeof item === 'object' && 'schemas' in item && !Array.isArray(item.schemas)) {
+          return [item.schemas]
+        }
+        return item
+      }).flat()
+    } else if (schemas && typeof schemas === 'object') {
+      if (schemas['@type']) {
+        schemasFromQuery = [schemas]
+      } else if ('schemas' in schemas) {
+        schemasFromQuery = Array.isArray(schemas.schemas) ? schemas.schemas : [schemas.schemas]
+      } else {
+        schemasFromQuery = [schemas]
+      }
+    }
+  }
+
+  // Use schemas from query when available (syncs with cache), fallback to local state
+  const displaySchemas = schemasFromQuery.length > 0 ? schemasFromQuery : generatedSchemas
+
+  console.log('📋 [GeneratePage] Schema source:', {
+    hasQuerySchemas: schemasFromQuery.length > 0,
+    hasLocalSchemas: generatedSchemas.length > 0,
+    usingSource: schemasFromQuery.length > 0 ? 'query' : 'local',
+    selectedSchemaIndex,
+    allSchemaRecords: allSchemaRecords.length
+  })
+
   // Get user credits - Wait for Clerk to load before firing
   const { data: creditsData, refetch: refetchCredits } = useQuery({
     queryKey: ['user-credits'],
@@ -949,7 +989,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         {/* RIGHT COLUMN - Schema Editor */}
         <div className="space-y-6">
           {/* Generated Schemas */}
-          {generatedSchemas.length > 0 && (
+          {displaySchemas.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Generated Schema</h2>
@@ -1048,7 +1088,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
           <SchemaEditor
             key={`schema-editor-${selectedSchemaIndex}-${currentUrlId}`}
-            schemas={generatedSchemas}
+            schemas={displaySchemas}
             htmlScriptTags={htmlScriptTags}
             onSchemaChange={handleSchemaChange}
             onValidate={handleValidate}
@@ -1095,13 +1135,13 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           )}
 
           {/* Rich Results Preview */}
-          <RichResultsPreview schemas={generatedSchemas} />
+          <RichResultsPreview schemas={displaySchemas} />
 
           {/* Schema Types Summary */}
           <div className="bg-muted/20 border border-border rounded-lg p-4">
             <h3 className="text-sm font-medium mb-3">Generated Schema Types</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {generatedSchemas.map((schema, index) => (
+              {displaySchemas.map((schema, index) => (
                 <div key={index} className="bg-card border border-border rounded-lg p-3 text-center hover:border-primary/50 transition-colors">
                   <div className="flex items-center justify-center mb-2">
                     <div className="w-3 h-3 rounded-full bg-primary" />
@@ -1124,12 +1164,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           )}
 
           {/* Loading State with Dad Jokes */}
-          {generatedSchemas.length === 0 && isGenerating && (
+          {displaySchemas.length === 0 && isGenerating && (
             <JokeDisplay />
           )}
 
           {/* Help Text - Ready State */}
-          {generatedSchemas.length === 0 && !isGenerating && (
+          {displaySchemas.length === 0 && !isGenerating && (
             <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-lg">
               <LightningBoltIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Ready to Generate Schema</h3>
