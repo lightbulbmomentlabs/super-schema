@@ -710,8 +710,6 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   })
 
   const handleSchemaChange = (schemas: JsonLdSchema[]) => {
-    setGeneratedSchemas(schemas)
-
     // Save to database if we have a URL ID
     if (currentUrlId) {
       console.log('💾 [GeneratePage handleSchemaChange] Saving schema changes:', {
@@ -725,11 +723,17 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         }))
       })
 
+      // DON'T update local state - let the mutation's optimistic update handle it
+      // This prevents a race where local state triggers a re-render showing old query data
+      // before the cache is updated
       updateSchemaMutation.mutate({
         urlId: currentUrlId,
         schemas,
         schemaIndex: selectedSchemaIndex
       })
+    } else {
+      // No URL ID yet (not saved to database) - use local state
+      setGeneratedSchemas(schemas)
     }
   }
 
