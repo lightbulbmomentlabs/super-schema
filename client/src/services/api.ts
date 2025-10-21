@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useAuth } from '@clerk/clerk-react'
+import { authTokenManager } from '@/utils/authTokenManager'
 import type {
   User,
   CreditTransaction,
@@ -29,8 +29,81 @@ export const api = axios.create({
   timeout: 60000, // 60 seconds for schema generation
 })
 
+// Configure request interceptor at module load time
+// This ensures the interceptor is ALWAYS active before any API calls are made
+// The authTokenManager reference is updated by ApiProvider when auth state changes
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await authTokenManager.getToken()
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+        console.log('✅ [API] Auth token attached:', {
+          url: config.url,
+          method: config.method?.toUpperCase(),
+          hasToken: true,
+          tokenPreview: token.substring(0, 20) + '...',
+          authStatus: authTokenManager.getStatus()
+        })
+      } else {
+        console.warn('⚠️ [API] No auth token available:', {
+          url: config.url,
+          method: config.method?.toUpperCase(),
+          authStatus: authTokenManager.getStatus()
+        })
+      }
+    } catch (error) {
+      console.error('❌ [API] Failed to get auth token:', {
+        url: config.url,
+        method: config.method?.toUpperCase(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        authStatus: authTokenManager.getStatus()
+      })
+    }
+    return config
+  },
+  (error) => {
+    console.error('❌ [API] Request interceptor error:', error)
+    return Promise.reject(error)
+  }
+)
+
+// Configure response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ [API] Response received:', {
+      url: response.config.url,
+      status: response.status,
+      statusText: response.statusText
+    })
+    return response
+  },
+  (error) => {
+    const status = error.response?.status
+    const url = error.config?.url
+
+    console.error('❌ [API] Response error:', {
+      url,
+      method: error.config?.method?.toUpperCase(),
+      status,
+      statusText: error.response?.statusText,
+      errorMessage: error.message,
+      authStatus: authTokenManager.getStatus()
+    })
+
+    if (status === 401) {
+      console.warn('🚫 [API] 401 Unauthorized - Redirecting to sign-in')
+      // Handle unauthorized - redirect to login
+      window.location.href = '/sign-in'
+    }
+
+    return Promise.reject(error)
+  }
+)
+
+console.log('🔧 [API] Axios interceptors configured at module load time')
+
 // Custom hook to get authenticated API instance
-// NOTE: Interceptors are now managed by ApiProvider.tsx to avoid duplicate registration
 export const useApi = () => {
   return api
 }
