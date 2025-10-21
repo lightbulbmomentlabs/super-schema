@@ -112,7 +112,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const { data: allSchemasResponse } = useQuery({
     queryKey: ['urlSchemas', currentUrlId],
     queryFn: () => currentUrlId ? apiService.getAllUrlSchemas(currentUrlId) : null,
-    enabled: !!currentUrlId
+    enabled: !!currentUrlId,
+    refetchOnMount: false,          // Prevent refetch on mount that could override optimistic updates
+    refetchOnWindowFocus: false,    // Prevent refetch on window focus
+    staleTime: Infinity,            // Keep data fresh indefinitely - cache is source of truth
   })
 
   const allSchemaRecords = allSchemasResponse?.data || []
