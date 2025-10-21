@@ -264,7 +264,7 @@ export default function LibraryPage() {
     onSuccess: (_, variables) => {
       // Update the cache optimistically to reflect the saved changes
       // This prevents the editor from reverting to old data
-      queryClient.setQueryData(['urlSchema', variables.urlId], (oldData: any) => {
+      queryClient.setQueryData(['urlSchemas', variables.urlId], (oldData: any) => {
         if (!oldData) return oldData
         return {
           ...oldData,
