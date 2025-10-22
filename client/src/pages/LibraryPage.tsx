@@ -29,7 +29,11 @@ export default function LibraryPage() {
   const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
   const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
   const [showHidden, setShowHidden] = useState(false)
-  const [collapsedDomains, setCollapsedDomains] = useState<Set<string>>(new Set())
+  const [collapsedDomains, setCollapsedDomains] = useState<Set<string>>(() => {
+    // Load collapsed state from localStorage
+    const saved = localStorage.getItem('collapsedDomains')
+    return saved ? new Set(JSON.parse(saved)) : new Set()
+  })
   const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null)
   const [selectedSchemaIndex, setSelectedSchemaIndex] = useState<number>(0)
   const [selectionMode, setSelectionMode] = useState(false)
@@ -250,6 +254,8 @@ export default function LibraryPage() {
       } else {
         newSet.add(domainId)
       }
+      // Save to localStorage
+      localStorage.setItem('collapsedDomains', JSON.stringify(Array.from(newSet)))
       return newSet
     })
   }
