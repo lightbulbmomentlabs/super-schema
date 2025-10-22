@@ -29,6 +29,10 @@ import releaseNotesRoutes from './routes/releaseNotes.js'
 const app = express()
 const PORT = process.env.PORT || 8080
 
+// Trust proxy - Required for Digital Ocean App Platform and other reverse proxies
+// This allows Express to correctly read X-Forwarded-For headers for rate limiting
+app.set('trust proxy', true)
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: false,
