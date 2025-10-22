@@ -5,6 +5,7 @@ import { hubspotApi } from '@/services/hubspot'
 import { apiService } from '@/services/api'
 import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ConfirmModal'
 
 export default function HubSpotPage() {
   const queryClient = useQueryClient()
@@ -12,6 +13,20 @@ export default function HubSpotPage() {
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [newDomain, setNewDomain] = useState<{ [key: string]: string }>({})
   const [showAddDomain, setShowAddDomain] = useState<{ [key: string]: boolean }>({})
+  const [showHowItWorks, setShowHowItWorks] = useState<boolean>(() => {
+    const dismissed = localStorage.getItem('hubspot-how-it-works-dismissed')
+    return dismissed !== 'true'
+  })
+  const [disconnectModal, setDisconnectModal] = useState<{ isOpen: boolean; connectionId: string | null; portalName?: string }>({
+    isOpen: false,
+    connectionId: null,
+    portalName: undefined
+  })
+
+  const handleDismissHowItWorks = () => {
+    setShowHowItWorks(false)
+    localStorage.setItem('hubspot-how-it-works-dismissed', 'true')
+  }
 
   // Fetch connections - Wait for Clerk to load before firing
   const { data: connectionsResponse, isLoading, error } = useQuery({
@@ -141,8 +156,12 @@ export default function HubSpotPage() {
   }
 
   const handleDisconnect = (connectionId: string, portalName?: string) => {
-    if (confirm(`Are you sure you want to disconnect ${portalName || 'this HubSpot portal'}?`)) {
-      disconnectMutation.mutate(connectionId)
+    setDisconnectModal({ isOpen: true, connectionId, portalName })
+  }
+
+  const confirmDisconnect = () => {
+    if (disconnectModal.connectionId) {
+      disconnectMutation.mutate(disconnectModal.connectionId)
     }
   }
 
@@ -194,28 +213,59 @@ export default function HubSpotPage() {
           </p>
         </div>
 
-        {/* Beta Notice */}
-        <div className="mb-8 flex items-start gap-2 p-4 bg-info/10 border border-info/20 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-info mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-foreground">Private Beta</p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              This feature is currently in private beta. Contact support to request access if you encounter any issues.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              <strong>Note:</strong> This feature requires HubSpot Marketing Hub Professional/Enterprise or Content Hub Professional/Enterprise.
-            </p>
+        {/* How It Works - Dismissable */}
+        {showHowItWorks && (
+          <div className="mb-8 bg-info border border-info rounded-lg p-6 relative">
+            <button
+              onClick={handleDismissHowItWorks}
+              className="absolute top-4 right-4 text-info-foreground/70 hover:text-info-foreground transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-semibold mb-3 flex items-center text-info-foreground">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              How It Works
+            </h3>
+            <div className="space-y-2 text-sm text-info-foreground pr-8">
+              <p>
+                1. <strong>Connect:</strong> Authorize SuperSchema to access your HubSpot account
+              </p>
+              <p>
+                2. <strong>Associate Domain:</strong> Add your website domain(s) to your connected HubSpot portal
+              </p>
+              <p>
+                3. <strong>Generate:</strong> Create schema markup for your content as usual
+              </p>
+              <p>
+                4. <strong>Push:</strong> Click "Push to HubSpot" to automatically add schema to your blog posts and website pages
+              </p>
+              <p>
+                5. <strong>Done:</strong> Schema is instantly added to your HubSpot content's head HTML
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Connect Button */}
-        <div className="mb-8">
-          <button
-            onClick={handleConnectHubSpot}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-          >
-            Connect HubSpot Account
-          </button>
+        {/* Beta Notice with Connect Button */}
+        <div className="mb-8 flex items-start gap-4 p-4 bg-info/10 border border-info/20 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-info mt-0.5 flex-shrink-0" />
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div>
+              <p className="text-sm font-medium text-foreground">Private Beta</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                This feature is currently in private beta. Contact support to request access if you encounter any issues.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={handleConnectHubSpot}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+              >
+                Connect HubSpot Account
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Connections List */}
@@ -412,43 +462,17 @@ export default function HubSpotPage() {
           )}
         </div>
 
-        {/* How It Works */}
-        <div className="mt-8 bg-info border border-info rounded-lg p-6">
-          <h3 className="font-semibold mb-3 flex items-center text-info-foreground">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            How It Works
-          </h3>
-          <div className="space-y-2 text-sm text-info-foreground">
-            <p>
-              1. <strong>Connect:</strong> Authorize SuperSchema to access your HubSpot account
-            </p>
-            <p>
-              2. <strong>Generate:</strong> Create schema markup for your content as usual
-            </p>
-            <p>
-              3. <strong>Push:</strong> Click "Push to HubSpot" to automatically add schema to your blog posts and website pages
-            </p>
-            <p>
-              4. <strong>Done:</strong> Schema is instantly added to your HubSpot content's head HTML
-            </p>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-info-foreground/20">
-            <p className="text-xs text-info-foreground">
-              <strong>Note:</strong> This feature requires HubSpot Marketing Hub Professional/Enterprise or Content Hub Professional/Enterprise.
-              {' '}
-              <a
-                href="https://developers.hubspot.com/docs/api/cms/blog-post"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline inline-flex items-center hover:no-underline"
-              >
-                Learn more
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
-            </p>
-          </div>
-        </div>
+        {/* Disconnect Confirmation Modal */}
+        <ConfirmModal
+          isOpen={disconnectModal.isOpen}
+          onClose={() => setDisconnectModal({ isOpen: false, connectionId: null, portalName: undefined })}
+          onConfirm={confirmDisconnect}
+          title="Disconnect HubSpot Account"
+          message={`Are you sure you want to disconnect ${disconnectModal.portalName || 'this HubSpot portal'}? You'll need to reconnect and reassociate your domains to push schema to this portal again.`}
+          confirmText="Disconnect"
+          cancelText="Cancel"
+          variant="danger"
+        />
       </div>
     </div>
   )

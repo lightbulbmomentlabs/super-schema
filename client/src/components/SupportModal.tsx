@@ -27,10 +27,10 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
       apiService.createSupportTicket(data),
     onSuccess: () => {
       setShowSuccess(true)
-      // Auto-close after 2 seconds
+      // Auto-close after 5 seconds to give time to read the message
       setTimeout(() => {
         handleClose()
-      }, 2000)
+      }, 5000)
     }
   })
 
@@ -81,12 +81,20 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           {/* Success State */}
           {showSuccess ? (
             <div className="px-6 pb-6">
-              <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="flex flex-col items-center justify-center py-6 text-center">
                 <CheckCircle2 className="h-16 w-16 text-success-foreground mb-4" />
                 <p className="text-lg font-semibold mb-2">Message sent successfully!</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   We'll get back to you via email soon.
                 </p>
+                <div className="bg-muted/50 border border-border rounded-lg p-4 text-left w-full mt-2">
+                  <p className="text-sm font-medium mb-2">📧 Important: Add us to your contacts</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    To ensure our response doesn't end up in your spam folder, please add{' '}
+                    <span className="font-mono font-semibold text-foreground">kevin@superschema.ai</span>{' '}
+                    to your email contacts or safe sender list.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

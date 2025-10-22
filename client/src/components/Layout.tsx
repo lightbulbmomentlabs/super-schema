@@ -54,7 +54,7 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="w-full flex h-16 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <SuperSchemaLogo className="h-8 w-8" />
@@ -107,7 +107,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background">
-            <div className="container mx-auto px-4 py-4 space-y-2">
+            <div className="w-full px-4 py-4 space-y-2">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href
                 return (
@@ -154,11 +154,13 @@ export default function Layout({ children }: LayoutProps) {
                     : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <span className="relative mr-3">
-                  <Bell className="h-5 w-5" />
-                  <NotificationBadge count={unreadCount} />
+                <Bell className="mr-3 h-5 w-5" />
+                <span className="flex items-center gap-2">
+                  What's New
+                  {unreadCount > 0 && location.pathname !== '/whats-new' && (
+                    <NotificationBadge count={unreadCount} />
+                  )}
                 </span>
-                What's New
               </Link>
 
               {/* Admin Link (if admin) */}
@@ -280,16 +282,18 @@ export default function Layout({ children }: LayoutProps) {
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <span className="relative mr-3 flex-shrink-0">
-                      <Bell
-                        className={cn(
-                          'h-5 w-5',
-                          location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
-                        )}
-                      />
-                      <NotificationBadge count={unreadCount} />
+                    <Bell
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    />
+                    <span className="flex items-center gap-2">
+                      What's New
+                      {unreadCount > 0 && location.pathname !== '/whats-new' && (
+                        <NotificationBadge count={unreadCount} />
+                      )}
                     </span>
-                    What's New
                   </Link>
 
                   {/* Admin-Only Links */}

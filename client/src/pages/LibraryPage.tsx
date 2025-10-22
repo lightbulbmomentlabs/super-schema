@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
-import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles, Plus } from 'lucide-react'
+import { Library, Search, Eye, EyeOff, Trash2, Loader2, AlertCircle, X, ExternalLink, Sparkles, Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { apiService } from '@/services/api'
 import type { DiscoveredUrl, HubSpotContentMatchResult } from '@shared/types'
 import { cn } from '@/utils/cn'
@@ -29,6 +29,7 @@ export default function LibraryPage() {
   const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>()
   const [schemaFilter, setSchemaFilter] = useState<'all' | 'with' | 'without'>('all')
   const [showHidden, setShowHidden] = useState(false)
+  const [collapsedDomains, setCollapsedDomains] = useState<Set<string>>(new Set())
   const [selectedUrlId, setSelectedUrlId] = useState<string | null>(null)
   const [selectedSchemaIndex, setSelectedSchemaIndex] = useState<number>(0)
   const [selectionMode, setSelectionMode] = useState(false)
@@ -239,6 +240,18 @@ export default function LibraryPage() {
     } catch (error) {
       console.error('Failed to unhide URL:', error)
     }
+  }
+
+  const toggleDomainCollapse = (domainId: string) => {
+    setCollapsedDomains(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(domainId)) {
+        newSet.delete(domainId)
+      } else {
+        newSet.add(domainId)
+      }
+      return newSet
+    })
   }
 
   const handleDeleteDomain = (domainId: string, domainName: string) => {
@@ -940,27 +953,42 @@ export default function LibraryPage() {
                       return null
                     }
 
+                    const isCollapsed = collapsedDomains.has(domain.id)
+
                     return (
                       <div key={domain.id} className="border-b border-input">
                         {/* Domain header */}
-                        <div className="bg-muted/30 px-4 py-2 flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-sm">{domain.domain}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              {totalDomainUrls} URL{totalDomainUrls !== 1 ? 's' : ''}
-                            </p>
-                          </div>
+                        <div className="bg-muted/30 px-4 py-2 flex items-center justify-between group">
                           <button
-                            onClick={() => handleDeleteDomain(domain.id, domain.domain)}
-                            className="text-destructive hover:text-destructive/80 transition-colors"
+                            onClick={() => toggleDomainCollapse(domain.id)}
+                            className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
+                            )}
+                            <div>
+                              <h3 className="font-medium text-sm">{domain.domain}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {totalDomainUrls} URL{totalDomainUrls !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteDomain(domain.id, domain.domain)
+                            }}
+                            className="text-destructive hover:text-destructive/80 transition-colors opacity-0 group-hover:opacity-100"
                             title="Delete domain"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
 
-                        {/* URLs */}
-                        {domainUrls.map((url) => (
+                        {/* URLs - Collapsible */}
+                        {!isCollapsed && domainUrls.map((url) => (
                           <div
                             key={url.id}
                             onClick={() => !selectionMode && handleUrlClick(url.id)}
