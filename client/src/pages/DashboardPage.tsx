@@ -280,6 +280,21 @@ export default function DashboardPage() {
             </button>
 
             <button
+              onClick={() => navigate('/dashboard/credits?purchase=true')}
+              className="w-full p-4 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">Buy Credits</p>
+                  <p className="text-sm text-muted-foreground">Purchase credit packs</p>
+                </div>
+              </div>
+            </button>
+
+            <button
               onClick={() => navigate('/library')}
               className="w-full p-4 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left group"
             >

@@ -153,7 +153,7 @@ export default function SettingsPage() {
             </div>
             <div className="pt-2 flex gap-2">
               <button
-                onClick={() => navigate('/dashboard/credits')}
+                onClick={() => navigate('/dashboard/credits?purchase=true')}
                 className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 <CreditCard className="h-3 w-3" />

@@ -833,6 +833,14 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           </p>
         </div>
         <div className="flex items-center space-x-2 text-sm">
+          <button
+            onClick={() => navigate('/dashboard/credits?purchase=true')}
+            className="flex items-center space-x-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+            title="Buy Credits"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Buy</span>
+          </button>
           <CreditCard className="h-4 w-4 text-muted-foreground" />
           <span className="text-muted-foreground">Credits:</span>
           <span className="font-medium">{creditBalance}</span>
