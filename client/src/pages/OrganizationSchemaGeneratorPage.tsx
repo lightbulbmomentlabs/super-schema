@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, CheckCircle, Info, Copy, Download, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import SchemaGeneratorNav from '@/components/SchemaGeneratorNav'
+import SuperSchemaLogo from '@/components/SuperSchemaLogo'
 import FAQItem from '../components/FAQItem'
 
 // Organization Types

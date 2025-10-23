@@ -12,10 +12,11 @@
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "aeo-schema-generator-shared": "*",
+    "@anthropic-ai/sdk": "^0.67.0",
     "@clerk/express": "^0.1.1",
     "@supabase/supabase-js": "^2.45.4",
     "@types/cheerio": "^0.22.35",
+    "aeo-schema-generator-shared": "*",
     "axios": "^1.7.7",
     "bullmq": "^5.12.14",
     "cheerio": "^1.1.2",

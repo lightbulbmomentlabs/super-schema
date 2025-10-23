@@ -132,7 +132,7 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
     console.log('🔧 [INIT USER] User lookup result:', {
       userId,
       userExists: !!user,
-      currentBalance: user?.credit_balance
+      currentBalance: user?.creditBalance
     })
 
     if (!user) {
@@ -167,8 +167,8 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
       user = await db.getUser(userId)
       console.log('🔧 [INIT USER] Final user state:', {
         userId,
-        creditBalance: user?.credit_balance,
-        totalCreditsUsed: user?.total_credits_used
+        creditBalance: user?.creditBalance,
+        totalCreditsUsed: user?.totalCreditsUsed
       })
 
       res.json({
@@ -181,11 +181,11 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
 
       // Check if this is an existing user who never received welcome credits
       // (They have 0 credits AND have never used any credits)
-      const needsWelcomeCredits = user.credit_balance === 0 && user.total_credits_used === 0
+      const needsWelcomeCredits = user.creditBalance === 0 && user.totalCreditsUsed === 0
 
       console.log('🔧 [INIT USER] Welcome credits check:', {
-        creditBalance: user.credit_balance,
-        totalCreditsUsed: user.total_credits_used,
+        creditBalance: user.creditBalance,
+        totalCreditsUsed: user.totalCreditsUsed,
         needsWelcomeCredits
       })
 
@@ -204,8 +204,8 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
         user = await db.getUser(userId)
         console.log('🔧 [INIT USER] Final user state after retroactive grant:', {
           userId,
-          creditBalance: user?.credit_balance,
-          totalCreditsUsed: user?.total_credits_used
+          creditBalance: user?.creditBalance,
+          totalCreditsUsed: user?.totalCreditsUsed
         })
 
         res.json({

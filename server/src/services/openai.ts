@@ -8,6 +8,9 @@ export interface AuthorInfo {
   email?: string
   jobTitle?: string
   worksFor?: string
+  image?: string
+  bio?: string
+  socialProfiles?: string[]
 }
 
 export interface BusinessInfo {
@@ -47,7 +50,7 @@ export interface ContentAnalysis {
     modifiedDate?: string
     images?: string[]
     videos?: string[]
-    breadcrumbs?: string[]
+    breadcrumbs?: Array<{ name: string; url?: string }>
     contactInfo?: any
     businessInfo?: BusinessInfo
     productInfo?: any
@@ -57,6 +60,7 @@ export interface ContentAnalysis {
     language?: string
     wordCount?: number
     articleSection?: string
+    articleSections?: string[]  // Array of H2 headings
     keywords?: string[]
     entities?: string[]
     mentions?: string[]
@@ -158,9 +162,9 @@ export const SCHEMA_PROPERTY_TEMPLATES: Record<string, SchemaPropertyRequirement
   },
   WebPage: {
     required: ['@context', '@type', 'name', 'url'],
-    recommended: ['description', 'inLanguage', 'isPartOf', 'mainEntity', 'breadcrumb', 'lastReviewed'],
-    advanced: ['potentialAction', 'speakable', 'significantLink', 'relatedLink'],
-    description: 'Basic web page structure and navigation'
+    recommended: ['description', 'inLanguage', 'image', 'keywords', 'isPartOf', 'mainEntity', 'breadcrumb', 'publisher', 'dateModified'],
+    advanced: ['potentialAction', 'speakable', 'significantLink', 'relatedLink', 'about', 'mentions'],
+    description: 'Web page with rich metadata for better discovery'
   },
   Organization: {
     required: ['@context', '@type', 'name', 'url'],
@@ -276,6 +280,7 @@ class OpenAIService {
           }
         ],
         max_completion_tokens: 6000,
+        temperature: 0.0,  // Deterministic output for consistent schema generation
         response_format: { type: 'json_object' }
       })
 
@@ -341,6 +346,25 @@ class OpenAIService {
     const readingMinutes = Math.ceil(wordCount / 200) // 200 WPM average reading speed
     const timeRequired = readingMinutes > 0 ? `PT${readingMinutes}M` : undefined
 
+    // Use up to 100,000 characters of content for better context (was 3000)
+    const contentLimit = 100000
+    const contentToSend = prioritizedContent.substring(0, contentLimit)
+
+    console.log(`\n🚀 ========== OPENAI PROMPT DIAGNOSTICS ==========`)
+    console.log(`📊 Content being sent to OpenAI: ${contentToSend.length} characters (limit: ${contentLimit})`)
+    console.log(`📝 Total content available: ${prioritizedContent.length} characters`)
+    console.log(`✂️ Content truncated: ${prioritizedContent.length > contentLimit ? 'YES' : 'NO'}`)
+    console.log(`\n📋 METADATA BEING SENT:`)
+    const authorName = typeof analysis.metadata?.author === 'string'
+      ? analysis.metadata.author
+      : analysis.metadata?.author?.name || '[NOT FOUND]'
+    console.log(`   Author: ${authorName}`)
+    console.log(`   Author object: ${JSON.stringify(analysis.metadata?.author)}`)
+    console.log(`   Keywords: ${analysis.metadata?.keywords?.length || 0} keywords`)
+    console.log(`   Article Sections: ${analysis.metadata?.articleSections?.length || 0} sections`)
+    console.log(`   Word Count: ${wordCount}`)
+    console.log(`🚀 ==============================================\n`)
+
     let prompt = `🎯 CHATGPT-QUALITY SCHEMA GENERATION - EXTRACT FROM PROVIDED METADATA ONLY:
 
 === VERIFIED PAGE METADATA ===
@@ -351,8 +375,10 @@ Canonical URL: ${analysis.metadata?.canonicalUrl || analysis.url}
 Language: ${analysis.metadata?.language || 'en'}
 
 === AUTHOR INFORMATION ===
-Author Name: ${analysis.metadata?.author?.name || '[NOT FOUND - OMIT author property]'}
-Author URL: ${analysis.metadata?.author?.url || '[NOT FOUND]'}
+Author Name: ${typeof analysis.metadata?.author === 'string' ? analysis.metadata.author : (analysis.metadata?.author?.name || '[NOT FOUND - DO NOT EXTRACT FROM CONTENT - OMIT ENTIRE author PROPERTY]')}
+Author URL: ${typeof analysis.metadata?.author === 'object' ? (analysis.metadata?.author?.url || '[NOT FOUND]') : '[NOT FOUND]'}
+
+⚠️ CRITICAL: If author is "[NOT FOUND - DO NOT EXTRACT FROM CONTENT - OMIT ENTIRE author PROPERTY]", you MUST OMIT the entire author property from the schema. DO NOT extract author names from the page content. DO NOT use sentences, company names, or content fragments as author names. This page may not have an author - that's OKAY.
 
 === PUBLICATION DATES ===
 Date Published: ${analysis.metadata?.publishDate || '[NOT FOUND - OMIT datePublished]'}
@@ -384,8 +410,8 @@ Content Type: ${analysis.metadata?.contentType || 'article'}
 Is Blog Post: ${analysis.url.includes('/blog/') || analysis.url.includes('/post/') ? 'YES - Use BlogPosting' : 'NO - Use Article'}
 Parent Blog URL: ${analysis.url.includes('/blog/') ? analysis.url.substring(0, analysis.url.indexOf('/blog/') + 6) : '[NOT A BLOG POST]'}
 
-=== CONTENT PREVIEW ===
-${prioritizedContent.substring(0, 3000)}${prioritizedContent.length > 3000 ? '...' : ''}
+=== FULL PAGE CONTENT ===
+${contentToSend}
 `
 
     // Add concise generation instruction
@@ -910,7 +936,7 @@ RESPONSE FORMAT:
   }
 
   // Clean schema properties to remove HTML and fix malformed data
-  private cleanSchemaProperties(schema: any): any {
+  public cleanSchemaProperties(schema: any): any {
     const cleaned: any = {}
 
     for (const [key, value] of Object.entries(schema)) {
@@ -957,7 +983,7 @@ RESPONSE FORMAT:
   }
 
   // Schema property validation and completion engine
-  private async validateAndEnhanceSchemas(schemas: JsonLdSchema[], analysis: ContentAnalysis): Promise<JsonLdSchema[]> {
+  public async validateAndEnhanceSchemas(schemas: JsonLdSchema[], analysis: ContentAnalysis): Promise<JsonLdSchema[]> {
     console.log(`🔧 Running schema validation and enhancement engine on ${schemas.length} schema(s)...`)
 
     const enhancedSchemas: JsonLdSchema[] = []
@@ -1070,8 +1096,8 @@ RESPONSE FORMAT:
       schema['mainEntityOfPage'] = analysis.metadata?.canonicalUrl || analysis.url
     }
 
-    // Add publisher with logo ImageObject (ChatGPT format)
-    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['publisher']) {
+    // Add publisher with logo ImageObject (ChatGPT format) for content pages
+    if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article' || schema['@type'] === 'WebPage') && !schema['publisher']) {
       const logoUrl = analysis.metadata?.businessInfo?.logo ||
                      analysis.metadata?.imageInfo?.featuredImage ||
                      `${new URL(analysis.url).origin}/favicon.ico`
@@ -1090,7 +1116,7 @@ RESPONSE FORMAT:
           'url': logoUrl
         }
       }
-    } else if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && schema['publisher']) {
+    } else if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article' || schema['@type'] === 'WebPage') && schema['publisher']) {
       // Enhance existing publisher
       if (!schema['publisher']['logo']) {
         const logoUrl = analysis.metadata?.businessInfo?.logo ||
@@ -1105,9 +1131,9 @@ RESPONSE FORMAT:
 
       // Improve publisher name if it's just a domain
       if (schema['publisher']['name'] && schema['publisher']['name'].includes('.')) {
-        const betterName = analysis.metadata?.business?.name ||
+        const betterName = analysis.metadata?.businessInfo?.name ||
                           analysis.metadata?.openGraph?.siteName
-        console.log(`🔍 Publisher name enhancement: current="${schema['publisher']['name']}", business.name="${analysis.metadata?.business?.name}", ogSiteName="${analysis.metadata?.openGraph?.siteName}"`)
+        console.log(`🔍 Publisher name enhancement: current="${schema['publisher']['name']}", business.name="${analysis.metadata?.businessInfo?.name}", ogSiteName="${analysis.metadata?.openGraph?.siteName}"`)
         if (betterName) {
           console.log(`✅ Updating publisher name to: "${betterName}"`)
           schema['publisher']['name'] = betterName
@@ -1123,6 +1149,7 @@ RESPONSE FORMAT:
     }
 
     // Add author if missing (REQUIRED for BlogPosting/Article)
+    // BUT ONLY if we have actual author data - DO NOT create fake authors!
     if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && !schema['author']) {
       let authorName: string | null = null
       let authorUrl: string | undefined
@@ -1136,28 +1163,28 @@ RESPONSE FORMAT:
         authorUrl = authorData.url
       }
 
-      // If still no author, generate fallback based on organization/domain
-      if (!authorName) {
-        const orgName = analysis.metadata?.businessInfo?.name ||
-                       analysis.metadata?.openGraph?.siteName ||
-                       new URL(analysis.url).hostname.replace('www.', '').replace('blog.', '')
-        authorName = `${orgName} Team`
-        console.log(`⚠️ No author metadata found, using fallback: "${authorName}"`)
-      }
+      // CRITICAL: Only add author if we found real author data
+      // DO NOT create fake/fallback authors - better to omit than fabricate
+      if (authorName && authorName.length > 0) {
+        schema['author'] = {
+          '@type': 'Person',
+          'name': authorName
+        }
 
-      schema['author'] = {
-        '@type': 'Person',
-        'name': authorName
-      }
+        // Add author image if available
+        if (authorImage) {
+          schema['author']['image'] = authorImage
+        }
 
-      // Add author image if available
-      if (authorImage) {
-        schema['author']['image'] = authorImage
-      }
+        // Add author URL if available
+        if (authorUrl) {
+          schema['author']['url'] = authorUrl
+        }
 
-      // Add author URL if available
-      if (authorUrl) {
-        schema['author']['url'] = authorUrl
+        console.log(`✅ Added author from metadata: "${authorName}"`)
+      } else {
+        console.log(`⚠️ No author metadata found - OMITTING author property (better than fabricating)`)
+        // Author will remain undefined/missing - this is CORRECT for pages without authors
       }
     } else if ((schema['@type'] === 'BlogPosting' || schema['@type'] === 'Article') && schema['author'] && typeof schema['author'] === 'object') {
       // Enhance existing author with image/URL if missing
@@ -1235,22 +1262,65 @@ RESPONSE FORMAT:
       console.log(`❌ articleSection condition NOT met`)
     }
 
-    // Add keywords from metadata as array
-    if (!schema['keywords'] && analysis.metadata?.keywords?.length) {
-      schema['keywords'] = analysis.metadata.keywords.slice(0, 10)
+    // Add/improve keywords from metadata (ALL schema types benefit from keywords!)
+    if (analysis.metadata?.keywords?.length) {
+      if (!schema['keywords'] || (Array.isArray(schema['keywords']) && schema['keywords'].length === 0)) {
+        // No keywords - add from metadata
+        schema['keywords'] = analysis.metadata.keywords.slice(0, 10)
+        console.log(`✅ Added ${analysis.metadata.keywords.length} keywords to ${schemaType}:`, schema['keywords'])
+      } else if (Array.isArray(schema['keywords'])) {
+        // Keywords exist - check quality and potentially replace low-quality ones
+        const existingKeywords = schema['keywords']
+        const lowQualityIndicators = ['?', '!', 'ready', 'started', 'success', 'ensure']
+        const hasLowQuality = existingKeywords.some((kw: string) =>
+          lowQualityIndicators.some(ind => kw.toLowerCase().includes(ind))
+        )
+
+        if (hasLowQuality) {
+          // Replace with better keywords from metadata
+          schema['keywords'] = analysis.metadata.keywords.slice(0, 10)
+          console.log(`🔄 Replaced low-quality keywords with metadata keywords:`, schema['keywords'])
+        } else {
+          console.log(`⏭️ ${schemaType} already has good keywords:`, schema['keywords'])
+        }
+      }
+    } else {
+      console.log(`❌ No keywords in metadata to add`)
     }
 
-    // Add image for content schemas
-    if ((schemaType === 'BlogPosting' || schemaType === 'Article' || schemaType === 'WebPage') && !schema['image'] && analysis.metadata?.imageInfo?.featuredImage) {
-      schema['image'] = analysis.metadata.imageInfo.featuredImage
+    // Add image for content schemas (with intelligent fallback)
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article' || schemaType === 'WebPage') && !schema['image']) {
+      // Priority 1: Featured image from metadata
+      if (analysis.metadata?.imageInfo?.featuredImage) {
+        schema['image'] = analysis.metadata.imageInfo.featuredImage
+        console.log(`✅ Added featured image to ${schemaType}:`, schema['image'])
+      }
+      // Priority 2: Business logo
+      else if (analysis.metadata?.businessInfo?.logo) {
+        schema['image'] = analysis.metadata.businessInfo.logo
+        console.log(`✅ Added business logo as image to ${schemaType}:`, schema['image'])
+      }
+      // Priority 3: First image from page
+      else if (analysis.metadata?.imageInfo?.allImages?.length && analysis.metadata.imageInfo.allImages[0]?.url) {
+        schema['image'] = analysis.metadata.imageInfo.allImages[0].url
+        console.log(`✅ Added first page image to ${schemaType}:`, schema['image'])
+      }
+      // Priority 4: Construct og:image URL if we have origin
+      else {
+        const fallbackImage = `${new URL(analysis.url).origin}/images/og-image.jpg`
+        schema['image'] = fallbackImage
+        console.log(`⚠️ Added fallback image to ${schemaType}:`, fallbackImage)
+      }
     }
 
-    // Add dateModified if available (or use datePublished)
-    if ((schemaType === 'BlogPosting' || schemaType === 'Article') && !schema['dateModified']) {
+    // Add dateModified if available (or use datePublished for articles)
+    if ((schemaType === 'BlogPosting' || schemaType === 'Article' || schemaType === 'WebPage') && !schema['dateModified']) {
       if (analysis.metadata?.modifiedDate) {
         schema['dateModified'] = analysis.metadata.modifiedDate
+        console.log(`✅ Added dateModified to ${schemaType}:`, schema['dateModified'])
       } else if (schema['datePublished']) {
         schema['dateModified'] = schema['datePublished']
+        console.log(`✅ Added dateModified from datePublished to ${schemaType}`)
       }
     }
 
@@ -1294,12 +1364,20 @@ RESPONSE FORMAT:
     if (schemaType === 'WebPage' && !schema['breadcrumb'] && analysis.metadata?.breadcrumbs?.length) {
       schema['breadcrumb'] = {
         '@type': 'BreadcrumbList',
-        'itemListElement': analysis.metadata.breadcrumbs.map((crumb, index) => ({
-          '@type': 'ListItem',
-          'position': index + 1,
-          'name': crumb
-        }))
+        'itemListElement': analysis.metadata.breadcrumbs.map((crumb, index) => {
+          const item: any = {
+            '@type': 'ListItem',
+            'position': index + 1,
+            'name': crumb.name
+          }
+          // Add URL if available
+          if (crumb.url) {
+            item['item'] = crumb.url
+          }
+          return item
+        })
       }
+      console.log(`✅ Added breadcrumb with ${analysis.metadata.breadcrumbs.length} items to WebPage`)
     }
   }
 
@@ -1333,13 +1411,230 @@ RESPONSE FORMAT:
       }
     }
 
-    // Add technical metadata for WebPage
+    // Add comprehensive properties for WebPage (recommended + advanced)
     if (schemaType === 'WebPage') {
+      // Recommended: isPartOf
       if (!schema['isPartOf'] && analysis.metadata?.businessInfo?.name) {
         schema['isPartOf'] = {
           '@type': 'WebSite',
           'name': analysis.metadata.businessInfo.name,
           'url': new URL(analysis.url).origin
+        }
+        console.log(`✅ Added isPartOf to WebPage`)
+      }
+
+      // Recommended: datePublished - add if missing but metadata has it
+      if (!schema['datePublished'] && analysis.metadata?.publishDate) {
+        schema['datePublished'] = analysis.metadata.publishDate
+        console.log(`✅ Added datePublished to WebPage: ${schema['datePublished']}`)
+      }
+
+      // AEO: wordCount - add if missing but metadata has it
+      if (!schema['wordCount'] && analysis.metadata?.wordCount) {
+        schema['wordCount'] = analysis.metadata.wordCount
+        console.log(`✅ Added wordCount to WebPage: ${schema['wordCount']}`)
+      }
+
+      // Recommended: mainEntity - describe the main content/purpose of the page
+      // Add or fix mainEntity with correct semantic type
+      const title = analysis.title || schema['name'] || ''
+      const description = analysis.description || schema['description'] || ''
+      const url = analysis.url
+
+      // Detect schema type from URL and content
+      let entityType = 'Thing'
+      if (url.includes('/services') || url.includes('/service') || title.toLowerCase().includes('service')) {
+        entityType = 'Service'
+      } else if (url.includes('/product') || title.toLowerCase().includes('product')) {
+        entityType = 'Product'
+      } else if (url.includes('/about') || title.toLowerCase().includes('about')) {
+        entityType = 'AboutPage'
+      }
+
+      // Check if we need to add or override mainEntity
+      const needsMainEntityFix = !schema['mainEntity'] ||
+        (schema['mainEntity']?.['@type'] === 'Thing' && entityType !== 'Thing')
+
+      if (needsMainEntityFix) {
+        schema['mainEntity'] = {
+          '@type': entityType,
+          'name': title,
+          'description': description
+        }
+
+        // Add provider for Service type
+        if (entityType === 'Service' && analysis.metadata?.businessInfo?.name) {
+          schema['mainEntity'].provider = {
+            '@type': 'Organization',
+            'name': analysis.metadata.businessInfo.name
+          }
+        }
+
+        console.log(`✅ ${schema['mainEntity'] ? 'Fixed' : 'Added'} mainEntity (${entityType}) to WebPage`)
+      }
+
+      // Advanced: about - extract topic keywords from title/keywords
+      if (!schema['about'] && (analysis.metadata?.keywords?.length || analysis.title)) {
+        const aboutTopics: string[] = []
+
+        // Extract from title (split by separators)
+        if (analysis.title) {
+          const titleParts = analysis.title.split(/[|\-–—:,]/)
+            .map(part => part.trim())
+            .filter(part => part.length >= 3 && part.length < 50)
+          aboutTopics.push(...titleParts.slice(0, 3))
+        }
+
+        // Add top keywords
+        if (analysis.metadata?.keywords?.length) {
+          aboutTopics.push(...analysis.metadata.keywords.slice(0, 3))
+        }
+
+        // Remove duplicates and limit to 5
+        const uniqueTopics = [...new Set(aboutTopics)].slice(0, 5)
+        if (uniqueTopics.length > 0) {
+          schema['about'] = uniqueTopics
+          console.log(`✅ Added about with ${uniqueTopics.length} topics to WebPage:`, uniqueTopics)
+        }
+      }
+
+      // Advanced: mentions - extract from H2 headings and keywords
+      if (!schema['mentions'] && analysis.metadata?.articleSections?.length) {
+        const mentions = analysis.metadata.articleSections
+          .filter((section: string) => section.length >= 3 && section.length < 100)
+          .slice(0, 5)
+
+        if (mentions.length > 0) {
+          schema['mentions'] = mentions
+          console.log(`✅ Added mentions with ${mentions.length} items to WebPage:`, mentions)
+        }
+      }
+
+      // Advanced: speakable - for content-rich pages (improve if minimal)
+      const wordCount = analysis.metadata?.wordCount || 0
+      if (wordCount > 300) {
+        const comprehensiveSelectors = ['h1', 'h2', 'main', '.content', 'article', 'p']
+
+        if (!schema['speakable']) {
+          // Add new speakable
+          schema['speakable'] = {
+            '@type': 'SpeakableSpecification',
+            'cssSelector': comprehensiveSelectors
+          }
+          console.log(`✅ Added speakable to WebPage (wordCount: ${wordCount})`)
+        } else if (schema['speakable']?.cssSelector && Array.isArray(schema['speakable'].cssSelector)) {
+          // Enhance existing speakable if it only has minimal selectors
+          const existing = schema['speakable'].cssSelector
+          if (existing.length <= 2) {
+            schema['speakable'].cssSelector = comprehensiveSelectors
+            console.log(`🔄 Enhanced speakable selectors from ${existing.length} to ${comprehensiveSelectors.length}`)
+          } else {
+            console.log(`⏭️ Speakable already has ${existing.length} selectors`)
+          }
+        }
+      }
+
+      // Advanced: potentialAction - SearchAction for discoverability
+      if (!schema['potentialAction']) {
+        const siteOrigin = new URL(analysis.url).origin
+        schema['potentialAction'] = {
+          '@type': 'SearchAction',
+          'target': {
+            '@type': 'EntryPoint',
+            'urlTemplate': `${siteOrigin}/search?q={search_term_string}`
+          },
+          'query-input': 'required name=search_term_string'
+        }
+        console.log(`✅ Added potentialAction SearchAction to WebPage`)
+      }
+
+      // Advanced: significantLink - Extract important internal links from breadcrumbs
+      if (!schema['significantLink']) {
+        const significantLinks: string[] = []
+
+        // Try breadcrumb URLs first
+        if (analysis.metadata?.breadcrumbs?.length) {
+          const breadcrumbUrls = analysis.metadata.breadcrumbs
+            .map((crumb: any) => crumb.url)
+            .filter((url: string) => url && url.startsWith('http'))
+
+          significantLinks.push(...breadcrumbUrls)
+        }
+
+        // If no breadcrumb URLs, construct from URL path
+        if (significantLinks.length === 0) {
+          const urlObj = new URL(analysis.url)
+          const pathParts = urlObj.pathname.split('/').filter(Boolean)
+
+          // Build hierarchical URLs from path
+          let currentPath = ''
+          for (const part of pathParts.slice(0, -1)) { // Exclude current page
+            currentPath += `/${part}`
+            significantLinks.push(`${urlObj.origin}${currentPath}`)
+          }
+
+          // Add home page
+          if (!significantLinks.includes(urlObj.origin)) {
+            significantLinks.unshift(urlObj.origin)
+          }
+        }
+
+        if (significantLinks.length > 0) {
+          schema['significantLink'] = significantLinks.slice(0, 5)
+          console.log(`✅ Added ${schema['significantLink'].length} significantLinks to WebPage`)
+        }
+      }
+
+      // Enhance publisher with contact information
+      if (schema['publisher']) {
+        // Extract phone and email from content if not in metadata
+        let phone = analysis.metadata?.contactInfo?.telephone
+        let email = analysis.metadata?.contactInfo?.email
+        let address = analysis.metadata?.contactInfo?.address
+
+        // Try to extract from content if missing
+        if (!phone || !email) {
+          const content = analysis.content
+
+          // Extract phone (US format)
+          if (!phone) {
+            const phoneMatch = content.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)
+            if (phoneMatch) {
+              phone = phoneMatch[0]
+              console.log(`📞 Extracted phone from content: ${phone}`)
+            }
+          }
+
+          // Extract email
+          if (!email) {
+            const emailMatch = content.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+            if (emailMatch) {
+              email = emailMatch[0]
+              console.log(`📧 Extracted email from content: ${email}`)
+            }
+          }
+        }
+
+        // Add contact point if we have phone or email
+        if (!schema['publisher'].contactPoint && (phone || email)) {
+          schema['publisher'].contactPoint = {
+            '@type': 'ContactPoint',
+            'contactType': 'customer service'
+          }
+
+          if (phone) schema['publisher'].contactPoint.telephone = phone
+          if (email) schema['publisher'].contactPoint.email = email
+
+          console.log(`✅ Added contactPoint to publisher (phone: ${!!phone}, email: ${!!email})`)
+        }
+
+        // Add address if available
+        if (!schema['publisher'].address && address) {
+          schema['publisher'].address = {
+            '@type': 'PostalAddress',
+            'streetAddress': address
+          }
+          console.log(`✅ Added address to publisher organization`)
         }
       }
     }

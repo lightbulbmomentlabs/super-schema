@@ -1,9 +1,17 @@
 import { scraperService } from './scraper.js'
 import { openaiService, type SchemaGenerationOptions } from './openai.js'
+import { anthropicService } from './anthropic.js'
 import { validatorService } from './validator.js'
 import { db } from './database.js'
 import { extractSchemaType } from '../utils/schemaTypeDetector.js'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
+
+// AI Model Provider Selection
+// Set AI_MODEL_PROVIDER=anthropic (recommended) or AI_MODEL_PROVIDER=openai
+const AI_PROVIDER = (process.env.AI_MODEL_PROVIDER || 'anthropic').toLowerCase()
+console.log(`🤖 AI Model Provider: ${AI_PROVIDER.toUpperCase()}`)
+
+const aiService = AI_PROVIDER === 'anthropic' ? anthropicService : openaiService
 
 export interface SchemaGenerationResult {
   success: boolean
@@ -106,7 +114,7 @@ class SchemaGeneratorService {
         fullOptions: optionsToPass
       })
 
-      const schemas = await openaiService.generateSchemas(contentAnalysis, optionsToPass)
+      const schemas = await aiService.generateSchemas(contentAnalysis, optionsToPass)
 
       if (!schemas || schemas.length === 0) {
         throw new Error('No schemas could be generated from the provided content')
@@ -374,6 +382,8 @@ class SchemaGeneratorService {
 
     try {
       // Use AI to refine the existing schemas
+      // Note: Refinement always uses OpenAI (gpt-4o-mini) for cost efficiency
+      // The critical initial generation uses the configured AI provider (Claude/OpenAI)
       const { schemas: refinedSchemas, changes } = await openaiService.refineSchemas(schemas, url, options)
 
       // Calculate new score

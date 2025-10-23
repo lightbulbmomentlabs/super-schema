@@ -23,18 +23,13 @@ function NotificationBadgeComponent({ count, className }: NotificationBadgeProps
     <span
       className={cn(
         // Base styles
-        'absolute flex items-center justify-center',
-        'min-w-[18px] h-[18px] px-1',
+        'inline-flex items-center justify-center',
+        'min-w-[20px] h-[20px] px-1.5',
         'rounded-full',
         // Colors - blue info theme
         'bg-info text-info-foreground',
-        // Border for contrast against parent
-        'border-2 border-background',
         // Typography
         'text-[10px] font-bold leading-none',
-        // Positioning
-        '-top-1 -right-1',
-        'z-10',
         // Animations
         'animate-in fade-in zoom-in-50',
         'duration-200',

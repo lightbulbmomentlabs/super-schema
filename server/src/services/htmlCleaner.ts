@@ -95,6 +95,9 @@ export interface EnhancedMetadata {
     hasContactInfo: boolean
   }
 
+  // Legacy compatibility
+  wordCount?: number  // Duplicate of contentAnalysis.wordCount for backwards compatibility
+
   // SEO and technical metadata
   technical: {
     robots?: string
@@ -112,6 +115,7 @@ export interface StructuredContent {
   originalLength: number
   processedLength: number
   tokenEstimate: number
+  contentQualitySuggestions?: string[]
 }
 
 export interface ContentNode {
@@ -157,9 +161,9 @@ class HtmlCleaningService {
     console.log('📝 Phase 4: Generating clean text for LLM...')
     const cleanText = this.generateCleanText(hierarchy)
 
-    // Phase 5: Intelligent truncation at content boundaries
+    // Phase 5: Intelligent truncation at content boundaries (increased to 100,000 for better AI context)
     console.log('✂️ Phase 5: Applying intelligent truncation...')
-    const { truncatedHierarchy, truncatedText } = this.intelligentTruncation(hierarchy, cleanText, 6000)
+    const { truncatedHierarchy, truncatedText } = this.intelligentTruncation(hierarchy, cleanText, 100000)
 
     // Phase 6: Enhance metadata from extracted content
     console.log('🔍 Phase 6: Enhancing metadata from extracted content...')
@@ -451,11 +455,36 @@ class HtmlCleaningService {
     const enhanced = { ...metadata }
 
     // 1. Extract author name from content if missing or incomplete
+    // IMPORTANT: Be very strict to avoid extracting random content as author name
     if (!enhanced.author?.name || enhanced.author.name.split(' ').length < 2) {
-      // Look for "P: Author Name" pattern in content (from byline paragraphs)
-      const authorMatch = cleanText.match(/P:\s*([A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*(?:\s+[A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*)+)/i)
-      if (authorMatch) {
-        const fullName = authorMatch[1].trim()
+      // Look for "By: Author Name" or byline patterns, NOT regular content
+      // Must have "by" keyword to avoid matching random content
+      const authorPatterns = [
+        /(?:by|author|written\s+by)[:\s]+([A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*(?:\s+[A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*)+)/i,
+        /P:\s+By\s+([A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*(?:\s+[A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*)+)/i
+      ]
+
+      let fullName = null
+      for (const pattern of authorPatterns) {
+        const authorMatch = cleanText.match(pattern)
+        if (authorMatch) {
+          fullName = authorMatch[1].trim()
+
+          // STRICT VALIDATION: Must be 2-4 words and not contain common non-name words
+          const words = fullName.split(/\s+/)
+          const nonNameWords = ['team', 'staff', 'department', 'company', 'website', 'process', 'service', 'our', 'the', 'and', 'richmond', 'services']
+          const hasNonNameWord = nonNameWords.some(word => fullName.toLowerCase().includes(word))
+
+          if (words.length >= 2 && words.length <= 4 && !hasNonNameWord) {
+            break
+          } else {
+            console.log(`⚠️ Rejected potential author in content (invalid): ${fullName}`)
+            fullName = null // Reset if invalid
+          }
+        }
+      }
+
+      if (fullName) {
         if (!enhanced.author) {
           enhanced.author = { name: fullName, socialProfiles: [] }
         } else {
@@ -466,6 +495,8 @@ class HtmlCleaningService {
           }
         }
         console.log(`✍️ Enhanced author from content: ${fullName}`)
+      } else {
+        console.log(`⚠️ No valid author found in content (strict validation)`)
       }
     }
 
@@ -968,13 +999,24 @@ class HtmlCleaningService {
       for (const selector of bylineSelectors) {
         const bylineText = $(selector).first().text()
         if (bylineText) {
-          // Match "By Author Name" or "Author Name" patterns (including hyphens like "Miriam-Rose")
-          // Supports: "John Doe", "Mary-Jane Smith", "Jean-Paul Sartre", etc.
-          const byMatch = bylineText.match(/(?:by\s+)?([A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*(?:\s+[A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*)+)/i)
+          // STRICT: Require "by" or "author" keyword to avoid matching random content
+          // Match patterns like: "By John Doe", "Author: Jane Smith", "Written by Bob Johnson"
+          const byMatch = bylineText.match(/(?:by|author|written\s+by)[:\s]+([A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*(?:\s+[A-Z][a-z]+(?:[-‑][A-Z][a-z]+)*)+)/i)
           if (byMatch) {
-            name = byMatch[1].trim()
-            console.log(`✍️ Extracted author from byline: ${name}`)
-            break
+            const extractedName = byMatch[1].trim()
+
+            // Validate: Must be 2-4 words and not contain common non-name words
+            const words = extractedName.split(/\s+/)
+            const nonNameWords = ['team', 'staff', 'department', 'company', 'website', 'process', 'service', 'our', 'the', 'and']
+            const hasNonNameWord = nonNameWords.some(word => extractedName.toLowerCase().includes(word))
+
+            if (words.length >= 2 && words.length <= 4 && !hasNonNameWord) {
+              name = extractedName
+              console.log(`✍️ Extracted author from byline: ${name}`)
+              break
+            } else {
+              console.log(`⚠️ Rejected potential author (invalid): ${extractedName}`)
+            }
           }
         }
       }
@@ -1082,10 +1124,74 @@ class HtmlCleaningService {
   }
 
   private extractKeywords($: CheerioAPI): string[] {
+    // Try meta keywords first
     const keywordsAttr = $('meta[name="keywords"]').attr('content')
-    if (!keywordsAttr) return []
+    if (keywordsAttr) {
+      const metaKeywords = keywordsAttr.split(',').map(k => k.trim()).filter(Boolean).slice(0, 10)
+      if (metaKeywords.length > 0) {
+        console.log(`📎 Extracted ${metaKeywords.length} keywords from meta tag`)
+        return metaKeywords
+      }
+    }
 
-    return keywordsAttr.split(',').map(k => k.trim()).filter(Boolean).slice(0, 10)
+    // Fallback: Extract keywords from title, headings, and content
+    console.log(`⚠️ No meta keywords found, extracting from content...`)
+    const keywords: Set<string> = new Set()
+
+    // Extract from page title (split by common separators)
+    const title = $('title').text()
+    const stopWords = ['richmond', 'va', 'our', 'your', 'the', 'and', 'bcs', 'llc', 'inc', 'ltd', 'corp']
+
+    if (title) {
+      const titleWords = title
+        .split(/[|\-–—:,]/)
+        .map(part => part.trim())
+        .filter(part => {
+          const words = part.split(/\s+/)
+          const lowerPart = part.toLowerCase()
+          // Must be 4+ characters, have at least 2 words, not contain stop words
+          return part.length >= 4 &&
+                 part.length < 50 &&
+                 words.length >= 2 &&
+                 !stopWords.some(stop => lowerPart.includes(stop))
+        })
+      titleWords.forEach(word => keywords.add(word))
+      console.log(`  📄 Extracted ${titleWords.length} keywords from title`)
+    }
+
+    // Extract from H1 and H2 headings (filter out CTAs and marketing fluff)
+    const stopPhrases = ['ready to', 'get started', 'contact us', 'learn more', 'find out',
+                         'we work with', 'ensure success', 'our', 'your']
+    $('h1, h2').each((_, heading) => {
+      const text = $(heading).text().trim()
+      const lowerText = text.toLowerCase()
+      const words = text.split(/\s+/)
+
+      // Skip if:
+      // - Too short or too long
+      // - Less than 2 words (single words are usually not good keywords)
+      // - Contains question mark or exclamation (likely a CTA)
+      // - Contains stop phrases (marketing fluff)
+      // - All caps (likely a CTA)
+      // - Contains stop words like location or company abbreviations
+      if (text &&
+          text.length >= 4 &&
+          text.length <= 30 &&
+          words.length >= 2 &&
+          !text.includes('?') &&
+          !text.includes('!') &&
+          text !== text.toUpperCase() &&
+          !stopPhrases.some(phrase => lowerText.includes(phrase)) &&
+          !stopWords.some(stop => lowerText.includes(stop))) {
+        keywords.add(text)
+      }
+    })
+    console.log(`  📋 Total unique keywords from headings (filtered): ${keywords.size}`)
+
+    const keywordsArray = Array.from(keywords).slice(0, 10)
+    console.log(`  ✅ Final keywords extracted: ${keywordsArray.length}`)
+
+    return keywordsArray
   }
 
   private extractImageMetadata($: CheerioAPI) {
