@@ -236,9 +236,9 @@ export default function SettingsPage() {
             <div className="flex items-start gap-2 p-3 bg-info/10 border border-info/20 rounded-lg">
               <AlertTriangle className="h-4 w-4 text-info mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-foreground">Private Beta</p>
+                <p className="text-xs font-medium text-foreground">Beta</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  This feature is currently in private beta. Contact support to request access if you encounter any issues.
+                  This feature is in beta. Contact support if you run into any issues.
                 </p>
               </div>
             </div>

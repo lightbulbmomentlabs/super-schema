@@ -252,9 +252,9 @@ export default function HubSpotPage() {
           <AlertTriangle className="h-5 w-5 text-info mt-0.5 flex-shrink-0" />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
-              <p className="text-sm font-medium text-foreground">Private Beta</p>
+              <p className="text-sm font-medium text-foreground">Beta</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                This feature is currently in private beta. Contact support to request access if you encounter any issues.
+                This feature is in beta. Contact support if you run into any issues.
               </p>
             </div>
             <div className="flex justify-end">
