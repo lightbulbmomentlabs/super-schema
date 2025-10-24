@@ -403,8 +403,38 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   }
 
   const handleSelectHubSpotContent = (match: HubSpotContentMatchResult) => {
-    if (!selectedHubSpotConnection || !htmlScriptTags) {
+    if (!selectedHubSpotConnection) {
       toast.error('Missing connection or schema data')
+      return
+    }
+
+    // Generate HTML script tags from all schema records (similar to LibraryPage)
+    let schemaHtml = ''
+    if (allSchemaRecords.length > 0) {
+      // Generate from all schema records when available
+      schemaHtml = allSchemaRecords
+        .map(record => {
+          let schemas = record.schemas
+          if (!Array.isArray(schemas)) {
+            schemas = [schemas]
+          }
+          return schemas
+            .map(schema => `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`)
+            .join('\n')
+        })
+        .join('\n')
+    } else if (htmlScriptTags) {
+      // Fallback to htmlScriptTags if no records yet
+      schemaHtml = htmlScriptTags
+    } else if (displaySchemas.length > 0) {
+      // Final fallback: generate from displaySchemas
+      schemaHtml = displaySchemas
+        .map(schema => `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`)
+        .join('\n')
+    }
+
+    if (!schemaHtml) {
+      toast.error('No schema data available')
       return
     }
 
@@ -412,7 +442,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       connectionId: selectedHubSpotConnection,
       contentId: match.contentId,
       contentType: match.contentType as 'blog_post' | 'page' | 'landing_page',
-      schemaHtml: htmlScriptTags,
+      schemaHtml,
       contentTitle: match.title,
       contentUrl: match.url
     })
@@ -1206,7 +1236,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           />
 
           {/* Push to HubSpot Button - Show for all users with HubSpot connections */}
-          {htmlScriptTags && hubspotConnections.length > 0 && (
+          {displaySchemas.length > 0 && hubspotConnections.length > 0 && (
             <div className="flex items-center justify-between bg-muted/20 border border-border rounded-lg p-4">
               <div className="flex-1">
                 <h3 className="font-medium mb-1">Push to HubSpot</h3>
@@ -1220,10 +1250,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                 onClick={handlePushToHubSpot}
                 disabled={pushToHubSpotMutation.isPending}
                 className={cn(
-                  'px-4 py-2 rounded-md font-medium transition-colors flex items-center space-x-2',
+                  'flex items-center gap-2 px-4 py-2 rounded-md transition-colors flex-shrink-0',
                   hasActiveHubSpotConnection
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
                 )}
               >
                 {pushToHubSpotMutation.isPending ? (
