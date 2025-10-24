@@ -205,11 +205,12 @@ ${schemas.length === 1
       // Stage 1: Copying...
       setCopyState('copying')
 
-      // Brief delay to show "Copying..." state
-      await new Promise(resolve => setTimeout(resolve, 300))
-
-      // Perform the copy
+      // Perform the copy IMMEDIATELY (no delay) to maintain user gesture context
+      // This is critical for clipboard API to work in production/strict browsers
       await navigator.clipboard.writeText(implementationCode)
+
+      // Brief delay to show "Copying..." state after successful copy
+      await new Promise(resolve => setTimeout(resolve, 300))
 
       // Stage 2: Copied! 🎉
       setCopyState('copied')
@@ -227,6 +228,8 @@ ${schemas.length === 1
     } catch (error) {
       console.error('Failed to copy implementation code:', error)
       setCopyState('idle')
+      // Show user-friendly error message
+      alert('Failed to copy to clipboard. Please try again or copy the schema manually from the editor.')
     }
   }
 
