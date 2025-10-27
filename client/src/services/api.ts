@@ -18,8 +18,9 @@ import type {
   UpdateReleaseNoteRequest
 } from '@shared/types'
 
-// In production, API is served from same origin as the client
+// In production, API is served from same origin as the client (supports both superschema.ai and www.superschema.ai)
 // In development, use VITE_API_URL from .env or default to localhost:3001
+// Note: VITE_API_URL is intentionally not set in production to allow dynamic origin resolution
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.MODE === 'production' ? window.location.origin : 'http://localhost:3001')
 

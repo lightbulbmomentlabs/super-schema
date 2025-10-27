@@ -48,10 +48,10 @@ envs:
 - key: VITE_PUBLIC_CLERK_AFTER_SIGN_UP_URL
   scope: RUN_AND_BUILD_TIME
   value: /generate
-- key: VITE_APP_URL
+- key: CLIENT_URL
   scope: RUN_AND_BUILD_TIME
-  value: https://superschema.ai
-- key: VITE_API_URL
+  value: https://superschema.ai,https://www.superschema.ai
+- key: VITE_APP_URL
   scope: RUN_AND_BUILD_TIME
   value: https://superschema.ai
 - key: SUPABASE_URL

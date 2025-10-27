@@ -41,9 +41,10 @@ app.use(helmet({
 }))
 
 // CORS configuration
+// Support both root domain and www subdomain
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.CLIENT_URL || 'https://superschema.ai']
+    ? process.env.CLIENT_URL?.split(',').map(url => url.trim()) || ['https://superschema.ai', 'https://www.superschema.ai']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }))

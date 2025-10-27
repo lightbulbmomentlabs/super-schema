@@ -50,5 +50,6 @@ export const env = {
   HUBSPOT_ENCRYPTION_KEY: process.env.HUBSPOT_ENCRYPTION_KEY,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || '3001',
+  // CLIENT_URL can be comma-separated for multiple origins (e.g., "https://superschema.ai,https://www.superschema.ai")
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000'
 }
