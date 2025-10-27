@@ -1,5 +1,6 @@
 import { Response } from 'express'
 import { db } from '../services/database.js'
+import { hubspotCRM } from '../services/hubspotCRM.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { userProfileUpdateSchema, paginationSchema } from 'aeo-schema-generator-shared/schemas'
@@ -34,6 +35,18 @@ export const updateUserProfile = asyncHandler(async (req: AuthenticatedRequest, 
   const validatedData = userProfileUpdateSchema.parse(req.body)
 
   const updatedUser = await db.updateUser(userId, validatedData)
+
+  // Sync update to HubSpot CRM (non-blocking, best effort)
+  if (updatedUser.email) {
+    hubspotCRM.createOrUpdateContact({
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName
+    }).catch(error => {
+      // Log error but don't fail profile update
+      console.error('Failed to sync profile update to HubSpot CRM:', error)
+    })
+  }
 
   // Track usage
   await db.trackUsage(

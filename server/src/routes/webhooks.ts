@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { Webhook } from 'svix'
 import { db } from '../services/database.js'
 import { stripeService } from '../services/stripe.js'
+import { hubspotCRM } from '../services/hubspotCRM.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 
 const router = Router()
@@ -103,6 +104,16 @@ async function handleUserCreated(data: any) {
     await db.upsertUserFromClerk(userId, email, firstName, lastName)
 
     console.log(`User created via webhook: ${userId} (${email})`)
+
+    // Add user to HubSpot CRM (non-blocking, best effort)
+    hubspotCRM.createOrUpdateContact({
+      email,
+      firstName,
+      lastName
+    }).catch(error => {
+      // Log error but don't fail user creation
+      console.error('Failed to add user to HubSpot CRM:', error)
+    })
   } catch (error) {
     console.error('Error creating user:', error)
   }
@@ -124,6 +135,16 @@ async function handleUserUpdated(data: any) {
     await db.upsertUserFromClerk(userId, email, firstName, lastName)
 
     console.log(`User updated: ${userId} (${email})`)
+
+    // Sync update to HubSpot CRM (non-blocking, best effort)
+    hubspotCRM.createOrUpdateContact({
+      email,
+      firstName,
+      lastName
+    }).catch(error => {
+      // Log error but don't fail user update
+      console.error('Failed to sync user update to HubSpot CRM:', error)
+    })
   } catch (error) {
     console.error('Error updating user:', error)
   }

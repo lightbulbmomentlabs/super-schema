@@ -14,6 +14,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
     "@clerk/express": "^0.1.1",
+    "@hubspot/api-client": "^13.4.0",
     "@supabase/supabase-js": "^2.45.4",
     "@types/cheerio": "^0.22.35",
     "aeo-schema-generator-shared": "*",

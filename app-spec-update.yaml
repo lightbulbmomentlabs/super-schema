@@ -70,6 +70,13 @@ envs:
 - key: ADMIN_USER_IDS
   scope: RUN_AND_BUILD_TIME
   value: user_33hfeOP0UYLcyLEkfcCdITEYY6W,user_33Fdrdz4hyXRWshiOjEsVOGmbTv
+- key: HUBSPOT_CRM_API_KEY
+  scope: RUN_AND_BUILD_TIME
+  type: SECRET
+  value: EV[1:PLACEHOLDER_REPLACE_WITH_YOUR_ENCRYPTED_API_KEY]
+- key: HUBSPOT_CRM_LIST_ID
+  scope: RUN_AND_BUILD_TIME
+  value: YOUR_LIST_ID_HERE
 ingress:
   rules:
   - component:
