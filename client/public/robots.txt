@@ -1,0 +1,16 @@
+# Robots.txt for SuperSchema.ai
+# Allow search engines to crawl public pages but block API endpoints
+
+User-agent: *
+
+# Allow all public pages
+Allow: /
+
+# Block API endpoints (reduce unnecessary 401 errors in logs)
+Disallow: /api/
+
+# Allow specific public API endpoints
+Allow: /api/release-notes
+
+# Sitemap location (update this if you add a sitemap)
+# Sitemap: https://superschema.ai/sitemap.xml

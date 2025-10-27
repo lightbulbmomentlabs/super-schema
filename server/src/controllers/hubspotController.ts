@@ -13,31 +13,68 @@ export const handleOAuthCallback = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.auth!.userId
     const { code, redirectUri } = req.body
+    const requestTimestamp = new Date().toISOString()
+
+    console.log('🔄 [HubSpot Controller] Processing OAuth callback', {
+      userId,
+      hasCode: !!code,
+      codePreview: code ? code.substring(0, 20) + '...' : null,
+      redirectUri: redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`,
+      timestamp: requestTimestamp
+    })
 
     if (!code) {
+      console.error('❌ [HubSpot Controller] Missing authorization code', {
+        userId,
+        timestamp: requestTimestamp,
+        error: 'NO_CODE'
+      })
       throw createError('Authorization code is required', 400)
     }
 
-    console.log('🔄 [HubSpot Controller] Processing OAuth callback for user:', userId)
-
     try {
-      // Exchange code for tokens
+      // Step 1: Exchange code for tokens
+      console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens', { userId })
       const tokens = await hubspotOAuthService.exchangeCodeForTokens(
         code,
         redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
       )
+      console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
+        userId,
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        expiresIn: tokens.expires_in
+      })
 
-      // Get account information
+      // Step 2: Get account information
+      console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { userId })
       const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token)
+      console.log('✅ [HubSpot Controller] Step 2 complete: Account info received', {
+        userId,
+        portalId: accountInfo.hub_id,
+        portalName: accountInfo.hub_domain,
+        scopeCount: accountInfo.scopes?.length || 0
+      })
 
-      // Store connection
+      // Step 3: Store connection
+      console.log('🔄 [HubSpot Controller] Step 3: Storing connection in database', { userId })
       const connectionId = await hubspotOAuthService.storeConnection(
         userId,
         tokens,
         accountInfo
       )
+      console.log('✅ [HubSpot Controller] Step 3 complete: Connection stored', {
+        userId,
+        connectionId,
+        portalId: accountInfo.hub_id
+      })
 
-      console.log('✅ [HubSpot Controller] OAuth connection created:', connectionId)
+      console.log('✅ [HubSpot Controller] OAuth flow completed successfully', {
+        userId,
+        connectionId,
+        portalId: accountInfo.hub_id,
+        duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
+      })
 
       res.json({
         success: true,
@@ -50,11 +87,33 @@ export const handleOAuthCallback = asyncHandler(
         message: 'HubSpot account connected successfully'
       })
     } catch (error) {
-      console.error('❌ [HubSpot Controller] OAuth callback failed:', error)
-      throw createError(
-        error instanceof Error ? error.message : 'Failed to connect HubSpot account',
-        500
-      )
+      // Enhanced error logging with context
+      const errorDetails = {
+        userId,
+        timestamp: new Date().toISOString(),
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
+      }
+
+      console.error('❌ [HubSpot Controller] OAuth callback failed', errorDetails)
+
+      // Determine user-friendly error message
+      let userMessage = 'Failed to connect HubSpot account'
+      if (error instanceof Error) {
+        if (error.message.includes('authorization code')) {
+          userMessage = 'Invalid or expired authorization code. Please try connecting again.'
+        } else if (error.message.includes('access token')) {
+          userMessage = 'Failed to retrieve access token from HubSpot. Please try again.'
+        } else if (error.message.includes('account information')) {
+          userMessage = 'Failed to retrieve HubSpot account information. Please verify your permissions.'
+        } else {
+          userMessage = error.message
+        }
+      }
+
+      throw createError(userMessage, 500)
     }
   }
 )
@@ -394,6 +453,43 @@ export const findConnectionByDomain = asyncHandler(
     res.json({
       success: true,
       data: connection
+    })
+  }
+)
+
+/**
+ * Health check endpoint for HubSpot integration
+ * Verifies that HubSpot credentials are properly configured
+ */
+export const healthCheck = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const hasClientId = !!process.env.HUBSPOT_CLIENT_ID
+    const hasClientSecret = !!process.env.HUBSPOT_CLIENT_SECRET
+    const hasEncryptionKey = !!process.env.HUBSPOT_ENCRYPTION_KEY
+
+    const isConfigured = hasClientId && hasClientSecret && hasEncryptionKey
+
+    console.log('🏥 [HubSpot Health] Health check requested', {
+      hasClientId,
+      hasClientSecret,
+      hasEncryptionKey,
+      isConfigured,
+      timestamp: new Date().toISOString()
+    })
+
+    res.json({
+      success: true,
+      data: {
+        configured: isConfigured,
+        checks: {
+          clientId: hasClientId,
+          clientSecret: hasClientSecret,
+          encryptionKey: hasEncryptionKey
+        },
+        message: isConfigured
+          ? 'HubSpot integration is properly configured'
+          : 'HubSpot integration is missing required environment variables'
+      }
     })
   }
 )

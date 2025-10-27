@@ -4,7 +4,10 @@ import * as hubspotController from '../controllers/hubspotController.js'
 
 const router = Router()
 
-// All routes require authentication (callback is called from authenticated client)
+// Health check endpoint (public - no auth required)
+router.get('/health', hubspotController.healthCheck)
+
+// All routes below require authentication (callback is called from authenticated client)
 router.use(authMiddleware)
 
 // OAuth callback - receives code from client after HubSpot redirect

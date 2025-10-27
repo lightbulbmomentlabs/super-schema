@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { hubspotApi } from '@/services/hubspot'
-import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function HubSpotCallbackPage() {
@@ -11,6 +11,7 @@ export default function HubSpotCallbackPage() {
   const { isLoaded, isSignedIn, getToken, userId } = useAuth()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState<string>('')
+  const [errorDetails, setErrorDetails] = useState<any>(null)
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -166,24 +167,75 @@ export default function HubSpotCallbackPage() {
           throw new Error('Failed to connect HubSpot account')
         }
       } catch (error: any) {
-        console.error('❌ [HubSpotCallback] Callback error', {
+        const errorContext = {
           error: error instanceof Error ? error.message : 'Unknown error',
           statusCode: error?.response?.status,
           statusText: error?.response?.statusText,
           errorData: error?.response?.data,
-          stack: error instanceof Error ? error.stack : undefined
-        })
+          timestamp: new Date().toISOString(),
+          userId: userId || 'unknown',
+          url: window.location.href
+        }
+
+        console.error('❌ [HubSpotCallback] Callback error', errorContext)
 
         setStatus('error')
-        const errorMsg = error?.response?.data?.error || error.message || 'Failed to connect HubSpot account'
-        setErrorMessage(errorMsg)
+
+        // Store error details for debugging
+        setErrorDetails(errorContext)
+
+        // Determine user-friendly error message based on error type
+        let errorMsg = 'Failed to connect HubSpot account'
+        let errorDetailsText = ''
+
+        if (error?.response?.status === 401) {
+          errorMsg = 'Authentication failed'
+          errorDetailsText = 'Your session may have expired. Please try signing out and back in.'
+        } else if (error?.response?.status === 400) {
+          errorMsg = 'Invalid authorization code'
+          errorDetailsText = 'The authorization code from HubSpot was invalid or expired. Please try connecting again.'
+        } else if (error?.response?.status === 500) {
+          errorMsg = error?.response?.data?.error || 'Server error occurred'
+          errorDetailsText = 'Please try again in a few moments. If the problem persists, contact support.'
+        } else if (error?.message?.includes('Network Error') || error?.message?.includes('timeout')) {
+          errorMsg = 'Connection timeout'
+          errorDetailsText = 'Unable to reach the server. Please check your internet connection and try again.'
+        } else if (error?.response?.data?.error) {
+          errorMsg = error.response.data.error
+          errorDetailsText = error.response.data.message || ''
+        } else if (error instanceof Error) {
+          errorMsg = error.message
+        }
+
+        setErrorMessage(errorDetailsText ? `${errorMsg}: ${errorDetailsText}` : errorMsg)
         toast.error(errorMsg)
-        setTimeout(() => navigate('/hubspot'), 3000)
+        setTimeout(() => navigate('/hubspot'), 5000)
       }
     }
 
     handleCallback()
   }, [searchParams, navigate, isLoaded, isSignedIn, getToken, userId])
+
+  const copyErrorDetails = () => {
+    if (!errorDetails) return
+
+    const detailsText = `HubSpot Connection Error Report
+Generated: ${errorDetails.timestamp}
+User ID: ${errorDetails.userId}
+
+Error: ${errorDetails.error}
+Status Code: ${errorDetails.statusCode || 'N/A'}
+Status Text: ${errorDetails.statusText || 'N/A'}
+
+URL: ${errorDetails.url}
+
+Additional Data:
+${JSON.stringify(errorDetails.errorData, null, 2)}`
+
+    navigator.clipboard.writeText(detailsText)
+      .then(() => toast.success('Error details copied to clipboard'))
+      .catch(() => toast.error('Failed to copy error details'))
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -213,6 +265,20 @@ export default function HubSpotCallbackPage() {
             <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
             <h1 className="text-2xl font-bold mb-2 text-destructive">Connection Failed</h1>
             <p className="text-muted-foreground mb-4">{errorMessage}</p>
+            {errorDetails && (
+              <div className="mt-4 mb-4">
+                <button
+                  onClick={copyErrorDetails}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-background border border-border rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy Error Details
+                </button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Share these details with support if you need help
+                </p>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">Redirecting back to HubSpot settings...</p>
           </>
         )}
