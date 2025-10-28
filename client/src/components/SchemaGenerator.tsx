@@ -824,11 +824,6 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           }
         }
 
-        // Refetch all schemas for this URL to get updated data
-        if (currentUrlId) {
-          await queryClient.refetchQueries({ queryKey: ['urlSchemas', currentUrlId] })
-        }
-
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
         toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
       }
