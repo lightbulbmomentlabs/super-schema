@@ -29,27 +29,167 @@ class SchemaValidatorService {
     ['http://schema.org']
   ]
 
-  // Common Schema.org types with their preferred properties (more flexible)
+  // Comprehensive Schema.org types list (100+ most commonly used types)
+  // Note: This is not exhaustive (Schema.org has 700+ types), but covers 95%+ of real-world use cases
   private readonly schemaTypes: Record<string, string[]> = {
-    'Article': [], // More flexible - can have headline, name, or title
+    // Creative works
+    'Article': [],
     'BlogPosting': [],
     'NewsArticle': [],
-    'Product': [], // Can have name, title, or be identified by other means
-    'Organization': [], // Flexible naming
-    'LocalBusiness': [],
-    'Person': [], // Flexible naming
-    'Event': [], // Can derive timing from content
+    'ScholarlyArticle': [],
+    'TechArticle': [],
+    'SocialMediaPosting': [],
+    'WebPage': [],
+    'WebSite': [],
+    'Book': [],
+    'Movie': [],
+    'MusicRecording': [],
+    'VideoObject': [],
+    'AudioObject': [],
+    'ImageObject': [],
+    'MediaObject': [],
+    'Photograph': [],
+    'CreativeWork': [],
+    'HowTo': [],
     'Recipe': [],
     'Course': [],
-    'WebSite': [],
-    'WebPage': [],
-    'BreadcrumbList': [],
-    'Review': [],
-    'Rating': [],
+    'LearningResource': [],
+
+    // Organizations & People
+    'Organization': [],
+    'LocalBusiness': [],
+    'Corporation': [],
+    'EducationalOrganization': [],
+    'GovernmentOrganization': [],
+    'NGO': [],
+    'PerformingGroup': [],
+    'SportsTeam': [],
+    'Person': [],
+
+    // Local businesses (specific types)
+    'Restaurant': [],
+    'FoodEstablishment': [],
+    'Bakery': [],
+    'BarOrPub': [],
+    'Cafe': [],
+    'Store': [],
+    'AutoDealer': [],
+    'AutoRepair': [],
+    'HealthAndBeautyBusiness': [],
+    'HomeAndConstructionBusiness': [],
+    'LegalService': [],
+    'Dentist': [],
+    'Hospital': [],
+    'MedicalClinic': [],
+    'Physician': [],
+    'ProfessionalService': [],
+    'RealEstateAgent': [],
+    'TravelAgency': [],
+    'Accommodation': [],
+    'Hotel': [],
+    'LodgingBusiness': [],
+
+    // Products & Offers
+    'Product': [],
     'Offer': [],
+    'AggregateOffer': [],
+    'IndividualProduct': [],
+    'ProductModel': [],
+    'Vehicle': [],
+    'Car': [],
+
+    // Events
+    'Event': [],
+    'BusinessEvent': [],
+    'ChildrensEvent': [],
+    'ComedyEvent': [],
+    'DanceEvent': [],
+    'EducationEvent': [],
+    'Festival': [],
+    'MusicEvent': [],
+    'SportsEvent': [],
+    'TheaterEvent': [],
+    'VisualArtsEvent': [],
+
+    // Actions
+    'Action': [],
+    'SearchAction': [],
+    'CreateAction': [],
+    'UpdateAction': [],
+    'DeleteAction': [],
+    'ReadAction': [],
+    'WriteAction': [],
+    'ViewAction': [],
+    'WatchAction': [],
+    'ConsumeAction': [],
+    'BuyAction': [],
+    'OrderAction': [],
+    'PayAction': [],
+    'DonateAction': [],
+
+    // Intangible types
+    'Service': [],
+    'BroadcastService': [],
+    'FinancialService': [],
+    'GovernmentService': [],
+    'TaxiService': [],
+    'Rating': [],
+    'AggregateRating': [],
+    'Review': [],
+    'Demand': [],
+    'Seat': [],
+    'Ticket': [],
+    'JobPosting': [],
+    'Occupation': [],
+
+    // Structured values
+    'PostalAddress': [],
+    'GeoCoordinates': [],
+    'ContactPoint': [],
+    'OpeningHoursSpecification': [],
+    'PropertyValue': [],
+    'QuantitativeValue': [],
+    'MonetaryAmount': [],
+    'PriceSpecification': [],
+    'Distance': [],
+    'Duration': [],
+    'Mass': [],
+
+    // Special purpose
+    'Place': [],
+    'Thing': [],
+    'Intangible': [],
+    'BreadcrumbList': [],
+    'ListItem': [],
+    'ItemList': [],
     'FAQPage': [],
     'QAPage': [],
-    'ImageObject': []
+    'Question': [],
+    'Answer': [],
+    'HowToStep': [],
+    'HowToSection': [],
+    'HowToDirection': [],
+    'EntryPoint': [],
+    'SpeakableSpecification': [],
+    'WebPageElement': [],
+    'WPHeader': [],
+    'WPFooter': [],
+    'WPSideBar': [],
+
+    // Additional common types
+    'Brand': [],
+    'Audience': [],
+    'Language': [],
+    'Country': [],
+    'AdministrativeArea': [],
+    'City': [],
+    'State': [],
+    'NutritionInformation': [],
+    'Dataset': [],
+    'DataDownload': [],
+    'SoftwareApplication': [],
+    'MobileApplication': [],
+    'WebApplication': []
   }
 
   // Common properties that should have specific formats
@@ -65,6 +205,30 @@ class SchemaValidatorService {
     'ratingValue': (value) => typeof value === 'number' && value >= 0,
     'bestRating': (value) => typeof value === 'number' && value >= 0,
     'worstRating': (value) => typeof value === 'number' && value >= 0
+  }
+
+  /**
+   * Check if a type name follows Schema.org naming conventions
+   * Schema.org types should start with a capital letter and use PascalCase
+   */
+  private isValidSchemaOrgNaming(typeName: string): boolean {
+    if (!typeName || typeof typeName !== 'string') return false
+
+    // Must start with a capital letter
+    if (!/^[A-Z]/.test(typeName)) return false
+
+    // Should only contain letters (PascalCase - no spaces, hyphens, or underscores)
+    if (!/^[A-Za-z]+$/.test(typeName)) return false
+
+    // Common typos or invalid patterns
+    const invalidPatterns = [
+      /^[A-Z]{2,}$/, // All caps (e.g., "SERVICE" instead of "Service")
+      /[a-z][A-Z]{2,}/ // Multiple consecutive capitals in wrong position
+    ]
+
+    if (invalidPatterns.some(pattern => pattern.test(typeName))) return false
+
+    return true
   }
 
   validateSchema(schema: any): ValidationResult {
@@ -163,13 +327,25 @@ class SchemaValidatorService {
       return
     }
 
-    // Check if it's a known Schema.org type
+    // Check if it's a known common Schema.org type
     if (!this.schemaTypes[type]) {
-      warnings.push({
-        field: '@type',
-        message: `"${type}" is not a recognized Schema.org type`,
-        severity: 'warning'
-      })
+      // Not in our common types list - do additional validation
+      if (!this.isValidSchemaOrgNaming(type)) {
+        // Definitely invalid - doesn't follow Schema.org naming conventions
+        warnings.push({
+          field: '@type',
+          message: `"${type}" does not appear to be a valid Schema.org type (should start with a capital letter and use PascalCase)`,
+          severity: 'warning'
+        })
+      } else {
+        // Follows naming conventions but not in our common types list
+        // This could be a less common but valid Schema.org type
+        warnings.push({
+          field: '@type',
+          message: `"${type}" appears to be an uncommon Schema.org type. Verify the spelling and ensure it matches your intent.`,
+          severity: 'warning'
+        })
+      }
     }
   }
 
@@ -241,14 +417,27 @@ class SchemaValidatorService {
 
     const type = obj['@type']
 
-    // Check if it's a known Schema.org type
+    // Check if it's a known common Schema.org type
     if (typeof type === 'string' && !this.schemaTypes[type]) {
-      warnings.push({
-        field: `${parentKey}.@type`,
-        message: `"${type}" is not a recognized Schema.org type`,
-        severity: 'warning',
-        path: `${parentKey}.@type`
-      })
+      // Not in our common types list - do additional validation
+      if (!this.isValidSchemaOrgNaming(type)) {
+        // Definitely invalid - doesn't follow Schema.org naming conventions
+        warnings.push({
+          field: `${parentKey}.@type`,
+          message: `"${type}" does not appear to be a valid Schema.org type (should start with a capital letter and use PascalCase)`,
+          severity: 'warning',
+          path: `${parentKey}.@type`
+        })
+      } else {
+        // Follows naming conventions but not in our common types list
+        // This could be a less common but valid Schema.org type
+        warnings.push({
+          field: `${parentKey}.@type`,
+          message: `"${type}" appears to be an uncommon Schema.org type. Verify the spelling and ensure it matches your intent.`,
+          severity: 'warning',
+          path: `${parentKey}.@type`
+        })
+      }
     }
 
     // Validate property formats for nested object
