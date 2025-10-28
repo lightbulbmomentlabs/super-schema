@@ -42,14 +42,48 @@ class HubSpotCRMService {
       if (this.listId) {
         console.log(`📋 [HubSpot CRM] List ID configured: ${this.listId}`)
       }
+
+      // Verify connection on startup
+      this.verifyConnection().catch(error => {
+        console.error('⚠️  [HubSpot CRM] Connection verification failed:', error.message)
+      })
     } else {
       console.log('⚠️  [HubSpot CRM] Service disabled - HUBSPOT_CRM_API_KEY not configured')
     }
   }
 
   /**
+   * Verify API connection and permissions
+   */
+  private async verifyConnection(): Promise<void> {
+    if (!this.client) {
+      throw new Error('Client not initialized')
+    }
+
+    try {
+      // Make a simple API call to verify credentials and permissions
+      // Search for a contact that likely doesn't exist - just to test API access
+      await this.client.crm.contacts.searchApi.doSearch({
+        filterGroups: [],
+        properties: ['email'],
+        limit: 1
+      })
+
+      console.log('✅ [HubSpot CRM] API connection verified successfully')
+    } catch (error: any) {
+      console.error('❌ [HubSpot CRM] API connection verification failed:', {
+        message: error.message,
+        statusCode: error.statusCode || error.code,
+        body: error.body
+      })
+      throw error
+    }
+  }
+
+  /**
    * Create or update a contact in HubSpot CRM
-   * Uses email as the unique identifier (HubSpot's default deduplication)
+   * Uses PATCH-by-email approach for efficient upsert without 409 errors
+   * Automatically sets super_schema property to true for all SuperSchema users
    */
   async createOrUpdateContact(data: ContactData): Promise<ContactResult> {
     if (!this.isEnabled || !this.client) {
@@ -66,8 +100,10 @@ class HubSpotCRMService {
 
     try {
       // Prepare contact properties
+      // Note: HubSpot API expects string values for all properties
       const properties: Record<string, string> = {
-        email: email
+        email: email,
+        super_schema: 'true' // Mark as SuperSchema user
       }
 
       if (firstName) {
@@ -78,18 +114,30 @@ class HubSpotCRMService {
         properties.lastname = lastName
       }
 
-      console.log('🔄 [HubSpot CRM] Creating/updating contact:', { email, firstName, lastName })
-
-      // Create or update contact
-      // HubSpot will automatically deduplicate by email
-      const response = await this.client.crm.contacts.basicApi.create({
-        properties,
-        associations: []
+      console.log('🔄 [HubSpot CRM] Creating/updating contact via PATCH-by-email:', {
+        email,
+        firstName,
+        lastName,
+        super_schema: true
       })
+
+      // Use PATCH-by-email approach (update with idProperty='email')
+      // This creates the contact if it doesn't exist, or updates if it does
+      // No 409 errors, single API call
+      const response = await this.client.crm.contacts.basicApi.update(
+        email,
+        { properties },
+        undefined,
+        'email' // idProperty - tells HubSpot to use email as the unique identifier
+      )
 
       const contactId = response.id
 
-      console.log('✅ [HubSpot CRM] Contact created/updated:', { email, contactId })
+      console.log('✅ [HubSpot CRM] Contact created/updated successfully:', {
+        email,
+        contactId,
+        super_schema: true
+      })
 
       // Add to list if configured
       if (this.listId && contactId) {
@@ -99,89 +147,33 @@ class HubSpotCRMService {
       return { success: true, contactId }
 
     } catch (error: any) {
-      // Handle duplicate contact error (HubSpot returns 409 Conflict)
-      if (error.statusCode === 409 || error.code === 409) {
-        console.log('ℹ️  [HubSpot CRM] Contact already exists, attempting update:', { email })
-        return await this.updateExistingContact(email, data)
-      }
-
-      // Log other errors but don't throw (graceful degradation)
-      console.error('❌ [HubSpot CRM] Failed to create/update contact:', {
+      // Enhanced error logging for better diagnostics
+      const errorDetails = {
         email,
         error: error.message,
         statusCode: error.statusCode || error.code,
-        body: error.body
-      })
+        body: error.body,
+        category: error.category
+      }
+
+      console.error('❌ [HubSpot CRM] Failed to create/update contact:', errorDetails)
+
+      // Provide helpful error messages based on common issues
+      let userMessage = error.message || 'Unknown error'
+
+      if (error.statusCode === 401 || error.statusCode === 403) {
+        userMessage = 'Invalid API key or insufficient permissions. Check HUBSPOT_CRM_API_KEY has required scopes: crm.objects.contacts.write'
+      } else if (error.statusCode === 400) {
+        userMessage = 'Invalid contact data or property. Check that super_schema property exists in HubSpot.'
+      }
 
       return {
         success: false,
-        error: error.message || 'Unknown error'
+        error: userMessage
       }
     }
   }
 
-  /**
-   * Update an existing contact by email
-   */
-  private async updateExistingContact(email: string, data: ContactData): Promise<ContactResult> {
-    if (!this.client) {
-      return { success: false, error: 'Client not initialized' }
-    }
-
-    try {
-      // Search for contact by email
-      const searchResponse = await this.client.crm.contacts.searchApi.doSearch({
-        filterGroups: [{
-          filters: [{
-            propertyName: 'email',
-            operator: 'EQ' as any, // HubSpot SDK type compatibility
-            value: email
-          }]
-        }],
-        properties: ['email', 'firstname', 'lastname'],
-        limit: 1
-      })
-
-      if (!searchResponse.results || searchResponse.results.length === 0) {
-        console.error('❌ [HubSpot CRM] Contact not found for update:', { email })
-        return { success: false, error: 'Contact not found' }
-      }
-
-      const contactId = searchResponse.results[0].id
-
-      // Prepare update properties
-      const properties: Record<string, string> = {}
-
-      if (data.firstName) {
-        properties.firstname = data.firstName
-      }
-
-      if (data.lastName) {
-        properties.lastname = data.lastName
-      }
-
-      // Update contact
-      await this.client.crm.contacts.basicApi.update(contactId, {
-        properties
-      })
-
-      console.log('✅ [HubSpot CRM] Contact updated:', { email, contactId })
-
-      return { success: true, contactId }
-
-    } catch (error: any) {
-      console.error('❌ [HubSpot CRM] Failed to update contact:', {
-        email,
-        error: error.message,
-        statusCode: error.statusCode || error.code
-      })
-
-      return {
-        success: false,
-        error: error.message || 'Unknown error'
-      }
-    }
-  }
 
   /**
    * Add a contact to the configured list
