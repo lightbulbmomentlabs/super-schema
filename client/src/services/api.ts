@@ -212,6 +212,9 @@ class ApiService {
     metadata: any
     refinementCount?: number
     remainingRefinements?: number
+    highlightedChanges?: any[]
+    isImportedSchema?: boolean
+    hasBeenRefined?: boolean
   }>> {
     const response = await api.post('/schema/refine', {
       schemas,
@@ -230,6 +233,8 @@ class ApiService {
     highlightedChanges: string[]
     refinementCount: number
     remainingRefinements: number
+    isImportedSchema?: boolean
+    hasBeenRefined?: boolean
   }>> {
     const response = await api.post('/schema/refine-library', {
       schemaId,

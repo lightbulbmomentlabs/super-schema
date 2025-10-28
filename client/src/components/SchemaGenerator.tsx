@@ -797,7 +797,8 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         console.log('✅ Refinement successful:', {
           schemaId: generationMetadata?.schemaId,
           newRefinementCount: response.data.refinementCount,
-          schemaTypes: response.data.schemas.map(s => s['@type'])
+          schemaTypes: response.data.schemas.map(s => s['@type']),
+          hasBeenRefined: response.data.hasBeenRefined
         })
 
         setGeneratedSchemas(response.data.schemas)
@@ -808,6 +809,20 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         // Update refinement count from server response if available
         const newRefinementCount = response.data.refinementCount ?? (refinementCount + 1)
         setRefinementCount(newRefinementCount)
+
+        // Update cache immediately with refined flags to prevent modal showing again
+        if (currentUrlId && generationMetadata?.schemaId) {
+          const cacheData = queryClient.getQueryData<any>(['urlSchemas', currentUrlId])
+          if (cacheData?.data) {
+            const updatedSchemas = cacheData.data.map((schema: any) =>
+              schema.id === generationMetadata.schemaId
+                ? { ...schema, hasBeenRefined: response.data.hasBeenRefined }
+                : schema
+            )
+            queryClient.setQueryData(['urlSchemas', currentUrlId], { ...cacheData, data: updatedSchemas })
+            console.log('✅ Updated cache with hasBeenRefined:', response.data.hasBeenRefined)
+          }
+        }
 
         // Refetch all schemas for this URL to get updated data
         if (currentUrlId) {

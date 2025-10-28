@@ -344,7 +344,9 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
           schemaScore: result.schemaScore,
           highlightedChanges: result.highlightedChanges,
           refinementCount: currentRefinements + 1,
-          remainingRefinements: MAX_REFINEMENTS - (currentRefinements + 1)
+          remainingRefinements: MAX_REFINEMENTS - (currentRefinements + 1),
+          isImportedSchema,
+          hasBeenRefined: needsCreditCharge ? true : hasBeenRefined  // true if this was first refinement, otherwise keep existing value
         },
         message: `Successfully refined schema (${currentRefinements + 1}/${MAX_REFINEMENTS} refinements used)`
       })
