@@ -1946,9 +1946,10 @@ class DatabaseService {
       return 'mock-connection-id'
     }
 
+    // Use upsert to handle reconnections - updates existing connection if it exists
     const { data, error } = await this.supabase
       .from('hubspot_connections')
-      .insert({
+      .upsert({
         user_id: params.userId,
         hubspot_portal_id: params.hubspotPortalId,
         portal_name: params.portalName,
@@ -1956,7 +1957,10 @@ class DatabaseService {
         refresh_token: params.refreshToken,
         token_expires_at: params.tokenExpiresAt.toISOString(),
         scopes: params.scopes,
-        is_active: true
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,hubspot_portal_id'
       })
       .select('id')
       .single()
