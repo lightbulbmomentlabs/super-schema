@@ -11,6 +11,7 @@ import {
   refineSchema,
   refineLibrarySchema,
   extractSchemaFromUrl,
+  importExistingSchema,
   deleteSchemaType
 } from '../controllers/schemaController.js'
 import { authMiddleware } from '../middleware/auth.js'
@@ -24,6 +25,9 @@ router.post('/extract', extractSchemaFromUrl)
 // PROTECTED ROUTES (auth required)
 // POST /api/schema/generate
 router.post('/generate', authMiddleware, generateSchema)
+
+// POST /api/schema/import-existing - Import existing JSON-LD schema from URL
+router.post('/import-existing', authMiddleware, importExistingSchema)
 
 // POST /api/schema/batch-generate
 router.post('/batch-generate', authMiddleware, batchGenerateSchemas)

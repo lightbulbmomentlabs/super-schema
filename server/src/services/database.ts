@@ -600,6 +600,46 @@ class DatabaseService {
     console.log(`✅ updateSchemaGeneration: Successfully updated record ${id}`)
   }
 
+  async saveImportedSchema(params: {
+    userId: string
+    url: string
+    schemas: any
+    discoveredUrlId: string
+    isValid: boolean
+    schemaType: string
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      const schemaId = `mock-imported-schema-${Date.now()}`
+      console.log('Mock: saveImportedSchema', { ...params, schemaId })
+      return schemaId
+    }
+
+    const { data, error } = await this.supabase
+      .from('schema_generations')
+      .insert({
+        user_id: params.userId,
+        url: params.url,
+        schemas: params.schemas,
+        discovered_url_id: params.discoveredUrlId,
+        status: params.isValid ? 'success' : 'failed',
+        schema_type: params.schemaType,
+        is_imported_schema: true,
+        imported_at: new Date().toISOString(),
+        credits_cost: 0,  // No credit charge for imported schemas
+        processing_time_ms: 0
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('❌ saveImportedSchema: Failed to save:', error)
+      throw error
+    }
+
+    console.log('✅ saveImportedSchema: Saved imported schema:', data.id)
+    return data.id
+  }
+
   async getSchemaGenerations(
     userId: string,
     page: number = 1,
@@ -1075,6 +1115,9 @@ class DatabaseService {
       processingTimeMs: data.processing_time_ms,
       errorMessage: data.error_message,
       discoveredUrlId: data.discovered_url_id,
+      isImportedSchema: data.is_imported_schema || false,
+      hasBeenRefined: data.has_been_refined || false,
+      importedAt: data.imported_at,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     }
@@ -1107,6 +1150,20 @@ class DatabaseService {
       .eq('id', schemaId)
 
     if (updateError) throw updateError
+  }
+
+  async markSchemaAsRefined(schemaId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('schema_generations')
+      .update({ has_been_refined: true })
+      .eq('id', schemaId)
+
+    if (error) {
+      console.error('❌ markSchemaAsRefined: Failed to mark schema as refined:', error)
+      throw error
+    }
+
+    console.log('✅ markSchemaAsRefined: Schema marked as refined:', schemaId)
   }
 
   /**
@@ -1518,6 +1575,9 @@ class DatabaseService {
       processingTimeMs: row.processing_time_ms,
       errorMessage: row.error_message,
       discoveredUrlId: row.discovered_url_id,
+      isImportedSchema: row.is_imported_schema || false,
+      hasBeenRefined: row.has_been_refined || false,
+      importedAt: row.imported_at,
       createdAt: row.created_at
     }))
   }

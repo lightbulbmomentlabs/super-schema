@@ -259,6 +259,33 @@ class ApiService {
     return response.data
   }
 
+  async extractSchemaFromUrl(url: string): Promise<ApiResponse<{
+    url: string
+    schemas: JsonLdSchema[]
+    schemasFound: number
+    metadata: {
+      title: string
+      description: string
+    }
+  }>> {
+    const response = await api.post('/schema/extract', {
+      url
+    })
+    return response.data
+  }
+
+  async importExistingSchema(url: string, schemas: JsonLdSchema[]): Promise<ApiResponse<{
+    urlId: string
+    schemaId: string
+    schemas: JsonLdSchema[]
+  }>> {
+    const response = await api.post('/schema/import-existing', {
+      url,
+      schemas
+    })
+    return response.data
+  }
+
   // Credit pack endpoints
   async getCreditPacks(): Promise<ApiResponse<any[]>> {
     const response = await api.get('/payment/credit-packs')

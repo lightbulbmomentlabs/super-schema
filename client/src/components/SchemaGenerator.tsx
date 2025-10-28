@@ -20,12 +20,14 @@ import SchemaScore from './SchemaScore'
 import RichResultsPreview from './RichResultsPreview'
 import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
+import PreExistingSchemaModal from './PreExistingSchemaModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
 import JokeDisplay from './JokeDisplay'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
 import { cn } from '@/utils/cn'
+import { calculateSchemaScore } from '@/utils/calculateSchemaScore'
 import { MAX_REFINEMENTS } from '@shared/config/refinement'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { SCHEMA_TYPES } from '@/constants/schemaTypes'
@@ -78,6 +80,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [isAddingSchemaType, setIsAddingSchemaType] = useState(false)
   const [pendingSchemaType, setPendingSchemaType] = useState<string | null>(null)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
+  const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   const urlInputRef = useRef<HTMLInputElement>(null)
 
   // Multi-schema state
@@ -91,6 +94,14 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     url: string
     urlId?: string
     createdAt?: string
+  } | null>(null)
+
+  // Pre-existing schema modal state
+  const [showPreExistingSchemaModal, setShowPreExistingSchemaModal] = useState(false)
+  const [preExistingSchemaData, setPreExistingSchemaData] = useState<{
+    url: string
+    schemas: JsonLdSchema[]
+    schemaCount: number
   } | null>(null)
 
   // HubSpot integration state
@@ -137,6 +148,8 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     selectedRecord: selectedSchemaRecord ? {
       id: selectedSchemaRecord.id,
       schemaType: selectedSchemaRecord.schemaType,
+      isImportedSchema: selectedSchemaRecord.isImportedSchema,
+      hasBeenRefined: selectedSchemaRecord.hasBeenRefined,
       schemasType: typeof selectedSchemaRecord.schemas,
       schemasIsArray: Array.isArray(selectedSchemaRecord.schemas),
       schemasKeys: selectedSchemaRecord.schemas && typeof selectedSchemaRecord.schemas === 'object'
@@ -289,6 +302,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     mutationFn: ({ url, options }: { url: string; options: GenerationOptions & { requestedSchemaTypes?: string[] } }) =>
       apiService.generateSchema(url, options),
     onSuccess: async (response) => {
+      setIsCheckingUrl(false)
       if (response.success && response.data) {
         setGeneratedSchemas(response.data.schemas)
         setHtmlScriptTags(response.data.htmlScriptTags || '') // Store HTML script tags
@@ -312,6 +326,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }
     },
     onError: (error: any) => {
+      setIsCheckingUrl(false)
       // Handle content validation errors with helpful feedback
       if (error.response?.status === 400 && error.response?.data?.error) {
         const errorMessage = error.response.data.error
@@ -470,10 +485,14 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       return
     }
 
-    // Check if URL already exists with schema
+    // Start loading state
+    setIsCheckingUrl(true)
+
+    // First, check if URL already exists in user's library with schema
     try {
       const checkResult = await apiService.checkUrlExists(url)
       if (checkResult.success && checkResult.data?.exists && checkResult.data?.hasSchema) {
+        setIsCheckingUrl(false)
         // Show duplicate URL modal
         setDuplicateUrlData({
           url,
@@ -485,9 +504,29 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }
     } catch (error) {
       console.error('Error checking URL existence:', error)
-      // Continue with generation if check fails
+      // Continue with pre-existing schema check if library check fails
     }
 
+    // Second, check if page already has existing JSON-LD schema
+    try {
+      const extractResult = await apiService.extractSchemaFromUrl(url)
+      if (extractResult.success && extractResult.data && extractResult.data.schemasFound > 0) {
+        setIsCheckingUrl(false)
+        // Show pre-existing schema modal
+        setPreExistingSchemaData({
+          url,
+          schemas: extractResult.data.schemas,
+          schemaCount: extractResult.data.schemasFound
+        })
+        setShowPreExistingSchemaModal(true)
+        return
+      }
+    } catch (error) {
+      console.error('Error extracting existing schema:', error)
+      // Continue with generation if extraction fails
+    }
+
+    // Note: isCheckingUrl will be set to false by generateMutation onSuccess/onError
     generateMutation.mutate({
       url,
       options: {
@@ -527,6 +566,75 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const handleGenerateAnyway = () => {
     handleCloseModal()
     if (url) {
+      generateMutation.mutate({
+        url,
+        options: {
+          ...options,
+          ...(selectedSchemaType !== 'Auto' && { requestedSchemaTypes: [selectedSchemaType] })
+        }
+      })
+    }
+  }
+
+  // Pre-existing schema modal handlers
+  const handleClosePreExistingModal = () => {
+    setShowPreExistingSchemaModal(false)
+    setPreExistingSchemaData(null)
+  }
+
+  const handleCancelPreExisting = () => {
+    handleClosePreExistingModal()
+    toast('Schema generation cancelled', { icon: 'ℹ️' })
+  }
+
+  const handleEditAndEnhance = async () => {
+    if (!preExistingSchemaData) return
+
+    try {
+      // Import the existing schema directly into library (no AI generation, no credit charge)
+      const importResult = await apiService.importExistingSchema(
+        preExistingSchemaData.url,
+        preExistingSchemaData.schemas
+      )
+
+      if (importResult.success && importResult.data) {
+        // Prepare schemas array for scoring
+        const schemasArray = Array.isArray(importResult.data.schemas)
+          ? importResult.data.schemas
+          : [importResult.data.schemas]
+
+        // Calculate schema score for the imported schema
+        const calculatedScore = calculateSchemaScore(schemasArray)
+
+        // Load the imported schema into the editor
+        setGeneratedSchemas(schemasArray)
+        setCurrentUrlId(importResult.data.urlId)
+        setSchemaScore(calculatedScore)
+        setRefinementCount(0) // Reset refinement count for imported schema
+        setGenerationMetadata({
+          url: preExistingSchemaData.url,
+          isImported: true,
+          schemasFound: preExistingSchemaData.schemaCount
+        })
+
+        // Invalidate queries to update library
+        await queryClient.invalidateQueries({ queryKey: ['urlSchemas', importResult.data.urlId] })
+        queryClient.invalidateQueries({ queryKey: ['domains'] })
+        queryClient.invalidateQueries({ queryKey: ['urls'] })
+
+        toast.success('Existing schema loaded into editor. You can now edit or refine with AI.')
+        handleClosePreExistingModal()
+      }
+    } catch (error) {
+      console.error('Error importing schema:', error)
+      toast.error('Failed to import existing schema')
+    }
+  }
+
+  const handleGenerateNewFromPreExisting = () => {
+    handleClosePreExistingModal()
+    if (url) {
+      // Proceed with normal AI generation (will charge 1 credit)
       generateMutation.mutate({
         url,
         options: {
@@ -1003,10 +1111,15 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
           <button
             type="submit"
-            disabled={!url || isGenerating || creditBalance < 1}
+            disabled={!url || isGenerating || isCheckingUrl || creditBalance < 1}
             className="w-full flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isGenerating ? (
+            {isCheckingUrl ? (
+              <>
+                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                Checking URL...
+              </>
+            ) : isGenerating ? (
               <>
                 <Loader2 className="animate-spin h-4 w-4 mr-2" />
                 Generating Schema...
@@ -1120,6 +1233,8 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
               previousScore={previousScore}
               refinementCount={refinementCount}
               maxRefinements={MAX_REFINEMENTS}
+              isImportedSchema={selectedSchemaRecord?.isImportedSchema || false}
+              hasBeenRefined={selectedSchemaRecord?.hasBeenRefined || false}
             />
           )}
 
@@ -1131,7 +1246,14 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           {displaySchemas.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Generated Schema</h2>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-lg font-semibold">Generated Schema</h2>
+              {selectedSchemaRecord?.isImportedSchema && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md">
+                  Imported
+                </span>
+              )}
+            </div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <span>{allSchemaRecords.length || 1} type{allSchemaRecords.length !== 1 ? 's' : ''}</span>
             </div>
@@ -1329,6 +1451,17 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         createdAt={duplicateUrlData?.createdAt}
         onViewExisting={handleViewExisting}
         onGenerateAnyway={handleGenerateAnyway}
+      />
+
+      {/* Pre-existing Schema Modal */}
+      <PreExistingSchemaModal
+        isOpen={showPreExistingSchemaModal}
+        onClose={handleClosePreExistingModal}
+        url={preExistingSchemaData?.url || ''}
+        schemaCount={preExistingSchemaData?.schemaCount || 0}
+        onCancel={handleCancelPreExisting}
+        onEditAndEnhance={handleEditAndEnhance}
+        onGenerateNew={handleGenerateNewFromPreExisting}
       />
 
       {/* HubSpot Content Matcher Modal */}
