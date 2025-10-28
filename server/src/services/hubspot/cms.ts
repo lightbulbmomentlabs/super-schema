@@ -211,6 +211,7 @@ export class HubSpotCMSService {
 
   /**
    * Push schema to blog post (v2 API with head_html)
+   * Preserves existing head HTML and only updates SuperSchema block
    */
   async pushSchemaToPost(
     connectionId: string,
@@ -223,34 +224,50 @@ export class HubSpotCMSService {
       const client = await this.createAuthorizedClient(connectionId)
 
       // Get current post to retrieve existing head_html
+      console.log(`🔍 [HubSpot CMS] Fetching current blog post ${postId} to preserve existing head HTML`)
       const getResponse = await client.get<HubSpotBlogPostV2>(
         `${BLOG_POSTS_V2_URL}/${postId}`
       )
 
       const existingHeadHtml = getResponse.data.head_html || ''
+      console.log(`📄 [HubSpot CMS] Existing head HTML length: ${existingHeadHtml.length} characters`)
+
+      // Build new head HTML with SuperSchema marker
+      const schemaMarker = '<!-- SuperSchema -->'
+      const schemaEndMarker = '<!-- /SuperSchema -->'
+      const newSchemaBlock = `${schemaMarker}\n${schemaHtml}\n${schemaEndMarker}`
+
+      let finalHeadHtml: string
 
       // Check if schema already exists (avoid duplicates)
-      const schemaMarker = '<!-- SuperSchema -->'
-      let newHeadHtml: string
-
       if (existingHeadHtml.includes(schemaMarker)) {
         // Replace existing SuperSchema block
+        console.log('🔄 [HubSpot CMS] Replacing existing SuperSchema block in blog post')
         const regex = /<!-- SuperSchema -->[\s\S]*?<!-- \/SuperSchema -->/
-        newHeadHtml = existingHeadHtml.replace(
-          regex,
-          `${schemaMarker}\n${schemaHtml}\n<!-- /SuperSchema -->`
-        )
+        finalHeadHtml = existingHeadHtml.replace(regex, newSchemaBlock)
+
+        // Verify we didn't accidentally lose content
+        const preservedLength = finalHeadHtml.replace(regex, '').length
+        const originalLength = existingHeadHtml.replace(regex, '').length
+        if (preservedLength < originalLength) {
+          console.warn('⚠️  [HubSpot CMS] Warning: Some non-SuperSchema content may have been affected')
+        }
       } else {
-        // Append new schema
-        newHeadHtml = `${existingHeadHtml}\n${schemaMarker}\n${schemaHtml}\n<!-- /SuperSchema -->`
+        // Append new schema to existing content
+        console.log('➕ [HubSpot CMS] Appending SuperSchema to existing head HTML in blog post')
+        finalHeadHtml = existingHeadHtml.trim()
+          ? `${existingHeadHtml}\n\n${newSchemaBlock}`
+          : newSchemaBlock
       }
 
-      // Update post with new head_html
+      console.log(`📝 [HubSpot CMS] Final head HTML length: ${finalHeadHtml.length} characters`)
+
+      // Update post with complete head HTML (preserving existing + new schema)
       await client.put(`${BLOG_POSTS_V2_URL}/${postId}`, {
-        head_html: newHeadHtml
+        head_html: finalHeadHtml
       })
 
-      console.log(`✅ [HubSpot CMS] Successfully pushed schema to blog post ${postId}`)
+      console.log(`✅ [HubSpot CMS] Successfully pushed schema to blog post ${postId} (existing content preserved)`)
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to push schema to blog post:', error)
       if (axios.isAxiosError(error)) {
@@ -263,7 +280,8 @@ export class HubSpotCMSService {
   }
 
   /**
-   * Push schema to page (v3 API - field name may vary)
+   * Push schema to page (v3 API)
+   * Preserves existing head HTML and only updates SuperSchema block
    * Note: This may not work on all HubSpot tiers
    */
   async pushSchemaToPage(
@@ -276,13 +294,51 @@ export class HubSpotCMSService {
 
       const client = await this.createAuthorizedClient(connectionId)
 
-      // Note: v3 API documentation doesn't clearly specify head HTML field
-      // This is a best-effort attempt - may need adjustment based on testing
+      // Get current page to retrieve existing head HTML
+      console.log(`🔍 [HubSpot CMS] Fetching current page ${pageId} to preserve existing head HTML`)
+      const getResponse = await client.get<any>(
+        `${PAGES_V3_URL}/${pageId}/draft`
+      )
+
+      const existingHeadHtml = getResponse.data.headHtml || ''
+      console.log(`📄 [HubSpot CMS] Existing head HTML length: ${existingHeadHtml.length} characters`)
+
+      // Build new head HTML with SuperSchema marker
+      const schemaMarker = '<!-- SuperSchema -->'
+      const schemaEndMarker = '<!-- /SuperSchema -->'
+      const newSchemaBlock = `${schemaMarker}\n${schemaHtml}\n${schemaEndMarker}`
+
+      let finalHeadHtml: string
+
+      // Check if schema already exists (avoid duplicates)
+      if (existingHeadHtml.includes(schemaMarker)) {
+        // Replace existing SuperSchema block
+        console.log('🔄 [HubSpot CMS] Replacing existing SuperSchema block in page')
+        const regex = /<!-- SuperSchema -->[\s\S]*?<!-- \/SuperSchema -->/
+        finalHeadHtml = existingHeadHtml.replace(regex, newSchemaBlock)
+
+        // Verify we didn't accidentally lose content
+        const preservedLength = finalHeadHtml.replace(regex, '').length
+        const originalLength = existingHeadHtml.replace(regex, '').length
+        if (preservedLength < originalLength) {
+          console.warn('⚠️  [HubSpot CMS] Warning: Some non-SuperSchema content may have been affected')
+        }
+      } else {
+        // Append new schema to existing content
+        console.log('➕ [HubSpot CMS] Appending SuperSchema to existing head HTML in page')
+        finalHeadHtml = existingHeadHtml.trim()
+          ? `${existingHeadHtml}\n\n${newSchemaBlock}`
+          : newSchemaBlock
+      }
+
+      console.log(`📝 [HubSpot CMS] Final head HTML length: ${finalHeadHtml.length} characters`)
+
+      // Update page with complete head HTML (preserving existing + new schema)
       await client.patch(`${PAGES_V3_URL}/${pageId}/draft`, {
-        headHtml: schemaHtml
+        headHtml: finalHeadHtml
       })
 
-      console.log(`✅ [HubSpot CMS] Successfully pushed schema to page ${pageId}`)
+      console.log(`✅ [HubSpot CMS] Successfully pushed schema to page ${pageId} (existing content preserved)`)
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to push schema to page:', error)
       if (axios.isAxiosError(error)) {
