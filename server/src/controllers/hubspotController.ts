@@ -32,32 +32,37 @@ export const handleOAuthCallback = asyncHandler(
       throw createError('Authorization code is required', 400)
     }
 
+    // Extract region from authorization code for regional API routing
+    const region = code.match(/^(na1|eu1|ap1)-/)?.[1] || 'na1'
+
     try {
       // Step 1: Exchange code for tokens
-      console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens', { userId })
+      console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens', { userId, region })
       const tokens = await hubspotOAuthService.exchangeCodeForTokens(
         code,
         redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
       )
       console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
         userId,
+        region,
         hasAccessToken: !!tokens.access_token,
         hasRefreshToken: !!tokens.refresh_token,
         expiresIn: tokens.expires_in
       })
 
-      // Step 2: Get account information
-      console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { userId })
-      const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token)
+      // Step 2: Get account information (pass region for correct endpoint)
+      console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { userId, region })
+      const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token, region)
       console.log('✅ [HubSpot Controller] Step 2 complete: Account info received', {
         userId,
+        region,
         portalId: accountInfo.hub_id,
         portalName: accountInfo.hub_domain,
         scopeCount: accountInfo.scopes?.length || 0
       })
 
       // Step 3: Store connection
-      console.log('🔄 [HubSpot Controller] Step 3: Storing connection in database', { userId })
+      console.log('🔄 [HubSpot Controller] Step 3: Storing connection in database', { userId, region })
       const connectionId = await hubspotOAuthService.storeConnection(
         userId,
         tokens,
@@ -65,6 +70,7 @@ export const handleOAuthCallback = asyncHandler(
       )
       console.log('✅ [HubSpot Controller] Step 3 complete: Connection stored', {
         userId,
+        region,
         connectionId,
         portalId: accountInfo.hub_id
       })
@@ -90,6 +96,7 @@ export const handleOAuthCallback = asyncHandler(
       // Enhanced error logging with context
       const errorDetails = {
         userId,
+        region,
         timestamp: new Date().toISOString(),
         errorType: error instanceof Error ? error.constructor.name : 'Unknown',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
@@ -99,21 +106,46 @@ export const handleOAuthCallback = asyncHandler(
 
       console.error('❌ [HubSpot Controller] OAuth callback failed', errorDetails)
 
-      // Determine user-friendly error message
+      // Determine user-friendly error message and appropriate HTTP status code
       let userMessage = 'Failed to connect HubSpot account'
+      let statusCode = 500
+
       if (error instanceof Error) {
-        if (error.message.includes('authorization code')) {
-          userMessage = 'Invalid or expired authorization code. Please try connecting again.'
-        } else if (error.message.includes('access token')) {
-          userMessage = 'Failed to retrieve access token from HubSpot. Please try again.'
-        } else if (error.message.includes('account information')) {
-          userMessage = 'Failed to retrieve HubSpot account information. Please verify your permissions.'
+        const errMsg = error.message.toLowerCase()
+
+        // Client errors (4xx) - user can fix these
+        if (errMsg.includes('invalid authorization code') || errMsg.includes('expired')) {
+          userMessage = 'Authorization code is invalid or expired. Please try connecting again.'
+          statusCode = 400
+        } else if (errMsg.includes('invalid client credentials')) {
+          userMessage = 'HubSpot app configuration error. Please contact support.'
+          statusCode = 500 // Server config issue
+        } else if (errMsg.includes('invalid or expired access token')) {
+          userMessage = 'Authorization failed. Please try connecting again.'
+          statusCode = 401
+        } else if (errMsg.includes('insufficient permissions')) {
+          userMessage = 'Please grant all required permissions when connecting HubSpot.'
+          statusCode = 403
+        } else if (errMsg.includes('endpoint not found')) {
+          userMessage = `HubSpot region (${region}) configuration error. Please contact support.`
+          statusCode = 500
+        } else if (errMsg.includes('encryption')) {
+          userMessage = 'Server configuration error. Please contact support.'
+          statusCode = 500
+        } else if (errMsg.includes('database')) {
+          userMessage = 'Database error while saving connection. Please try again or contact support.'
+          statusCode = 500
+        } else if (errMsg.includes('already connected')) {
+          userMessage = error.message // Use the specific message from the error
+          statusCode = 409 // Conflict
         } else {
+          // Use the actual error message if it's descriptive
           userMessage = error.message
+          // Keep 500 for unknown errors
         }
       }
 
-      throw createError(userMessage, 500)
+      throw createError(userMessage, statusCode)
     }
   }
 )
