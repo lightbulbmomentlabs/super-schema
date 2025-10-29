@@ -213,8 +213,6 @@ class ApiService {
     refinementCount?: number
     remainingRefinements?: number
     highlightedChanges?: any[]
-    isImportedSchema?: boolean
-    hasBeenRefined?: boolean
   }>> {
     const response = await api.post('/schema/refine', {
       schemas,
@@ -233,8 +231,6 @@ class ApiService {
     highlightedChanges: string[]
     refinementCount: number
     remainingRefinements: number
-    isImportedSchema?: boolean
-    hasBeenRefined?: boolean
   }>> {
     const response = await api.post('/schema/refine-library', {
       schemaId,
@@ -275,18 +271,6 @@ class ApiService {
   }>> {
     const response = await api.post('/schema/extract', {
       url
-    })
-    return response.data
-  }
-
-  async importExistingSchema(url: string, schemas: JsonLdSchema[]): Promise<ApiResponse<{
-    urlId: string
-    schemaId: string
-    schemas: JsonLdSchema[]
-  }>> {
-    const response = await api.post('/schema/import-existing', {
-      url,
-      schemas
     })
     return response.data
   }

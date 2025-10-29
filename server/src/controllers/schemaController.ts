@@ -289,20 +289,6 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
 
     console.log(`✅ Refinement allowed: ${currentRefinements}/${MAX_REFINEMENTS}`)
 
-    // Check if this is an imported schema that needs a credit for first refinement
-    const isImportedSchema = schemaRecord.isImportedSchema || false
-    const hasBeenRefined = schemaRecord.hasBeenRefined || false
-    const needsCreditCharge = isImportedSchema && !hasBeenRefined
-
-    if (needsCreditCharge) {
-      // Check if user has sufficient credits
-      const user = await db.getUser(userId)
-      if (!user || user.creditBalance < 1) {
-        throw createError('Insufficient credits. First AI refinement of imported schema requires 1 credit.', 400)
-      }
-      console.log('💳 Imported schema first refinement will charge 1 credit')
-    }
-
     // Perform refinement
     const result = await schemaGeneratorService.refineSchemas({
       schemas,
@@ -317,13 +303,6 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
       // Update the schema in the database with refined version and increment refinement count
       await db.updateSchemaContent(schemaRecord.id, result.schemas)
       await db.incrementRefinementCount(schemaRecord.id)
-
-      // If this is an imported schema's first refinement, charge credit and mark as refined
-      if (needsCreditCharge) {
-        await db.consumeCredits(userId, 1, `First AI refinement of imported schema for ${url}`)
-        await db.markSchemaAsRefined(schemaRecord.id)
-        console.log('✅ Consumed 1 credit for first refinement of imported schema')
-      }
 
       // Also update the schema score
       if (result.schemaScore) {
@@ -344,9 +323,7 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
           schemaScore: result.schemaScore,
           highlightedChanges: result.highlightedChanges,
           refinementCount: currentRefinements + 1,
-          remainingRefinements: MAX_REFINEMENTS - (currentRefinements + 1),
-          isImportedSchema,
-          hasBeenRefined: needsCreditCharge ? true : hasBeenRefined  // true if this was first refinement, otherwise keep existing value
+          remainingRefinements: MAX_REFINEMENTS - (currentRefinements + 1)
         },
         message: `Successfully refined schema (${currentRefinements + 1}/${MAX_REFINEMENTS} refinements used)`
       })
@@ -758,101 +735,6 @@ export const extractSchemaFromUrl = asyncHandler(async (req: Request, res: Respo
     console.error('❌ Schema extraction failed:', error)
     throw createError(
       error instanceof Error ? error.message : 'Failed to extract schema from URL',
-      500
-    )
-  }
-})
-
-// Import existing JSON-LD schema from URL
-// No AI generation, no credit charge - just saves existing schema to library
-export const importExistingSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.auth!.userId
-  const { url, schemas } = req.body
-
-  if (!url || typeof url !== 'string') {
-    throw createError('URL is required', 400)
-  }
-
-  if (!schemas || !Array.isArray(schemas) || schemas.length === 0) {
-    throw createError('Schemas array is required', 400)
-  }
-
-  // Basic URL validation
-  try {
-    new URL(url)
-  } catch {
-    throw createError('Invalid URL format', 400)
-  }
-
-  console.log('📥 Importing existing schema from URL:', url, `(${schemas.length} schemas)`)
-
-  try {
-    // Extract domain and path
-    const baseDomain = extractBaseDomain(url)
-    const path = extractPath(url)
-    const depth = calculatePathDepth(path)
-
-    // Create/get domain record
-    const domain = await db.saveOrUpdateDomain(userId, baseDomain)
-    console.log('🌐 Domain saved/updated:', { domainId: domain.id, domain: baseDomain })
-
-    // Check if URL exists in library
-    let existingUrl = await db.getDiscoveredUrlByUrl(userId, url)
-
-    if (existingUrl) {
-      // URL already exists - check if it has schemas
-      const existingSchemas = await db.getSchemasByDiscoveredUrlId(existingUrl.id)
-      if (existingSchemas.length > 0) {
-        throw createError('URL already has schema in your library', 400)
-      }
-    }
-
-    // Save URL to library
-    const discoveredUrl = await db.saveSingleUrlToLibrary(
-      userId,
-      url,
-      path,
-      depth,
-      domain.id
-    )
-    console.log('✅ URL saved to library:', discoveredUrl.id)
-
-    // Validate schemas
-    const validationResults = validatorService.validateMultipleSchemas(schemas)
-    const isValid = validationResults.every((r: any) => r.isValid)
-
-    // Wrap schemas in standard format
-    const wrappedSchemas = schemas.length === 1 ? schemas[0] : schemas
-
-    // Save imported schema to database
-    const schemaId = await db.saveImportedSchema({
-      userId,
-      url,
-      schemas: wrappedSchemas,
-      discoveredUrlId: discoveredUrl.id,
-      isValid,
-      schemaType: 'Auto'  // Default to Auto for imported schemas
-    })
-
-    console.log('✅ Imported schema saved:', schemaId)
-
-    // Link schema to URL and mark URL as having schema
-    await db.linkSchemaToDiscoveredUrl(schemaId, discoveredUrl.id)
-    console.log('🔗 Schema linked to URL and marked as has_schema')
-
-    res.json({
-      success: true,
-      data: {
-        urlId: discoveredUrl.id,
-        schemaId,
-        schemas: wrappedSchemas
-      },
-      message: `Successfully imported ${schemas.length} schema(s) from URL`
-    })
-  } catch (error) {
-    console.error('❌ Schema import failed:', error)
-    throw createError(
-      error instanceof Error ? error.message : 'Failed to import schema',
       500
     )
   }

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { SchemaScore, ActionItem } from '@shared/types'
-import ImportedSchemaRefinementModal from './ImportedSchemaRefinementModal'
 
 interface SchemaScoreProps {
   score: SchemaScore
@@ -29,8 +28,6 @@ interface SchemaScoreProps {
   previousScore?: number
   refinementCount?: number
   maxRefinements?: number
-  isImportedSchema?: boolean
-  hasBeenRefined?: boolean
 }
 
 const getScoreColor = (score: number) => {
@@ -103,44 +100,17 @@ export default function SchemaScore({
   canRefine = true,
   previousScore,
   refinementCount = 0,
-  maxRefinements = 2,
-  isImportedSchema = false,
-  hasBeenRefined = false
+  maxRefinements = 2
 }: SchemaScoreProps) {
   const [showDetails, setShowDetails] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showActionItems, setShowActionItems] = useState(false)
-  const [showCreditModal, setShowCreditModal] = useState(false)
 
   const overallScore = score.overallScore
   const grade = getScoreGrade(overallScore)
   const hasContentIssues = score.contentIssues && Object.keys(score.contentIssues).length > 0
   const hasActionItems = score.actionItems && score.actionItems.length > 0
   const scoreImprovement = previousScore ? overallScore - previousScore : 0
-
-  // Handler for Refine button click - shows modal for first refinement of imported schemas
-  const handleRefineClick = () => {
-    const needsCreditConfirmation = isImportedSchema && !hasBeenRefined
-
-    console.log('🔍 [SchemaScore] Refine button clicked:', {
-      isImportedSchema,
-      hasBeenRefined,
-      needsCreditConfirmation,
-      willShowModal: needsCreditConfirmation
-    })
-
-    if (needsCreditConfirmation) {
-      setShowCreditModal(true)
-    } else {
-      onRefineSchema?.()
-    }
-  }
-
-  // Handler for confirming credit charge in modal
-  const handleConfirmRefinement = () => {
-    setShowCreditModal(false)
-    onRefineSchema?.()
-  }
 
   return (
     <div className={cn('bg-card border border-border rounded-lg p-6', className)}>
@@ -301,7 +271,7 @@ export default function SchemaScore({
         <div className="flex items-center space-x-4">
           {onRefineSchema && (
             <button
-              onClick={handleRefineClick}
+              onClick={onRefineSchema}
               disabled={isRefining || !canRefine}
               className="flex items-center px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -313,13 +283,7 @@ export default function SchemaScore({
               ) : (
                 <>
                   <Zap className="h-4 w-4 mr-2" />
-                  {isImportedSchema && !hasBeenRefined ? (
-                    'Refine with AI (1 credit)'
-                  ) : isImportedSchema && hasBeenRefined ? (
-                    `Refine with AI (Free - ${maxRefinements - refinementCount} left)`
-                  ) : (
-                    `Refine with AI (${maxRefinements - refinementCount} left)`
-                  )}
+                  Refine with AI ({maxRefinements - refinementCount} left)
                 </>
               )}
             </button>
@@ -533,13 +497,6 @@ export default function SchemaScore({
           </div>
         </div>
       )}
-
-      {/* Credit Confirmation Modal for Imported Schema First Refinement */}
-      <ImportedSchemaRefinementModal
-        isOpen={showCreditModal}
-        onClose={() => setShowCreditModal(false)}
-        onConfirm={handleConfirmRefinement}
-      />
     </div>
   )
 }
