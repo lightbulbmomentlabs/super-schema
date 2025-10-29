@@ -955,7 +955,8 @@ export default function LibraryPage() {
                     // Get the count from allUrls to show total unfiltered count
                     const totalDomainUrls = allUrls.filter(url => url.domainId === domain.id).length
 
-                    if (domainUrls.length === 0 && selectedDomainId) {
+                    // Hide empty domain folders completely
+                    if (domainUrls.length === 0) {
                       return null
                     }
 

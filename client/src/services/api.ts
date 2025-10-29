@@ -27,7 +27,7 @@ const API_URL = import.meta.env.VITE_API_URL ||
 // Create axios instance
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
-  timeout: 60000, // 60 seconds for schema generation
+  timeout: 120000, // 120 seconds (2 minutes) for schema generation
 })
 
 // Configure request interceptor at module load time

@@ -317,13 +317,42 @@ function GenericPreview({ schema }: { schema: JsonLdSchema }) {
   const name = schema.name || schema.headline || 'Content Title'
   const description = schema.description || ''
   const schemaType = schema['@type']
+  const image = extractImageUrl(schema.image)
+  const url = schema.url || 'example.com'
+
+  // Extract domain from URL
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
 
   return (
     <div className="space-y-2">
       <div className="text-xs font-medium text-muted-foreground mb-2">{schemaType} Schema Preview</div>
       <div className="border border-gray-300 rounded-lg p-4 bg-white shadow-sm">
-        <h3 className="text-blue-800 text-xl font-normal mb-2">{name}</h3>
-        {description && <p className="text-sm text-gray-600">{description}</p>}
+        {/* URL breadcrumb */}
+        <div className="flex items-center text-xs text-gray-600 mb-1">
+          <span className="font-normal">{domain}</span>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-blue-800 hover:underline text-xl font-normal cursor-pointer mb-1 line-clamp-2">
+          {name}
+        </h3>
+
+        {/* Image and description */}
+        <div className="flex space-x-3">
+          {image && (
+            <div className="flex-shrink-0">
+              <div className="w-24 h-24 bg-gray-200 rounded overflow-hidden">
+                <img src={image} alt="" className="w-full h-full object-cover" onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none'
+                }} />
+              </div>
+            </div>
+          )}
+          <div className="flex-1">
+            {description && <p className="text-sm text-gray-600 line-clamp-3">{description}</p>}
+          </div>
+        </div>
+
         <p className="text-xs text-gray-500 mt-3 italic">
           This schema type ({schemaType}) may be eligible for rich results in Google Search.
         </p>

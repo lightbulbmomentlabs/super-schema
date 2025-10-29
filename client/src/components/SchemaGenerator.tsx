@@ -20,6 +20,8 @@ import SchemaScore from './SchemaScore'
 import RichResultsPreview from './RichResultsPreview'
 import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
+import TimeoutErrorModal from './TimeoutErrorModal'
+import SupportModal from './SupportModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
 import JokeDisplay from './JokeDisplay'
@@ -94,6 +96,17 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     createdAt?: string
   } | null>(null)
 
+  // Timeout error modal state
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false)
+  const [timeoutErrorData, setTimeoutErrorData] = useState<{
+    url: string
+    errorMessage: string
+  } | null>(null)
+  const [isCheckingComplete, setIsCheckingComplete] = useState(false)
+
+  // Support modal state
+  const [showSupportModal, setShowSupportModal] = useState(false)
+
   // HubSpot integration state
   const [showHubSpotMatcher, setShowHubSpotMatcher] = useState(false)
   const [selectedHubSpotConnection, setSelectedHubSpotConnection] = useState<string | null>(null)
@@ -108,6 +121,55 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
   const hubspotConnections = hubspotConnectionsResponse?.data || []
   const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
+
+  // Session storage key for persisting schema state
+  const SESSION_STORAGE_KEY = 'schemaGenerator_state'
+
+  // Restore state from sessionStorage on mount
+  useEffect(() => {
+    const savedState = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState)
+        // Only restore if it's recent (within 1 hour)
+        const oneHourAgo = Date.now() - (60 * 60 * 1000)
+        if (parsed.timestamp && parsed.timestamp > oneHourAgo) {
+          console.log('🔄 Restoring schema state from session storage')
+          setGeneratedSchemas(parsed.schemas || [])
+          setHtmlScriptTags(parsed.htmlScriptTags || '')
+          setGenerationMetadata(parsed.metadata || null)
+          setSchemaScore(parsed.schemaScore || null)
+          setUrl(parsed.url || '')
+          setCurrentUrlId(parsed.urlId || null)
+          setRefinementCount(parsed.refinementCount || 0)
+        } else {
+          // Clear expired state
+          sessionStorage.removeItem(SESSION_STORAGE_KEY)
+        }
+      } catch (error) {
+        console.error('Failed to restore schema state:', error)
+        sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      }
+    }
+  }, [])
+
+  // Save state to sessionStorage whenever schemas change
+  useEffect(() => {
+    if (generatedSchemas.length > 0) {
+      const stateToSave = {
+        schemas: generatedSchemas,
+        htmlScriptTags,
+        metadata: generationMetadata,
+        schemaScore,
+        url,
+        urlId: currentUrlId,
+        refinementCount,
+        timestamp: Date.now()
+      }
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave))
+      console.log('💾 Saved schema state to session storage')
+    }
+  }, [generatedSchemas, htmlScriptTags, generationMetadata, schemaScore, url, currentUrlId, refinementCount])
 
   // Fetch all schemas for the current URL (multi-schema support)
   // Configuration matches LibraryPage exactly to ensure optimistic updates work correctly
@@ -313,14 +375,37 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }
     },
     onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to generate schema'
+
+      // Handle timeout errors with modal
+      if (errorMessage.toLowerCase().includes('timeout') ||
+          errorMessage.toLowerCase().includes('exceeded') ||
+          errorMessage.toLowerCase().includes('timed out')) {
+
+        // Track timeout analytics
+        console.log('⏱️ Schema generation timeout:', {
+          url,
+          errorMessage,
+          timestamp: new Date().toISOString()
+        })
+
+        // Show timeout modal
+        setTimeoutErrorData({
+          url,
+          errorMessage
+        })
+        setShowTimeoutModal(true)
+        return
+      }
+
       // Handle content validation errors with helpful feedback
       if (error.response?.status === 400 && error.response?.data?.error) {
-        const errorMessage = error.response.data.error
+        const errorMsg = error.response.data.error
 
         // Check if this is a content validation error
-        if (errorMessage.includes('Content not suitable for schema generation') ||
-            errorMessage.includes('not accessible') ||
-            errorMessage.includes('validation')) {
+        if (errorMsg.includes('Content not suitable for schema generation') ||
+            errorMsg.includes('not accessible') ||
+            errorMsg.includes('validation')) {
           // Show a more user-friendly message for content validation
           toast.error('Content Analysis', {
             duration: 8000, // Show longer for detailed feedback
@@ -329,7 +414,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           // Also set the error as metadata so we can display it properly
           setGenerationMetadata({
             url,
-            error: errorMessage,
+            error: errorMsg,
             isValidationError: true,
             processingTimeMs: error.response.data.data?.metadata?.processingTimeMs || 0
           })
@@ -338,8 +423,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       }
 
       // Handle other errors normally
-      const message = error.response?.data?.error || 'Failed to generate schema'
-      toast.error(message)
+      toast.error(errorMessage)
       console.error('Schema generation error:', error)
     }
   })
@@ -538,6 +622,74 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  const handleCheckComplete = async () => {
+    if (!timeoutErrorData?.url) return
+
+    setIsCheckingComplete(true)
+
+    try {
+      // Fetch all URLs from library
+      const response = await apiService.getUrls()
+      const urls = response.data || []
+
+      // Find matching URL (check both exact match and normalized match)
+      const normalizedTimeoutUrl = timeoutErrorData.url.toLowerCase().replace(/\/$/, '')
+      const matchingUrl = urls.find((urlRecord: any) => {
+        const recordUrl = urlRecord.url.toLowerCase().replace(/\/$/, '')
+        return recordUrl === normalizedTimeoutUrl
+      })
+
+      if (matchingUrl && matchingUrl.id) {
+        console.log('✅ Found completed schema in library:', matchingUrl)
+
+        // Fetch all schemas for this URL
+        const schemasResponse = await apiService.getAllUrlSchemas(matchingUrl.id)
+        const schemaRecords = schemasResponse.data || []
+
+        if (schemaRecords.length > 0) {
+          // Get the most recent schema record
+          const latestRecord = schemaRecords[0]
+
+          // Extract schemas from the record
+          let schemasToLoad: any[] = []
+          if (Array.isArray(latestRecord.schemas)) {
+            schemasToLoad = latestRecord.schemas.flatMap((item: any) => {
+              if (item && typeof item === 'object' && 'schemas' in item && Array.isArray(item.schemas)) {
+                return item.schemas
+              }
+              return item
+            })
+          } else if (latestRecord.schemas && typeof latestRecord.schemas === 'object') {
+            if ('schemas' in latestRecord.schemas && Array.isArray(latestRecord.schemas.schemas)) {
+              schemasToLoad = latestRecord.schemas.schemas
+            } else {
+              schemasToLoad = [latestRecord.schemas]
+            }
+          }
+
+          // Load into editor
+          setGeneratedSchemas(schemasToLoad)
+          setUrl(timeoutErrorData.url)
+          setCurrentUrlId(matchingUrl.id)
+          setSchemaScore(latestRecord.schemaScore || null)
+          setGenerationMetadata(latestRecord.metadata || null)
+
+          // Close modal and show success
+          setShowTimeoutModal(false)
+          toast.success('Schema found and loaded! It completed in the background.')
+        } else {
+          toast.error('Schema record found but no schema data available')
+        }
+      } else {
+        toast.error('Schema not found yet. It may still be processing - try again in a moment.')
+      }
+    } catch (error) {
+      console.error('Error checking for completed schema:', error)
+      toast.error('Error checking for schema completion')
+    } finally {
+      setIsCheckingComplete(false)
+    }
+  }
 
   const handleAddSchemaType = async (schemaType: string) => {
     if (!url) return
@@ -1274,30 +1426,6 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
           {/* Rich Results Preview */}
           <RichResultsPreview schemas={displaySchemas} />
-
-          {/* Schema Types Summary */}
-          <div className="bg-muted/20 border border-border rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3">Generated Schema Types</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {displaySchemas.map((schema, index) => (
-                <div key={index} className="bg-card border border-border rounded-lg p-3 text-center hover:border-primary/50 transition-colors">
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="w-3 h-3 rounded-full bg-primary" />
-                  </div>
-                  <div className="font-medium text-sm">{schema['@type']}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Schema {index + 1}
-                  </div>
-                  <div className="text-xs text-success-foreground mt-1">
-                    ✓ Generated
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 text-xs text-muted-foreground text-center">
-              💡 Click the tabs above to view and edit each schema individually
-            </div>
-          </div>
             </div>
           )}
 
@@ -1328,6 +1456,26 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         createdAt={duplicateUrlData?.createdAt}
         onViewExisting={handleViewExisting}
         onGenerateAnyway={handleGenerateAnyway}
+      />
+
+      {/* Timeout Error Modal */}
+      <TimeoutErrorModal
+        isOpen={showTimeoutModal}
+        onClose={() => setShowTimeoutModal(false)}
+        url={timeoutErrorData?.url || ''}
+        errorMessage={timeoutErrorData?.errorMessage}
+        onContactSupport={() => {
+          setShowTimeoutModal(false)
+          setShowSupportModal(true)
+        }}
+        onCheckComplete={handleCheckComplete}
+        isChecking={isCheckingComplete}
+      />
+
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
       />
 
       {/* HubSpot Content Matcher Modal */}
