@@ -524,6 +524,44 @@ class ApiService {
     return response.data
   }
 
+  // Error logging admin endpoints
+  async getErrorLogs(params?: {
+    limit?: number
+    offset?: number
+    status?: 'open' | 'investigating' | 'resolved' | 'ignored'
+    userId?: string
+    errorType?: string
+    startDate?: string
+    endDate?: string
+  }): Promise<ApiResponse<any[]> & { total: number; limit: number; offset: number }> {
+    const response = await api.get('/admin/errors', { params })
+    return response.data
+  }
+
+  async getErrorLog(id: string): Promise<ApiResponse<any>> {
+    const response = await api.get(`/admin/errors/${id}`)
+    return response.data
+  }
+
+  async updateErrorLogStatus(id: string, status: string, resolutionNotes?: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.patch(`/admin/errors/${id}/status`, {
+      status,
+      resolutionNotes
+    })
+    return response.data
+  }
+
+  async getErrorStats(timeframe?: '24h' | '7d' | '30d'): Promise<ApiResponse<{
+    total: number
+    byType: Record<string, number>
+    byStatus: Record<string, number>
+  }>> {
+    const response = await api.get('/admin/errors/stats', {
+      params: { timeframe }
+    })
+    return response.data
+  }
+
   // Support ticket endpoints
   async createSupportTicket(data: CreateSupportTicketRequest): Promise<ApiResponse<SupportTicket>> {
     const response = await api.post('/support/tickets', data)

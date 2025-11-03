@@ -8,7 +8,11 @@ import {
   deleteUser,
   modifyUserCredits,
   getPlatformStats,
-  adminHealthCheck
+  adminHealthCheck,
+  getErrorLogs,
+  getErrorLog,
+  updateErrorLogStatus,
+  getErrorStats
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -37,5 +41,19 @@ router.delete('/users/:userId', deleteUser)
 
 // POST /api/admin/users/credits - Modify user credits
 router.post('/users/credits', modifyUserCredits)
+
+// Error Logging Routes
+
+// GET /api/admin/errors - Get error logs with pagination and filtering
+router.get('/errors', getErrorLogs)
+
+// GET /api/admin/errors/stats - Get error statistics
+router.get('/errors/stats', getErrorStats)
+
+// GET /api/admin/errors/:id - Get single error log
+router.get('/errors/:id', getErrorLog)
+
+// PATCH /api/admin/errors/:id/status - Update error log status
+router.patch('/errors/:id/status', updateErrorLogStatus)
 
 export default router

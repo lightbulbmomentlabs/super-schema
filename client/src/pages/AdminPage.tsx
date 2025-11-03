@@ -15,12 +15,14 @@ import {
   Activity,
   MessageSquare,
   Filter,
-  Bell
+  Bell,
+  AlertCircle
 } from 'lucide-react'
 import { apiService } from '@/services/api'
 import type { User, SupportTicket, ReleaseNote } from '@shared/types'
 import ConfirmModal from '@/components/ConfirmModal'
 import TicketDetailsModal from '@/components/TicketDetailsModal'
+import AdminErrorsSection from '@/components/AdminErrorsSection'
 
 export default function AdminPage() {
   const { user: currentUser, isLoaded, isSignedIn } = useUser()
@@ -714,6 +716,15 @@ export default function AdminPage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Error Logs Section */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertCircle className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">Error Logs</h2>
+        </div>
+        <AdminErrorsSection />
       </div>
 
       {/* Release Notes Management Section */}
