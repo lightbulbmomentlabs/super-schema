@@ -4,6 +4,7 @@ export interface User {
   email: string
   firstName?: string
   lastName?: string
+  organizationName?: string
   createdAt: string
   updatedAt: string
   creditBalance: number
@@ -310,6 +311,90 @@ export interface UpdateReleaseNoteRequest {
   category?: 'new_feature' | 'enhancement' | 'performance' | 'bug_fix'
   releaseDate?: string
   isPublished?: boolean
+}
+
+// Team Types
+export interface Team {
+  id: string
+  ownerId: string
+  organizationName?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TeamMember {
+  id: string
+  teamId: string
+  userId: string
+  invitedAt: string
+  joinedAt: string
+  isOwner: boolean
+  isActive: boolean
+  email?: string
+  firstName?: string
+  lastName?: string
+  organizationName?: string
+  teamCreatedAt?: string
+}
+
+export interface TeamInvite {
+  inviteToken: string
+  inviteUrl: string
+  expiresAt: string
+}
+
+export interface TeamInviteDetails {
+  id: string
+  team_id: string
+  invite_token: string
+  created_by: string
+  created_at: string
+  expires_at: string
+  used_at: string | null
+  used_by: string | null
+  users?: {
+    email: string
+    first_name: string | null
+    last_name: string | null
+  }
+}
+
+export interface TeamInviteValidation {
+  valid: boolean
+  error?: string
+  teamOwnerEmail?: string
+  teamOwnerFirstName?: string
+  teamOwnerLastName?: string
+  organizationName?: string
+  teamMemberCount?: number
+  expiresAt?: string
+}
+
+export interface CreateTeamInviteRequest {
+  teamId?: string
+}
+
+export interface AcceptTeamInviteRequest {
+  token: string
+}
+
+export interface SwitchTeamRequest {
+  teamId: string
+}
+
+export interface RemoveTeamMemberRequest {
+  userId: string
+}
+
+export interface CurrentTeamResponse {
+  team: Team
+  members: TeamMember[]
+  isOwner: boolean
+}
+
+export interface ListTeamsResponse {
+  teams: TeamMember[]
+  count: number
 }
 
 // Configuration Types

@@ -340,11 +340,19 @@ class DatabaseService {
 
     if (error && error.code !== 'PGRST116') throw error
 
+    console.log('🔍 [Database] Get user:', {
+      userId,
+      found: !!data,
+      organizationName: data?.organization_name,
+      email: data?.email
+    })
+
     return data ? {
       id: data.id,
       email: data.email,
       firstName: data.first_name || undefined,
       lastName: data.last_name || undefined,
+      organizationName: data.organization_name || undefined,
       creditBalance: data.credit_balance,
       totalCreditsUsed: data.total_credits_used,
       isActive: data.is_active,
@@ -354,24 +362,48 @@ class DatabaseService {
   }
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
+    // Build update object with only provided fields
+    const updateData: any = {}
+
+    if (updates.email !== undefined) {
+      updateData.email = updates.email
+    }
+    if (updates.firstName !== undefined) {
+      updateData.first_name = updates.firstName || null
+    }
+    if (updates.lastName !== undefined) {
+      updateData.last_name = updates.lastName || null
+    }
+    if (updates.organizationName !== undefined) {
+      updateData.organization_name = updates.organizationName || null
+    }
+
+    console.log('🔧 [Database] Updating user:', { userId, updates, updateData })
+
     const { data, error } = await this.supabase
       .from('users')
-      .update({
-        email: updates.email,
-        first_name: updates.firstName || null,
-        last_name: updates.lastName || null
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ [Database] Update user error:', error)
+      throw error
+    }
+
+    console.log('✅ [Database] User updated successfully:', {
+      userId: data.id,
+      organizationName: data.organization_name,
+      email: data.email
+    })
 
     return {
       id: data.id,
       email: data.email,
       firstName: data.first_name || undefined,
       lastName: data.last_name || undefined,
+      organizationName: data.organization_name || undefined,
       creditBalance: data.credit_balance,
       totalCreditsUsed: data.total_credits_used,
       isActive: data.is_active,

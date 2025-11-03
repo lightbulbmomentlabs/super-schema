@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename)
 
 import { errorHandler } from './middleware/errorHandler.js'
 import { authMiddleware } from './middleware/auth.js'
+import { logFeatureFlags } from './config/featureFlags.js'
 import schemaRoutes from './routes/schema.js'
 import userRoutes from './routes/user.js'
 import paymentRoutes from './routes/payment.js'
@@ -25,6 +26,7 @@ import adminRoutes from './routes/admin.js'
 import supportRoutes from './routes/support.js'
 import hubspotRoutes from './routes/hubspot.js'
 import releaseNotesRoutes from './routes/releaseNotes.js'
+import teamRoutes from './routes/team.js'
 
 const app = express()
 const PORT = process.env.PORT || 8080
@@ -98,6 +100,7 @@ app.use('/api/library', authMiddleware, urlLibraryRoutes)
 app.use('/api/support', supportRoutes) // Support routes include their own auth middleware
 app.use('/api/hubspot', hubspotRoutes) // HubSpot routes include their own auth middleware
 app.use('/api/release-notes', releaseNotesRoutes) // Release notes routes include their own auth middleware
+app.use('/api/team', teamRoutes) // Team routes include their own auth middleware
 
 // Serve static files from client build
 // In production, client/dist is copied to server/dist/client during build
@@ -119,4 +122,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`🔗 Health check: http://localhost:${PORT}/health`)
+
+  // Log feature flags status
+  logFeatureFlags()
 })

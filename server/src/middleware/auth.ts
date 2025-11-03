@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { createError } from './errorHandler.js'
+import { getUserActiveTeam, isTeamOwner } from '../services/teamService.js'
+import { FEATURE_FLAGS } from '../config/featureFlags.js'
 
 export interface AuthenticatedRequest extends Request {
   auth?: {
@@ -9,6 +11,8 @@ export interface AuthenticatedRequest extends Request {
     email?: string
     firstName?: string
     lastName?: string
+    teamId?: string | null
+    isTeamOwner?: boolean
   }
   userId?: string
 }
@@ -77,7 +81,34 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
     // Also set userId directly on request for backward compatibility
     req.userId = payload.sub
 
-    next()
+    // Fetch team context if teams feature is enabled
+    if (FEATURE_FLAGS.TEAMS_ENABLED || FEATURE_FLAGS.TEAMS_MIGRATION_COMPLETE) {
+      getUserActiveTeam(payload.sub)
+        .then(async (teamId) => {
+          if (req.auth && teamId) {
+            req.auth.teamId = teamId
+            // Check if user is team owner
+            req.auth.isTeamOwner = await isTeamOwner(payload.sub, teamId)
+            console.log('🏢 [Auth] Team context added:', {
+              userId: payload.sub,
+              teamId,
+              isTeamOwner: req.auth.isTeamOwner
+            })
+          }
+          next()
+        })
+        .catch((error) => {
+          console.warn('⚠️ [Auth] Failed to fetch team context:', {
+            userId: payload.sub,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+          // Continue without team context (backward compatibility)
+          next()
+        })
+    } else {
+      // Teams feature disabled, continue without team context
+      next()
+    }
   } catch (error) {
     console.error('❌ [Auth] Failed to decode token:', {
       error: error instanceof Error ? error.message : 'Unknown error',

@@ -5,6 +5,8 @@ import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { userProfileUpdateSchema, paginationSchema } from 'aeo-schema-generator-shared/schemas'
 import { z } from 'zod'
+import teamService from '../services/teamService.js'
+import { FEATURE_FLAGS } from '../config/featureFlags.js'
 
 const userInitSchema = z.object({
   userId: z.string().optional(),
@@ -175,6 +177,25 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
         }
       )
       console.log('🔧 [INIT USER] Signup analytics tracked')
+
+      // Initialize team for new user (team-of-one model)
+      // Only create team if teams migration has been completed
+      if (FEATURE_FLAGS.TEAMS_MIGRATION_COMPLETE) {
+        try {
+          console.log('🔧 [INIT USER] Initializing team for new user...')
+          const team = await teamService.initializeTeamForUser(userId)
+          console.log('🔧 [INIT USER] Team created:', {
+            teamId: team.id,
+            ownerId: team.owner_id
+          })
+        } catch (error) {
+          // Log error but don't fail user initialization
+          console.error('❌ [INIT USER] Failed to create team:', error)
+          console.warn('⚠️ [INIT USER] User created without team - may need manual intervention')
+        }
+      } else {
+        console.log('🔧 [INIT USER] Skipping team creation (migration not complete)')
+      }
 
       // Get the updated user with credits
       user = await db.getUser(userId)

@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUser, useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   User,
   CreditCard,
@@ -9,20 +9,44 @@ import {
   Settings as SettingsIcon,
   ExternalLink,
   AlertTriangle,
-  Link2
+  Link2,
+  Edit,
+  Check,
+  X
 } from 'lucide-react'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
+import { toast } from 'react-hot-toast'
 
 export default function SettingsPage() {
   const { user } = useUser()
   const { isLoaded } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const [isEditingOrg, setIsEditingOrg] = useState(false)
+  const [orgName, setOrgName] = useState('')
 
   // Set page title
   useEffect(() => {
     document.title = 'Super Schema | Settings'
   }, [])
+
+  // Get user profile - Wait for Clerk to load before firing
+  const { data: userProfileData } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => apiService.getProfile(),
+    enabled: isLoaded  // Prevents race condition with Clerk auth
+  })
+
+  const userProfile = userProfileData?.data
+
+  // Initialize org name when user profile loads
+  useEffect(() => {
+    if (userProfile?.organizationName) {
+      setOrgName(userProfile.organizationName)
+    }
+  }, [userProfile])
 
   // Get user stats - Wait for Clerk to load before firing
   const { data: statsData } = useQuery({
@@ -63,6 +87,35 @@ export default function SettingsPage() {
   const urlsWithSchema = libraryUrls.filter((url: any) => url.hasSchema).length
   const schemaCoverage = totalUrls > 0 ? Math.round((urlsWithSchema / totalUrls) * 100) : 0
   const hasHubSpotConnection = hubspotConnections.length > 0
+
+  // Mutation for updating organization name
+  const updateOrgMutation = useMutation({
+    mutationFn: (organizationName: string) =>
+      apiService.updateProfile({ organizationName }),
+    onSuccess: async (response) => {
+      // Manually update the cache with the response data
+      queryClient.setQueryData(['user-profile'], response)
+      toast.success('Organization name updated successfully')
+      setIsEditingOrg(false)
+    },
+    onError: () => {
+      toast.error('Failed to update organization name')
+    }
+  })
+
+  const handleSaveOrg = async () => {
+    try {
+      const nameToSave = orgName.trim()
+      await updateOrgMutation.mutateAsync(nameToSave)
+    } catch (error) {
+      console.error('Error saving organization name:', error)
+    }
+  }
+
+  const handleCancelEditOrg = () => {
+    setOrgName(userProfile?.organizationName || '')
+    setIsEditingOrg(false)
+  }
 
   const formatDate = (date: number | string | Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -108,7 +161,7 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold">Account Information</h2>
             </div>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Name</label>
@@ -126,6 +179,63 @@ export default function SettingsPage() {
                   {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
                 </p>
               </div>
+            </div>
+
+            {/* Organization Name - Editable */}
+            <div className="pt-2 border-t border-border">
+              <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                <span>Organization / Company Name (Optional)</span>
+                {!isEditingOrg && (
+                  <button
+                    onClick={() => setIsEditingOrg(true)}
+                    className="text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </button>
+                )}
+              </label>
+
+              {isEditingOrg ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveOrg()
+                      }
+                    }}
+                    placeholder="Enter your organization or company name"
+                    className="flex-1 px-3 py-1.5 text-sm bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                    maxLength={100}
+                  />
+                  <button
+                    onClick={handleSaveOrg}
+                    disabled={updateOrgMutation.isPending}
+                    className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 rounded-md transition-colors disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handleCancelEditOrg}
+                    disabled={updateOrgMutation.isPending}
+                    className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-md transition-colors disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm mt-1.5">
+                  {userProfile?.organizationName || (
+                    <span className="text-muted-foreground italic">Not set</span>
+                  )}
+                </p>
+              )}
+
+              <p className="text-xs text-muted-foreground mt-1.5">
+                This name will appear on team invitation links you create
+              </p>
             </div>
           </div>
         </div>

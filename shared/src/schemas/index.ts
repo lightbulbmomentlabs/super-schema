@@ -42,7 +42,8 @@ export const creditPurchaseSchema = z.object({
 export const userProfileUpdateSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
-  email: z.string().email().optional()
+  email: z.string().email().optional(),
+  organizationName: z.string().min(1).max(100).optional()
 })
 
 // Credit Transaction Schema

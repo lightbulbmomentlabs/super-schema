@@ -40,6 +40,8 @@ import HowToWinFeaturedSnippetsPage from './pages/HowToWinFeaturedSnippetsPage'
 import JsonLdVsMicrodataPage from './pages/JsonLdVsMicrodataPage'
 import HowAIEnginesRankSourcesPage from './pages/HowAIEnginesRankSourcesPage'
 import EntityBasedSeoStrategiesPage from './pages/EntityBasedSeoStrategiesPage'
+import TeamSettingsPage from './pages/TeamSettingsPage'
+import JoinTeamPage from './pages/JoinTeamPage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -51,6 +53,7 @@ import Layout from './components/Layout'
 // Contexts
 import { OnboardingProvider } from './contexts/OnboardingContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { TeamProvider } from './contexts/TeamContext'
 
 // Providers
 import { ApiProvider } from './providers/ApiProvider'
@@ -60,6 +63,16 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 30, // 30 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx client errors (includes 401, 403, 404, 429, etc.)
+        if (error?.response?.status >= 400 && error?.response?.status < 500) {
+          return false
+        }
+        // Allow 1 retry for other errors (5xx, network issues, etc.)
+        return failureCount < 1
+      },
+      refetchOnWindowFocus: false, // Don't auto-refetch when window regains focus
+      refetchOnReconnect: false, // Don't auto-refetch when reconnecting
     },
   },
 })
@@ -69,10 +82,11 @@ function App() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <ApiProvider>
-          <OnboardingProvider>
-            <ScrollToTop />
-            <div className="min-h-screen bg-background">
-              <Routes>
+          <TeamProvider>
+            <OnboardingProvider>
+              <ScrollToTop />
+              <div className="min-h-screen bg-background">
+                <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/pricing" element={<PricingPage />} />
@@ -145,6 +159,15 @@ function App() {
             </Layout>
           } />
 
+          {/* Team routes */}
+          <Route path="/team/settings" element={
+            <Layout>
+              <TeamSettingsPage />
+            </Layout>
+          } />
+
+          <Route path="/team/join/:token" element={<JoinTeamPage />} />
+
           {/* Protected routes - Temporarily bypassed for testing */}
           <Route path="/dashboard/*" element={
             <Layout>
@@ -173,12 +196,13 @@ function App() {
 
           {/* Fallback route */}
           <Route path="*" element={<div>404 - Page Not Found</div>} />
-            </Routes>
-          </div>
-          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-        </OnboardingProvider>
-      </ApiProvider>
-    </QueryClientProvider>
+                </Routes>
+              </div>
+              {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+            </OnboardingProvider>
+          </TeamProvider>
+        </ApiProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   )
 }

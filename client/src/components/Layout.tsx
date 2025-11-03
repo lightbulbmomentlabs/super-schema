@@ -18,6 +18,7 @@ import HubSpotIcon from './icons/HubSpotIcon'
 import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
 import ResourcesDropdown from './ResourcesDropdown'
+import TeamSwitcher from './TeamSwitcher'
 import { NotificationBadge } from './NotificationBadge'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
@@ -65,6 +66,7 @@ export default function Layout({ children }: LayoutProps) {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <ResourcesDropdown />
+            <TeamSwitcher />
             <span className="text-sm text-muted-foreground">
               Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
             </span>

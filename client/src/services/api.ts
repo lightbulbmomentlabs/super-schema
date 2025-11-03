@@ -15,7 +15,13 @@ import type {
   CreateSupportTicketRequest,
   ReleaseNote,
   CreateReleaseNoteRequest,
-  UpdateReleaseNoteRequest
+  UpdateReleaseNoteRequest,
+  TeamMember,
+  TeamInvite,
+  TeamInviteDetails,
+  TeamInviteValidation,
+  CurrentTeamResponse,
+  ListTeamsResponse
 } from '@shared/types'
 
 // In production, API is served from same origin as the client (supports both superschema.ai and www.superschema.ai)
@@ -536,6 +542,62 @@ class ApiService {
 
   async batchDeleteSupportTickets(ticketIds: string[]): Promise<ApiResponse<{ message: string }>> {
     const response = await api.post('/support/tickets/batch-delete', { ticketIds })
+    return response.data
+  }
+
+  // Team endpoints
+  async listTeams(): Promise<ApiResponse<ListTeamsResponse>> {
+    const response = await api.get('/team/list')
+    return response.data
+  }
+
+  async getCurrentTeam(): Promise<ApiResponse<CurrentTeamResponse>> {
+    const response = await api.get('/team/current')
+    return response.data
+  }
+
+  async switchTeam(teamId: string): Promise<ApiResponse<{ activeTeamId: string; message: string }>> {
+    const response = await api.post(`/team/switch/${teamId}`)
+    return response.data
+  }
+
+  async createTeamInvite(): Promise<ApiResponse<TeamInvite>> {
+    const response = await api.post('/team/invite')
+    return response.data
+  }
+
+  async validateTeamInvite(token: string): Promise<ApiResponse<{ valid: boolean } & TeamInviteValidation>> {
+    const response = await api.get(`/team/invite/${token}`)
+    return response.data
+  }
+
+  async acceptTeamInvite(token: string): Promise<ApiResponse<{ teamId: string; message: string }>> {
+    const response = await api.post(`/team/join/${token}`)
+    return response.data
+  }
+
+  async getTeamMembers(): Promise<ApiResponse<{ members: TeamMember[]; teamId: string; ownerId: string }>> {
+    const response = await api.get('/team/members')
+    return response.data
+  }
+
+  async removeTeamMember(userId: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.delete(`/team/members/${userId}`)
+    return response.data
+  }
+
+  async leaveTeam(): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.post('/team/leave')
+    return response.data
+  }
+
+  async getTeamInvites(): Promise<ApiResponse<TeamInviteDetails[]>> {
+    const response = await api.get('/team/invites')
+    return response.data
+  }
+
+  async deleteTeamInvite(inviteId: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.delete(`/team/invite/${inviteId}`)
     return response.data
   }
 
