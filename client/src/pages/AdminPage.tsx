@@ -23,6 +23,8 @@ import type { User, SupportTicket, ReleaseNote } from '@shared/types'
 import ConfirmModal from '@/components/ConfirmModal'
 import TicketDetailsModal from '@/components/TicketDetailsModal'
 import AdminErrorsSection from '@/components/AdminErrorsSection'
+import AdminHubSpotStats from '@/components/AdminHubSpotStats'
+import AdminSchemaFailures from '@/components/AdminSchemaFailures'
 
 export default function AdminPage() {
   const { user: currentUser, isLoaded, isSignedIn } = useUser()
@@ -725,6 +727,24 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold">Error Logs</h2>
         </div>
         <AdminErrorsSection />
+      </div>
+
+      {/* HubSpot Integration Stats */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">HubSpot Integration Health</h2>
+        </div>
+        <AdminHubSpotStats />
+      </div>
+
+      {/* Schema Generation Failures (Phase 1: Enhanced Failure Tracking) */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertCircle className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">Schema Generation Failures</h2>
+        </div>
+        <AdminSchemaFailures />
       </div>
 
       {/* Release Notes Management Section */}

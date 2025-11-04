@@ -27,10 +27,12 @@ export const errorHandler = async (
     userAgent: req.get('User-Agent')
   })
 
-  // Skip logging errors from disabled features (feature flags)
-  const shouldSkipLogging = err.message === 'Feature not available'
+  // Skip logging errors from disabled features (feature flags) and authentication failures
+  const shouldSkipLogging =
+    err.message === 'Feature not available' ||
+    (statusCode === 401 && err.message === 'Authentication required')
 
-  // Log error to database for admin debugging (skip feature flag denials)
+  // Log error to database for admin debugging (skip feature flag denials and auth failures)
   if (!shouldSkipLogging) {
     await errorLogger.logError({
       errorType: 'api_error',

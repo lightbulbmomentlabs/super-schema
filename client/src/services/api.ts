@@ -562,6 +562,78 @@ class ApiService {
     return response.data
   }
 
+  async getHubSpotStats(): Promise<ApiResponse<{
+    totalConnections: number
+    activeConnections: number
+    connectionsByRegion: {
+      na1: number
+      eu1: number
+      ap1: number
+    }
+    recentSyncs24h: number
+    recentSyncFailures24h: number
+    topUsersByConnections: Array<{
+      userId: string
+      userEmail: string
+      connectionCount: number
+    }>
+  }>> {
+    const response = await api.get('/admin/hubspot/stats')
+    return response.data
+  }
+
+  // Schema failure tracking endpoints (Phase 1: Enhanced Failure Tracking)
+  async getSchemaFailures(params?: {
+    page?: number
+    limit?: number
+    failureReason?: string
+    failureStage?: string
+    userId?: string
+    startDate?: string
+    endDate?: string
+  }): Promise<ApiResponse<{
+    failures: Array<{
+      id: string
+      userId: string
+      userEmail: string
+      url: string
+      failureReason: string
+      failureStage: string
+      errorMessage: string
+      aiModelProvider: string
+      stackTrace: string
+      requestContext: any
+      processingTimeMs: number
+      createdAt: string
+    }>
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
+  }>> {
+    const response = await api.get('/admin/schema-failures', { params })
+    return response.data
+  }
+
+  async getSchemaFailureStats(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<ApiResponse<{
+    totalFailures: number
+    failuresByReason: Array<{ reason: string; count: number; percentage: number }>
+    failuresByStage: Array<{ stage: string; count: number; percentage: number }>
+    failuresByAiModel: Array<{ model: string; count: number; percentage: number }>
+    recentFailures24h: number
+    failureRate: number
+    topFailingUrls: Array<{ url: string; count: number }>
+    affectedUsers: number
+  }>> {
+    const response = await api.get('/admin/schema-failures/stats', { params })
+    return response.data
+  }
+
   // Support ticket endpoints
   async createSupportTicket(data: CreateSupportTicketRequest): Promise<ApiResponse<SupportTicket>> {
     const response = await api.post('/support/tickets', data)

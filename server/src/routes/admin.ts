@@ -12,7 +12,10 @@ import {
   getErrorLogs,
   getErrorLog,
   updateErrorLogStatus,
-  getErrorStats
+  getErrorStats,
+  getHubSpotStats,
+  getSchemaFailures,
+  getSchemaFailureStats
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -55,5 +58,18 @@ router.get('/errors/:id', getErrorLog)
 
 // PATCH /api/admin/errors/:id/status - Update error log status
 router.patch('/errors/:id/status', updateErrorLogStatus)
+
+// HubSpot Integration Monitoring
+
+// GET /api/admin/hubspot/stats - Get HubSpot connection statistics
+router.get('/hubspot/stats', getHubSpotStats)
+
+// Schema Generation Failure Tracking (Phase 1: Enhanced Failure Tracking)
+
+// GET /api/admin/schema-failures - Get schema generation failures with filtering
+router.get('/schema-failures', getSchemaFailures)
+
+// GET /api/admin/schema-failures/stats - Get aggregated failure statistics
+router.get('/schema-failures/stats', getSchemaFailureStats)
 
 export default router

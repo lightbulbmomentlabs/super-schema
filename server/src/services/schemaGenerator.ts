@@ -226,12 +226,41 @@ class SchemaGeneratorService {
       const processingTime = Date.now() - startTime
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
 
-      // Update generation record with failure (if record was created)
+      // Capture full stack trace for debugging
+      const stackTrace = error instanceof Error ? error.stack || '' : ''
+
+      // Categorize the failure reason based on error message and context
+      const failureReason = this.categorizeFailureReason(error, errorMessage)
+
+      // Determine which stage of the pipeline failed
+      const failureStage = this.determineFailureStage(errorMessage, stackTrace)
+
+      // Get AI model provider being used
+      const aiModelProvider = AI_PROVIDER === 'anthropic'
+        ? 'claude-sonnet-4-20250514'
+        : 'openai-gpt-4o'
+
+      // Build request context for debugging
+      const requestContext = {
+        ipAddress: request.ipAddress || 'unknown',
+        userAgent: request.userAgent || 'unknown',
+        requestedSchemaType: request.schemaType || 'Auto',
+        shouldChargeCredits: request.shouldChargeCredits !== false,
+        isLocalhost: process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL,
+        timestamp: new Date().toISOString()
+      }
+
+      // Update generation record with detailed failure information (if record was created)
       if (generationId) {
         await db.updateSchemaGeneration(generationId, {
           status: 'failed',
           errorMessage,
-          processingTimeMs: processingTime
+          processingTimeMs: processingTime,
+          failureReason,
+          failureStage,
+          aiModelProvider,
+          stackTrace,
+          requestContext
         })
       }
 
@@ -239,7 +268,10 @@ class SchemaGeneratorService {
         userId: request.userId,
         url: request.url,
         error: errorMessage,
-        processingTime
+        failureReason,
+        failureStage,
+        processingTime,
+        aiModelProvider
       })
 
       return {
@@ -420,6 +452,111 @@ class SchemaGeneratorService {
         }
       }
     }
+  }
+
+  // Categorize failure reason based on error type and message
+  private categorizeFailureReason(error: unknown, errorMessage: string): string {
+    // Check for timeout errors
+    if (errorMessage.toLowerCase().includes('timeout') ||
+        errorMessage.toLowerCase().includes('timed out') ||
+        errorMessage.toLowerCase().includes('econnaborted')) {
+      return 'timeout'
+    }
+
+    // Check for scraper/content fetching errors
+    if (errorMessage.includes('URL not accessible') ||
+        errorMessage.includes('scrape') ||
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('ENOTFOUND') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('getaddrinfo')) {
+      return 'scraper_error'
+    }
+
+    // Check for AI service errors
+    if (errorMessage.includes('AI') ||
+        errorMessage.includes('anthropic') ||
+        errorMessage.includes('openai') ||
+        errorMessage.includes('generate') ||
+        errorMessage.toLowerCase().includes('model')) {
+      return 'ai_error'
+    }
+
+    // Check for validation errors
+    if (errorMessage.includes('validation') ||
+        errorMessage.includes('invalid schema') ||
+        errorMessage.includes('No schemas could be generated or passed validation')) {
+      return 'validation_error'
+    }
+
+    // Check for insufficient content
+    if (errorMessage.includes('No schemas could be generated') ||
+        errorMessage.includes('insufficient content') ||
+        errorMessage.includes('no content')) {
+      return 'insufficient_content'
+    }
+
+    // Check for network errors
+    if (errorMessage.includes('network') ||
+        errorMessage.includes('ENETUNREACH') ||
+        errorMessage.includes('EHOSTUNREACH')) {
+      return 'network_error'
+    }
+
+    // Check for rate limiting
+    if (errorMessage.includes('rate limit') ||
+        errorMessage.includes('too many requests') ||
+        errorMessage.includes('429')) {
+      return 'rate_limit'
+    }
+
+    // Check for credit/authorization issues
+    if (errorMessage.includes('credits') ||
+        errorMessage.includes('Insufficient credits')) {
+      return 'insufficient_credits'
+    }
+
+    // Default to unknown
+    return 'unknown'
+  }
+
+  // Determine which stage of the pipeline failed based on error context
+  private determineFailureStage(errorMessage: string, stackTrace: string): string {
+    // Check stack trace and error message for clues about failure stage
+    const combinedContext = `${errorMessage} ${stackTrace}`.toLowerCase()
+
+    // Scraping stage indicators
+    if (combinedContext.includes('scrapeurl') ||
+        combinedContext.includes('validateurl') ||
+        combinedContext.includes('scraper') ||
+        errorMessage.includes('URL not accessible')) {
+      return 'scraping'
+    }
+
+    // AI generation stage indicators
+    if (combinedContext.includes('generateschemas') ||
+        combinedContext.includes('anthropic') ||
+        combinedContext.includes('openai') ||
+        combinedContext.includes('aiservice')) {
+      return 'ai_generation'
+    }
+
+    // Validation stage indicators
+    if (combinedContext.includes('validate') ||
+        combinedContext.includes('validatemultipleschemas') ||
+        errorMessage.includes('No schemas could be generated or passed validation')) {
+      return 'validation'
+    }
+
+    // Post-processing stage indicators
+    if (combinedContext.includes('consumecredits') ||
+        combinedContext.includes('updateschemageneration') ||
+        combinedContext.includes('database')) {
+      return 'post_processing'
+    }
+
+    // Default to unknown stage
+    return 'unknown'
   }
 
   // Calculate a comprehensive score for schemas

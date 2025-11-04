@@ -585,6 +585,11 @@ class DatabaseService {
       schemaScore?: any
       refinementCount?: number
       schema_type?: string
+      failureReason?: string
+      failureStage?: string
+      aiModelProvider?: string
+      stackTrace?: string
+      requestContext?: any
     }
   ): Promise<void> {
     if (!this.isDatabaseAvailable()) {
@@ -611,6 +616,23 @@ class DatabaseService {
       console.log(`✅ updateSchemaGeneration: Adding schema_type="${updates.schema_type}" to update for record ${id}`)
     } else {
       console.log(`⚠️ updateSchemaGeneration: schema_type is undefined, not updating for record ${id}`)
+    }
+
+    // Include failure tracking fields if provided (Phase 1: Enhanced Failure Tracking)
+    if (updates.failureReason !== undefined) {
+      updateData.failure_reason = updates.failureReason
+    }
+    if (updates.failureStage !== undefined) {
+      updateData.failure_stage = updates.failureStage
+    }
+    if (updates.aiModelProvider !== undefined) {
+      updateData.ai_model_provider = updates.aiModelProvider
+    }
+    if (updates.stackTrace !== undefined) {
+      updateData.stack_trace = updates.stackTrace
+    }
+    if (updates.requestContext !== undefined) {
+      updateData.request_context = updates.requestContext
     }
 
     console.log(`💾 updateSchemaGeneration: Updating record ${id} with:`, {
@@ -2193,6 +2215,136 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Get HubSpot connection statistics for admin monitoring
+   * Helps track the health of the HubSpot integration, especially regional API usage
+   */
+  async getHubSpotStats(): Promise<{
+    totalConnections: number
+    activeConnections: number
+    connectionsByRegion: {
+      na1: number
+      eu1: number
+      ap1: number
+    }
+    recentSyncs24h: number
+    recentSyncFailures24h: number
+    topUsersByConnections: Array<{
+      userId: string
+      userEmail: string
+      connectionCount: number
+    }>
+  }> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getHubSpotStats')
+      return {
+        totalConnections: 0,
+        activeConnections: 0,
+        connectionsByRegion: { na1: 0, eu1: 0, ap1: 0 },
+        recentSyncs24h: 0,
+        recentSyncFailures24h: 0,
+        topUsersByConnections: []
+      }
+    }
+
+    // Get total and active connections
+    const { count: totalConnections, error: totalError } = await this.supabase
+      .from('hubspot_connections')
+      .select('*', { count: 'exact', head: true })
+
+    if (totalError) throw totalError
+
+    const { count: activeConnections, error: activeError } = await this.supabase
+      .from('hubspot_connections')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true)
+
+    if (activeError) throw activeError
+
+    // Get connections by region
+    const { data: regionData, error: regionError } = await this.supabase
+      .from('hubspot_connections')
+      .select('region')
+      .eq('is_active', true)
+
+    if (regionError) throw regionError
+
+    const connectionsByRegion = {
+      na1: 0,
+      eu1: 0,
+      ap1: 0
+    }
+
+    regionData?.forEach(row => {
+      const region = (row.region || 'na1') as 'na1' | 'eu1' | 'ap1'
+      connectionsByRegion[region]++
+    })
+
+    // Get recent sync stats (last 24 hours)
+    const twentyFourHoursAgo = new Date()
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
+
+    const { count: recentSyncs24h, error: syncsError } = await this.supabase
+      .from('hubspot_sync_jobs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', twentyFourHoursAgo.toISOString())
+
+    if (syncsError) throw syncsError
+
+    const { count: recentSyncFailures24h, error: failuresError } = await this.supabase
+      .from('hubspot_sync_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'failed')
+      .gte('created_at', twentyFourHoursAgo.toISOString())
+
+    if (failuresError) throw failuresError
+
+    // Get top users by connections (simple query without RPC)
+    const { data: connectionsWithUsers, error: topUsersError } = await this.supabase
+      .from('hubspot_connections')
+      .select('user_id')
+      .eq('is_active', true)
+
+    if (topUsersError) throw topUsersError
+
+    // Count connections per user
+    const userConnectionCounts = new Map<string, number>()
+    connectionsWithUsers?.forEach(row => {
+      const count = userConnectionCounts.get(row.user_id) || 0
+      userConnectionCounts.set(row.user_id, count + 1)
+    })
+
+    // Get top 5 users and their emails
+    const topUserIds = Array.from(userConnectionCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([userId]) => userId)
+
+    const topUsersByConnections = []
+    for (const userId of topUserIds) {
+      const { data: userData } = await this.supabase
+        .from('users')
+        .select('email')
+        .eq('id', userId)
+        .single()
+
+      topUsersByConnections.push({
+        userId,
+        userEmail: userData?.email || 'Unknown',
+        connectionCount: userConnectionCounts.get(userId) || 0
+      })
+    }
+
+    return {
+      totalConnections: totalConnections || 0,
+      activeConnections: activeConnections || 0,
+      connectionsByRegion,
+      recentSyncs24h: recentSyncs24h || 0,
+      recentSyncFailures24h: recentSyncFailures24h || 0,
+      topUsersByConnections
+    }
+  }
+
   async createHubSpotSyncJob(params: {
     userId: string
     connectionId: string
@@ -2287,6 +2439,257 @@ class DatabaseService {
       createdAt: row.created_at,
       portalName: row.portal_name
     }))
+  }
+
+  /**
+   * Get schema generation failures with filtering and pagination
+   * Part of Phase 1: Enhanced Failure Tracking
+   */
+  async getSchemaFailures(params: {
+    page?: number
+    limit?: number
+    failureReason?: string
+    failureStage?: string
+    userId?: string
+    startDate?: string
+    endDate?: string
+  }): Promise<{
+    failures: Array<{
+      id: string
+      userId: string
+      userEmail: string
+      url: string
+      failureReason: string
+      failureStage: string
+      errorMessage: string
+      aiModelProvider: string
+      stackTrace: string
+      requestContext: any
+      processingTimeMs: number
+      createdAt: string
+    }>
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
+  }> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getSchemaFailures', params)
+      return {
+        failures: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
+      }
+    }
+
+    const page = params.page || 1
+    const limit = params.limit || 20
+    const offset = (page - 1) * limit
+
+    // Build query with filters
+    let query = this.supabase
+      .from('schema_generations')
+      .select('*, users!inner(email)', { count: 'exact' })
+      .eq('status', 'failed')
+      .order('created_at', { ascending: false })
+
+    // Apply optional filters
+    if (params.failureReason) {
+      query = query.eq('failure_reason', params.failureReason)
+    }
+    if (params.failureStage) {
+      query = query.eq('failure_stage', params.failureStage)
+    }
+    if (params.userId) {
+      query = query.eq('user_id', params.userId)
+    }
+    if (params.startDate) {
+      query = query.gte('created_at', params.startDate)
+    }
+    if (params.endDate) {
+      query = query.lte('created_at', params.endDate)
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1)
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Failed to fetch schema failures:', error)
+      throw error
+    }
+
+    const failures = (data || []).map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      userEmail: row.users?.email || 'Unknown',
+      url: row.url,
+      failureReason: row.failure_reason || 'unknown',
+      failureStage: row.failure_stage || 'unknown',
+      errorMessage: row.error_message || '',
+      aiModelProvider: row.ai_model_provider || 'unknown',
+      stackTrace: row.stack_trace || '',
+      requestContext: row.request_context || {},
+      processingTimeMs: row.processing_time_ms || 0,
+      createdAt: row.created_at
+    }))
+
+    const total = count || 0
+    const totalPages = Math.ceil(total / limit)
+
+    return {
+      failures,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
+    }
+  }
+
+  /**
+   * Get aggregated schema failure statistics
+   * Part of Phase 1: Enhanced Failure Tracking
+   */
+  async getSchemaFailureStats(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{
+    totalFailures: number
+    failuresByReason: Array<{ reason: string; count: number; percentage: number }>
+    failuresByStage: Array<{ stage: string; count: number; percentage: number }>
+    failuresByAiModel: Array<{ model: string; count: number; percentage: number }>
+    recentFailures24h: number
+    failureRate: number
+    topFailingUrls: Array<{ url: string; count: number }>
+    affectedUsers: number
+  }> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getSchemaFailureStats', params)
+      return {
+        totalFailures: 0,
+        failuresByReason: [],
+        failuresByStage: [],
+        failuresByAiModel: [],
+        recentFailures24h: 0,
+        failureRate: 0,
+        topFailingUrls: [],
+        affectedUsers: 0
+      }
+    }
+
+    // Build base query with optional date filters
+    let baseQuery = this.supabase
+      .from('schema_generations')
+      .select('*')
+      .eq('status', 'failed')
+
+    if (params?.startDate) {
+      baseQuery = baseQuery.gte('created_at', params.startDate)
+    }
+    if (params?.endDate) {
+      baseQuery = baseQuery.lte('created_at', params.endDate)
+    }
+
+    const { data: failures, error } = await baseQuery
+
+    if (error) {
+      console.error('Failed to fetch schema failure stats:', error)
+      throw error
+    }
+
+    const totalFailures = failures?.length || 0
+
+    // Get total generation attempts for failure rate calculation
+    let totalQuery = this.supabase
+      .from('schema_generations')
+      .select('*', { count: 'exact', head: true })
+
+    if (params?.startDate) {
+      totalQuery = totalQuery.gte('created_at', params.startDate)
+    }
+    if (params?.endDate) {
+      totalQuery = totalQuery.lte('created_at', params.endDate)
+    }
+
+    const { count: totalAttempts } = await totalQuery
+    const failureRate = totalAttempts && totalAttempts > 0
+      ? Math.round((totalFailures / totalAttempts) * 100)
+      : 0
+
+    // Aggregate by failure reason
+    const reasonCounts: Record<string, number> = {}
+    const stageCounts: Record<string, number> = {}
+    const modelCounts: Record<string, number> = {}
+    const urlCounts: Record<string, number> = {}
+    const affectedUserIds = new Set<string>()
+
+    failures?.forEach((failure: any) => {
+      const reason = failure.failure_reason || 'unknown'
+      const stage = failure.failure_stage || 'unknown'
+      const model = failure.ai_model_provider || 'unknown'
+      const url = failure.url
+
+      reasonCounts[reason] = (reasonCounts[reason] || 0) + 1
+      stageCounts[stage] = (stageCounts[stage] || 0) + 1
+      modelCounts[model] = (modelCounts[model] || 0) + 1
+      urlCounts[url] = (urlCounts[url] || 0) + 1
+      affectedUserIds.add(failure.user_id)
+    })
+
+    // Convert to arrays and sort
+    const failuresByReason = Object.entries(reasonCounts)
+      .map(([reason, count]) => ({
+        reason,
+        count,
+        percentage: totalFailures > 0 ? Math.round((count / totalFailures) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    const failuresByStage = Object.entries(stageCounts)
+      .map(([stage, count]) => ({
+        stage,
+        count,
+        percentage: totalFailures > 0 ? Math.round((count / totalFailures) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    const failuresByAiModel = Object.entries(modelCounts)
+      .map(([model, count]) => ({
+        model,
+        count,
+        percentage: totalFailures > 0 ? Math.round((count / totalFailures) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    const topFailingUrls = Object.entries(urlCounts)
+      .map(([url, count]) => ({ url, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+
+    // Get recent failures (last 24 hours)
+    const twentyFourHoursAgo = new Date()
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
+
+    const { count: recentFailures24h } = await this.supabase
+      .from('schema_generations')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'failed')
+      .gte('created_at', twentyFourHoursAgo.toISOString())
+
+    return {
+      totalFailures,
+      failuresByReason,
+      failuresByStage,
+      failuresByAiModel,
+      recentFailures24h: recentFailures24h || 0,
+      failureRate,
+      topFailingUrls,
+      affectedUsers: affectedUserIds.size
+    }
   }
 }
 

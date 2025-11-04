@@ -235,3 +235,65 @@ export const getErrorStats = asyncHandler(async (req: AuthenticatedRequest, res:
     timeframe
   })
 })
+
+/**
+ * Get HubSpot connection statistics
+ * Helps monitor the HubSpot integration health, especially for regional API support
+ */
+export const getHubSpotStats = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const stats = await db.getHubSpotStats()
+
+  res.json({
+    success: true,
+    data: stats
+  })
+})
+
+/**
+ * Get schema generation failures with filtering and pagination
+ * Part of Phase 1: Enhanced Failure Tracking
+ */
+export const getSchemaFailures = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const {
+    page = 1,
+    limit = 20,
+    failureReason,
+    failureStage,
+    userId,
+    startDate,
+    endDate
+  } = req.query
+
+  const result = await db.getSchemaFailures({
+    page: Number(page),
+    limit: Number(limit),
+    failureReason: failureReason as string,
+    failureStage: failureStage as string,
+    userId: userId as string,
+    startDate: startDate as string,
+    endDate: endDate as string
+  })
+
+  res.json({
+    success: true,
+    data: result
+  })
+})
+
+/**
+ * Get aggregated schema failure statistics
+ * Part of Phase 1: Enhanced Failure Tracking
+ */
+export const getSchemaFailureStats = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { startDate, endDate } = req.query
+
+  const stats = await db.getSchemaFailureStats({
+    startDate: startDate as string,
+    endDate: endDate as string
+  })
+
+  res.json({
+    success: true,
+    data: stats
+  })
+})
