@@ -21,7 +21,7 @@ function getRegionFromCode(code: string): string {
   return regionMatch ? regionMatch[1] : 'na1' // Default to NA1 for backwards compatibility
 }
 
-function getHubSpotApiBaseUrl(region: string): string {
+export function getHubSpotApiBaseUrl(region: string): string {
   const baseUrls: Record<string, string> = {
     'na1': 'https://api.hubapi.com',
     'eu1': 'https://api.eu1.hubapi.com',
@@ -229,7 +229,8 @@ export class HubSpotOAuthService {
   async storeConnection(
     userId: string,
     tokens: HubSpotTokenResponse,
-    accountInfo: HubSpotAccountInfo
+    accountInfo: HubSpotAccountInfo,
+    region: string = 'na1'
   ): Promise<string> {
     try {
       console.log('🔄 [HubSpot OAuth] Storing connection', {
@@ -267,7 +268,8 @@ export class HubSpotOAuthService {
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken,
           tokenExpiresAt: expiresAt,
-          scopes: accountInfo.scopes
+          scopes: accountInfo.scopes,
+          region
         })
 
         console.log('✅ [HubSpot OAuth] Successfully stored connection', {
@@ -342,8 +344,9 @@ export class HubSpotOAuthService {
         // Decrypt refresh token
         const refreshToken = decrypt(connection.refreshToken)
 
-        // Get new tokens
-        const newTokens = await this.refreshAccessToken(refreshToken)
+        // Get new tokens using the connection's region
+        const region = connection.region || 'na1'
+        const newTokens = await this.refreshAccessToken(refreshToken, region)
 
         // Encrypt new tokens
         const encryptedAccessToken = encrypt(newTokens.access_token)

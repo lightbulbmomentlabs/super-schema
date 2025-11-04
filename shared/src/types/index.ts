@@ -204,6 +204,7 @@ export interface HubSpotConnection {
   userId: string
   hubspotPortalId: string
   portalName?: string
+  region: string  // 'na1', 'eu1', or 'ap1'
   scopes: string[]
   associatedDomains?: string[]
   isActive: boolean

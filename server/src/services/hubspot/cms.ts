@@ -4,20 +4,13 @@
  */
 
 import axios, { AxiosInstance } from 'axios'
-import { hubspotOAuthService } from './oauth.js'
+import { hubspotOAuthService, getHubSpotApiBaseUrl } from './oauth.js'
+import { db } from '../database.js'
 import type {
   HubSpotBlogPost,
   HubSpotPage,
   HubSpotContentMatchResult
 } from 'aeo-schema-generator-shared/types'
-
-const HUBSPOT_API_BASE = 'https://api.hubapi.com'
-
-// API v2 for blog posts (has head_html field)
-const BLOG_POSTS_V2_URL = `${HUBSPOT_API_BASE}/content/api/v2/blog-posts`
-
-// API v3 for pages
-const PAGES_V3_URL = `${HUBSPOT_API_BASE}/cms/v3/pages/site-pages`
 
 interface HubSpotBlogPostV2 {
   id: string
@@ -47,6 +40,28 @@ interface HubSpotPageV3 {
 
 export class HubSpotCMSService {
   /**
+   * Get region for a connection
+   */
+  private async getConnectionRegion(connectionId: string): Promise<string> {
+    const connection = await db.getHubSpotConnection(connectionId)
+    if (!connection) {
+      throw new Error('HubSpot connection not found')
+    }
+    return connection.region || 'na1'
+  }
+
+  /**
+   * Build API URLs for a specific region
+   */
+  private buildApiUrls(region: string) {
+    const baseUrl = getHubSpotApiBaseUrl(region)
+    return {
+      blogPostsV2: `${baseUrl}/content/api/v2/blog-posts`,
+      pagesV3: `${baseUrl}/cms/v3/pages/site-pages`
+    }
+  }
+
+  /**
    * Create axios instance with authorization
    */
   private async createAuthorizedClient(connectionId: string): Promise<AxiosInstance> {
@@ -69,19 +84,22 @@ export class HubSpotCMSService {
       console.log('📚 [HubSpot CMS] Fetching blog posts (up to', maxPosts, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
+      const region = await this.getConnectionRegion(connectionId)
+      const urls = this.buildApiUrls(region)
+
       const allPosts: HubSpotBlogPost[] = []
       let offset = 0
       const limit = 100 // HubSpot's maximum
 
       while (allPosts.length < maxPosts) {
-        console.log(`🔍 [HubSpot CMS] Fetching blog posts batch (offset: ${offset})`)
+        console.log(`🔍 [HubSpot CMS] Fetching blog posts batch (offset: ${offset}, region: ${region})`)
 
         const response = await client.get<{
           objects: HubSpotBlogPostV2[]
           total?: number
           total_count?: number
         }>(
-          BLOG_POSTS_V2_URL,
+          urls.blogPostsV2,
           {
             params: {
               limit,
@@ -144,18 +162,21 @@ export class HubSpotCMSService {
       console.log('📄 [HubSpot CMS] Fetching pages (up to', maxPages, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
+      const region = await this.getConnectionRegion(connectionId)
+      const urls = this.buildApiUrls(region)
+
       const allPages: HubSpotPage[] = []
       let offset = 0
       const limit = 100 // HubSpot's maximum
 
       while (allPages.length < maxPages) {
-        console.log(`🔍 [HubSpot CMS] Fetching pages batch (offset: ${offset})`)
+        console.log(`🔍 [HubSpot CMS] Fetching pages batch (offset: ${offset}, region: ${region})`)
 
         const response = await client.get<{
           results: HubSpotPageV3[]
           total?: number
         }>(
-          PAGES_V3_URL,
+          urls.pagesV3,
           {
             params: {
               limit,
@@ -222,11 +243,13 @@ export class HubSpotCMSService {
       console.log(`🚀 [HubSpot CMS] Pushing schema to blog post ${postId}`)
 
       const client = await this.createAuthorizedClient(connectionId)
+      const region = await this.getConnectionRegion(connectionId)
+      const urls = this.buildApiUrls(region)
 
       // Get current post to retrieve existing head_html
-      console.log(`🔍 [HubSpot CMS] Fetching current blog post ${postId} to preserve existing head HTML`)
+      console.log(`🔍 [HubSpot CMS] Fetching current blog post ${postId} to preserve existing head HTML (region: ${region})`)
       const getResponse = await client.get<HubSpotBlogPostV2>(
-        `${BLOG_POSTS_V2_URL}/${postId}`
+        `${urls.blogPostsV2}/${postId}`
       )
 
       const existingHeadHtml = getResponse.data.head_html || ''
@@ -263,7 +286,7 @@ export class HubSpotCMSService {
       console.log(`📝 [HubSpot CMS] Final head HTML length: ${finalHeadHtml.length} characters`)
 
       // Update post with complete head HTML (preserving existing + new schema)
-      await client.put(`${BLOG_POSTS_V2_URL}/${postId}`, {
+      await client.put(`${urls.blogPostsV2}/${postId}`, {
         head_html: finalHeadHtml
       })
 
@@ -293,11 +316,13 @@ export class HubSpotCMSService {
       console.log(`🚀 [HubSpot CMS] Pushing schema to page ${pageId}`)
 
       const client = await this.createAuthorizedClient(connectionId)
+      const region = await this.getConnectionRegion(connectionId)
+      const urls = this.buildApiUrls(region)
 
       // Get current page to retrieve existing head HTML
-      console.log(`🔍 [HubSpot CMS] Fetching current page ${pageId} to preserve existing head HTML`)
+      console.log(`🔍 [HubSpot CMS] Fetching current page ${pageId} to preserve existing head HTML (region: ${region})`)
       const getResponse = await client.get<any>(
-        `${PAGES_V3_URL}/${pageId}/draft`
+        `${urls.pagesV3}/${pageId}/draft`
       )
 
       const existingHeadHtml = getResponse.data.headHtml || ''
@@ -334,7 +359,7 @@ export class HubSpotCMSService {
       console.log(`📝 [HubSpot CMS] Final head HTML length: ${finalHeadHtml.length} characters`)
 
       // Update page with complete head HTML (preserving existing + new schema)
-      await client.patch(`${PAGES_V3_URL}/${pageId}/draft`, {
+      await client.patch(`${urls.pagesV3}/${pageId}/draft`, {
         headHtml: finalHeadHtml
       })
 

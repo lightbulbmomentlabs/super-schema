@@ -1978,6 +1978,7 @@ class DatabaseService {
     refreshToken: string
     tokenExpiresAt: Date
     scopes: string[]
+    region?: string
   }): Promise<string> {
     if (!this.isDatabaseAvailable()) {
       console.log('Mock: createHubSpotConnection', params)
@@ -1995,6 +1996,7 @@ class DatabaseService {
         refresh_token: params.refreshToken,
         token_expires_at: params.tokenExpiresAt.toISOString(),
         scopes: params.scopes,
+        region: params.region || 'na1',
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
@@ -2026,6 +2028,7 @@ class DatabaseService {
       userId: data.user_id,
       hubspotPortalId: data.hubspot_portal_id,
       portalName: data.portal_name,
+      region: data.region || 'na1',
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       tokenExpiresAt: data.token_expires_at,
@@ -2045,7 +2048,7 @@ class DatabaseService {
 
     const { data, error } = await this.supabase
       .from('hubspot_connections')
-      .select('id, hubspot_portal_id, portal_name, scopes, associated_domains, is_active, last_validated_at, created_at, updated_at')
+      .select('id, hubspot_portal_id, portal_name, region, scopes, associated_domains, is_active, last_validated_at, created_at, updated_at')
       .eq('user_id', userId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -2057,6 +2060,7 @@ class DatabaseService {
       userId,
       hubspotPortalId: row.hubspot_portal_id,
       portalName: row.portal_name,
+      region: row.region || 'na1',
       scopes: row.scopes,
       associatedDomains: row.associated_domains || [],
       isActive: row.is_active,

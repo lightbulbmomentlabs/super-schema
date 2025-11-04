@@ -66,7 +66,8 @@ export const handleOAuthCallback = asyncHandler(
       const connectionId = await hubspotOAuthService.storeConnection(
         userId,
         tokens,
-        accountInfo
+        accountInfo,
+        region
       )
       console.log('✅ [HubSpot Controller] Step 3 complete: Connection stored', {
         userId,
