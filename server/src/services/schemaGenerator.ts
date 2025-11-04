@@ -19,6 +19,8 @@ export interface SchemaGenerationResult {
   htmlScriptTags?: string  // HTML-ready script tags for easy copy-pasting
   highlightedChanges?: string[]  // List of changes made during refinement
   validationResults: any[]
+  scrapedMetadata?: any  // Original scraped metadata for refinement verification
+  schemaScore?: any  // Schema quality score
   metadata: {
     schemaId?: string  // Schema generation record ID for linking
     url: string
@@ -229,6 +231,7 @@ class SchemaGeneratorService {
         htmlScriptTags, // Add HTML-ready version for easy copy-paste
         schemaScore, // Add schema quality score
         validationResults,
+        scrapedMetadata: contentAnalysis, // Include for refinement verification
         metadata: {
           schemaId: generationId, // Include schema ID for linking to library
           url: request.url,
@@ -452,10 +455,20 @@ class SchemaGeneratorService {
     console.log('🔧 Refining schemas for URL:', url)
 
     try {
-      // Use AI to refine the existing schemas
+      // Scrape the URL to get original metadata for verification
+      console.log('🔍 Re-scraping URL to get original metadata for anti-hallucination verification')
+      const scrapedMetadata = await scraperService.scrapeUrl(url, {
+        timeout: 30000,
+        userAgent: params.userAgent
+      })
+
+      // Use AI to refine the existing schemas with metadata for verification
       // Note: Refinement always uses OpenAI (gpt-4o-mini) for cost efficiency
       // The critical initial generation uses the configured AI provider (Claude/OpenAI)
-      const { schemas: refinedSchemas, changes } = await openaiService.refineSchemas(schemas, url, options)
+      const { schemas: refinedSchemas, changes } = await openaiService.refineSchemas(schemas, url, {
+        ...options,
+        originalMetadata: scrapedMetadata
+      })
 
       // Calculate new score
       const schemaScore = this.calculateBasicScore(refinedSchemas)

@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
+import { validateRefinedSchema } from './schemaValidator.js'
 
 // Enhanced interfaces for comprehensive AEO metadata
 export interface AuthorInfo {
@@ -1784,7 +1785,7 @@ Return a JSON object with:
     }
   }
 
-  async refineSchemas(schemas: JsonLdSchema[], url: string, options?: any): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
+  async refineSchemas(schemas: JsonLdSchema[], url: string, options?: { originalMetadata?: any }): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
     console.log('🤖 AI refining schemas with intelligent enhancements...')
 
     // Initialize client lazily
@@ -1797,6 +1798,24 @@ Return a JSON object with:
 
     try {
       const schemaType = schemas[0]['@type']
+      const originalMetadata = options?.originalMetadata
+
+      // Build metadata context for verification
+      let metadataContext = ''
+      if (originalMetadata) {
+        metadataContext = `
+
+ORIGINAL SCRAPED METADATA (for verification only):
+${JSON.stringify({
+  author: originalMetadata.author || '[NOT FOUND]',
+  publishDate: originalMetadata.publishDate || '[NOT FOUND]',
+  modifiedDate: originalMetadata.modifiedDate || '[NOT FOUND]',
+  siteName: originalMetadata.siteName || '[NOT FOUND]',
+  publisher: originalMetadata.publisher || '[NOT FOUND]'
+}, null, 2)}
+
+⚠️ USE THIS METADATA TO VERIFY: Only add properties if they exist in the metadata above!`
+      }
 
       // Create a detailed prompt for AI refinement
       const refinementPrompt = `You are an expert in Schema.org structured data and SEO best practices. Your task is to enhance the following JSON-LD schema to achieve the highest possible quality score (aiming for grade A).
@@ -1804,23 +1823,39 @@ Return a JSON object with:
 CURRENT SCHEMA:
 ${JSON.stringify(schemas[0], null, 2)}
 
-ORIGINAL URL: ${url}
+ORIGINAL URL: ${url}${metadataContext}
 
 REFINEMENT OBJECTIVES:
-1. **Add Missing Critical Properties**: Identify and add any missing required or strongly recommended properties for ${schemaType} type
-2. **Enhance Existing Properties**: Improve descriptions, add relevant keywords, ensure completeness
-3. **Add Topical Keywords**: Include relevant industry-specific and topical keywords in appropriate fields (like keywords, about, mentions)
-4. **Follow Best Practices**: Ensure the schema follows Google's Rich Results guidelines and Schema.org specifications
-5. **Improve Discoverability**: Add properties that enhance search engine understanding (inLanguage, datePublished, dateModified, etc.)
+1. **Enhance Existing Properties**: Improve descriptions, add relevant keywords to existing arrays, ensure completeness
+2. **Add Topical Keywords**: Include relevant industry-specific and topical keywords in appropriate fields (like keywords, about, mentions)
+3. **Follow Best Practices**: Ensure the schema follows Google's Rich Results guidelines and Schema.org specifications
+4. **Improve Discoverability**: Add Schema.org best practices like speakable, breadcrumbs, proper relationships
+5. **Verify Before Adding**: ONLY add new factual properties (author, dates, etc.) if verified in the ORIGINAL SCRAPED METADATA above
+
+🚫 ANTI-HALLUCINATION PROTOCOL - CRITICAL RULES:
+❌ NEVER add "author" property unless verified in ORIGINAL SCRAPED METADATA above
+❌ NEVER add "datePublished" or "dateModified" unless verified in ORIGINAL SCRAPED METADATA above
+❌ NEVER add organization "address", "founder", "telephone", "email" unless verified in metadata
+❌ NEVER invent person names, social media profiles, or contact information
+❌ NEVER use placeholder values like "John Doe", "Jane Doe", "example.com", "[Your Company]"
+❌ NEVER add specific factual claims not present in the original schema or metadata
+❌ If metadata shows "[NOT FOUND]" for a field, DO NOT ADD that property
+
+✅ ALLOWED ENHANCEMENTS:
+✅ Add relevant keywords to existing keyword/about/mentions arrays
+✅ Improve existing descriptions with better SEO language
+✅ Add Schema.org structural properties: speakable, breadcrumb, isPartOf, potentialAction
+✅ Enhance service/product offers with pricing if already present
+✅ Add inLanguage if you can detect it from the URL
+✅ Improve existing organization/publisher info (don't add new factual details)
 
 SPECIFIC ENHANCEMENTS TO CONSIDER:
-- For Articles: Add keywords, articleSection, speakable, wordCount, inLanguage
-- For all types: Enhance description with SEO-friendly content, add relevant keywords
-- Add structured author information with sameAs links if possible
-- Include publisher information with logo
-- Add breadcrumb or isPartOf relationships
-- Include relevant FAQPage or HowTo schemas if applicable to content
-- Add aggregateRating or review data if relevant
+- For Articles: Add keywords, articleSection, speakable if not present
+- For Services: Enhance service descriptions, add serviceType
+- For all types: Add speakable selectors, improve keyword relevance
+- Add breadcrumb navigation if appropriate
+- Enhance existing descriptions for SEO
+- Add relevant "about" and "mentions" topic keywords
 
 IMPORTANT RULES:
 1. Return ONLY valid JSON (no markdown, no explanations)
@@ -1828,7 +1863,8 @@ IMPORTANT RULES:
 3. Don't remove any existing properties
 4. Only add properties that are valid for this schema type according to Schema.org
 5. Make descriptions natural and SEO-friendly (not spammy)
-6. Use realistic, professional values (not placeholders like "example.com")
+6. When in doubt about factual data (author, dates, organization details), OMIT rather than guess
+7. Focus on enhancement, not invention
 
 Return the enhanced schema as a JSON object, followed by a summary of changes made.
 
@@ -1843,7 +1879,15 @@ FORMAT YOUR RESPONSE AS:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in Schema.org structured data, SEO, and Answer Engine Optimization (AEO). You provide precise, valid JSON-LD schemas that follow all best practices.'
+            content: `You are an expert in Schema.org structured data, SEO, and Answer Engine Optimization (AEO). You provide precise, valid JSON-LD schemas that follow all best practices.
+
+🔒 CRITICAL ANTI-HALLUCINATION RULES:
+- NEVER invent author names, social profiles, or contact details
+- NEVER add factual information not verified in provided metadata
+- NEVER use placeholder values like "John Doe" or "example.com"
+- ONLY add new factual properties if explicitly provided in the original metadata
+- When uncertain about factual data, OMIT the property entirely
+- Focus on enhancing structure and SEO, not inventing facts`
           },
           {
             role: 'user',
@@ -1862,8 +1906,12 @@ FORMAT YOUR RESPONSE AS:
       const result = JSON.parse(responseContent)
 
       // Extract the refined schema and changes
-      const refinedSchema = result.schema || result
+      let refinedSchema = result.schema || result
       const changes = result.changes || ['Schema enhanced with AI improvements']
+
+      // Validate and sanitize the refined schema to prevent hallucinations
+      const originalSchema = schemas[0]
+      refinedSchema = validateRefinedSchema(originalSchema, refinedSchema, originalMetadata)
 
       console.log(`✅ AI refinement completed with ${changes.length} improvements`)
       console.log('📝 Changes made:', changes)
