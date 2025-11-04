@@ -16,25 +16,53 @@ import type {
 export const hubspotApi = {
   /**
    * Handle OAuth callback (exchange code for tokens)
-   * @param authToken - Clerk auth token (must be provided explicitly for callback)
+   * Supports both authenticated (SuperSchema-first) and unauthenticated (Marketplace-first) flows
+   * @param code - OAuth authorization code from HubSpot
+   * @param authToken - Clerk auth token (optional for marketplace-first flow)
+   * @param redirectUri - OAuth redirect URI
+   * @param state - State parameter for CSRF protection
    */
   handleCallback: async (
     code: string,
-    authToken: string,
-    redirectUri?: string
+    authToken: string | null,
+    redirectUri?: string,
+    state?: string | null
   ): Promise<ApiResponse<{
-    connectionId: string
+    connectionId?: string
     portalId: number
     portalName: string
     scopes: string[]
+    requiresSignup?: boolean
+    state?: string
+    flow?: 'authenticated' | 'pending'
   }>> => {
+    const headers: Record<string, string> = {}
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`
+    }
+
     const response = await api.post('/hubspot/callback', {
       code,
-      redirectUri
+      redirectUri,
+      state
     }, {
-      headers: {
-        Authorization: `Bearer ${authToken}`
-      }
+      headers
+    })
+    return response.data
+  },
+
+  /**
+   * Claim a pending HubSpot connection after user completes signup (Marketplace-first flow)
+   * @param state - State token from pending connection
+   */
+  claimPendingConnection: async (state: string): Promise<ApiResponse<{
+    connectionId: string
+    portalId: string
+    portalName: string
+    scopes: string[]
+  }>> => {
+    const response = await api.post('/hubspot/claim', {
+      state
     })
     return response.data
   },

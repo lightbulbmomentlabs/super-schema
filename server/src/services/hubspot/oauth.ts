@@ -11,6 +11,7 @@
  */
 
 import axios from 'axios'
+import crypto from 'crypto'
 import { encrypt, decrypt } from '../encryption.js'
 import { db } from '../database.js'
 
@@ -56,6 +57,40 @@ export class HubSpotOAuthService {
     if (!this.clientId || !this.clientSecret) {
       console.warn('⚠️ [HubSpot OAuth] Client ID or Secret not configured')
     }
+  }
+
+  /**
+   * Generate a secure state parameter for CSRF protection
+   * Should be stored client-side and validated on callback
+   */
+  generateStateParameter(): string {
+    // Generate 32 bytes (256 bits) of random data
+    const randomBytes = crypto.randomBytes(32)
+    // Convert to base64url (URL-safe base64)
+    const stateToken = randomBytes
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+
+    console.log('🔐 [HubSpot OAuth] Generated state parameter:', stateToken.substring(0, 10) + '...')
+    return stateToken
+  }
+
+  /**
+   * Validate state parameter (basic format check)
+   * Actual validation happens by checking if it exists in pending_hubspot_connections
+   */
+  isValidStateFormat(state: string): boolean {
+    // Should be 43 characters (32 bytes base64url encoded without padding)
+    // But allow some flexibility for different encoding
+    if (!state || state.length < 32 || state.length > 64) {
+      return false
+    }
+
+    // Should only contain base64url characters
+    const base64urlPattern = /^[A-Za-z0-9_-]+$/
+    return base64urlPattern.test(state)
   }
 
   /**

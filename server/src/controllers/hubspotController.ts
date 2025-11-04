@@ -7,25 +7,30 @@ import { db } from '../services/database.js'
 
 /**
  * Handle OAuth callback from Clerk/HubSpot
- * Exchange code for tokens and store connection
+ * Supports TWO flows:
+ * 1. SuperSchema-first: User authenticated → connects HubSpot (original flow)
+ * 2. Marketplace-first: User installs from HubSpot Marketplace → creates account later
  */
 export const handleOAuthCallback = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.auth!.userId
-    const { code, redirectUri } = req.body
+    const userId = req.auth?.userId // May be undefined for marketplace-first flow
+    const { code, redirectUri, state } = req.body
     const requestTimestamp = new Date().toISOString()
 
     console.log('🔄 [HubSpot Controller] Processing OAuth callback', {
-      userId,
+      userId: userId || 'UNAUTHENTICATED',
       hasCode: !!code,
+      hasState: !!state,
       codePreview: code ? code.substring(0, 20) + '...' : null,
+      statePreview: state ? state.substring(0, 10) + '...' : null,
       redirectUri: redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`,
-      timestamp: requestTimestamp
+      timestamp: requestTimestamp,
+      flow: userId ? 'superschema-first' : 'marketplace-first'
     })
 
     if (!code) {
       console.error('❌ [HubSpot Controller] Missing authorization code', {
-        userId,
+        userId: userId || 'UNAUTHENTICATED',
         timestamp: requestTimestamp,
         error: 'NO_CODE'
       })
@@ -36,63 +41,158 @@ export const handleOAuthCallback = asyncHandler(
     const region = code.match(/^(na1|eu1|ap1)-/)?.[1] || 'na1'
 
     try {
-      // Step 1: Exchange code for tokens
-      console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens', { userId, region })
-      const tokens = await hubspotOAuthService.exchangeCodeForTokens(
-        code,
-        redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
-      )
-      console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
-        userId,
-        region,
-        hasAccessToken: !!tokens.access_token,
-        hasRefreshToken: !!tokens.refresh_token,
-        expiresIn: tokens.expires_in
-      })
+      // FLOW DETECTION: Authenticated vs Unauthenticated
+      if (userId) {
+        // ========================================
+        // FLOW 1: SuperSchema-First (Authenticated)
+        // ========================================
+        console.log('🎯 [HubSpot Controller] Flow 1: SuperSchema-first (authenticated user)')
 
-      // Step 2: Get account information (pass region for correct endpoint)
-      console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { userId, region })
-      const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token, region)
-      console.log('✅ [HubSpot Controller] Step 2 complete: Account info received', {
-        userId,
-        region,
-        portalId: accountInfo.hub_id,
-        portalName: accountInfo.hub_domain,
-        scopeCount: accountInfo.scopes?.length || 0
-      })
+        // Step 1: Exchange code for tokens
+        console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens', { userId, region })
+        const tokens = await hubspotOAuthService.exchangeCodeForTokens(
+          code,
+          redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
+        )
+        console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
+          userId,
+          region,
+          hasAccessToken: !!tokens.access_token,
+          hasRefreshToken: !!tokens.refresh_token,
+          expiresIn: tokens.expires_in
+        })
 
-      // Step 3: Store connection
-      console.log('🔄 [HubSpot Controller] Step 3: Storing connection in database', { userId, region })
-      const connectionId = await hubspotOAuthService.storeConnection(
-        userId,
-        tokens,
-        accountInfo,
-        region
-      )
-      console.log('✅ [HubSpot Controller] Step 3 complete: Connection stored', {
-        userId,
-        region,
-        connectionId,
-        portalId: accountInfo.hub_id
-      })
-
-      console.log('✅ [HubSpot Controller] OAuth flow completed successfully', {
-        userId,
-        connectionId,
-        portalId: accountInfo.hub_id,
-        duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
-      })
-
-      res.json({
-        success: true,
-        data: {
-          connectionId,
+        // Step 2: Get account information
+        console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { userId, region })
+        const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token, region)
+        console.log('✅ [HubSpot Controller] Step 2 complete: Account info received', {
+          userId,
+          region,
           portalId: accountInfo.hub_id,
           portalName: accountInfo.hub_domain,
-          scopes: accountInfo.scopes
-        },
-        message: 'HubSpot account connected successfully'
-      })
+          scopeCount: accountInfo.scopes?.length || 0
+        })
+
+        // Step 3: Store connection immediately
+        console.log('🔄 [HubSpot Controller] Step 3: Storing connection in database', { userId, region })
+        const connectionId = await hubspotOAuthService.storeConnection(
+          userId,
+          tokens,
+          accountInfo,
+          region
+        )
+        console.log('✅ [HubSpot Controller] Step 3 complete: Connection stored', {
+          userId,
+          region,
+          connectionId,
+          portalId: accountInfo.hub_id
+        })
+
+        console.log('✅ [HubSpot Controller] OAuth flow completed successfully', {
+          userId,
+          connectionId,
+          portalId: accountInfo.hub_id,
+          duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
+        })
+
+        res.json({
+          success: true,
+          data: {
+            connectionId,
+            portalId: accountInfo.hub_id,
+            portalName: accountInfo.hub_domain,
+            scopes: accountInfo.scopes,
+            flow: 'authenticated'
+          },
+          message: 'HubSpot account connected successfully'
+        })
+
+      } else {
+        // ========================================
+        // FLOW 2: Marketplace-First (Unauthenticated)
+        // ========================================
+        console.log('🎯 [HubSpot Controller] Flow 2: Marketplace-first (unauthenticated user)')
+
+        // Validate state parameter
+        if (!state) {
+          console.error('❌ [HubSpot Controller] Missing state parameter for unauthenticated flow')
+          throw createError('State parameter is required', 400)
+        }
+
+        if (!hubspotOAuthService.isValidStateFormat(state)) {
+          console.error('❌ [HubSpot Controller] Invalid state parameter format', { state: state.substring(0, 10) + '...' })
+          throw createError('Invalid state parameter format', 400)
+        }
+
+        // Step 1: Exchange code for tokens IMMEDIATELY (before user completes signup)
+        // OAuth codes expire in ~60 seconds, so we must exchange them now
+        console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens (URGENT - code expires soon)', { region })
+        const tokens = await hubspotOAuthService.exchangeCodeForTokens(
+          code,
+          redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
+        )
+        console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
+          region,
+          hasAccessToken: !!tokens.access_token,
+          hasRefreshToken: !!tokens.refresh_token,
+          expiresIn: tokens.expires_in
+        })
+
+        // Step 2: Get account information
+        console.log('🔄 [HubSpot Controller] Step 2: Fetching account information', { region })
+        const accountInfo = await hubspotOAuthService.getAccountInfo(tokens.access_token, region)
+        console.log('✅ [HubSpot Controller] Step 2 complete: Account info received', {
+          region,
+          portalId: accountInfo.hub_id,
+          portalName: accountInfo.hub_domain,
+          scopeCount: accountInfo.scopes?.length || 0
+        })
+
+        // Step 3: Store as PENDING connection (to be claimed after signup)
+        console.log('🔄 [HubSpot Controller] Step 3: Storing pending connection', { state: state.substring(0, 10) + '...' })
+
+        // Encrypt tokens for storage
+        const { encrypt } = await import('../services/encryption.js')
+        const encryptedAccessToken = encrypt(tokens.access_token)
+        const encryptedRefreshToken = encrypt(tokens.refresh_token)
+
+        // Store both tokens as JSON in oauth_code field (reusing the field)
+        const tokenData = JSON.stringify({
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          expiresIn: tokens.expires_in,
+          region
+        })
+
+        await db.createPendingHubSpotConnection({
+          stateToken: state,
+          oauthCode: tokenData, // Actually storing encrypted tokens
+          hubspotPortalId: accountInfo.hub_id.toString(),
+          portalName: accountInfo.hub_domain,
+          redirectUri: redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`,
+          scopes: accountInfo.scopes,
+          expiresInMinutes: 30 // Give user 30 minutes to complete signup
+        })
+
+        console.log('✅ [HubSpot Controller] Pending connection stored, user has 30 minutes to complete signup', {
+          state: state.substring(0, 10) + '...',
+          portalId: accountInfo.hub_id,
+          duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
+        })
+
+        res.json({
+          success: true,
+          data: {
+            state,
+            portalId: accountInfo.hub_id,
+            portalName: accountInfo.hub_domain,
+            requiresSignup: true,
+            expiresInMinutes: 30,
+            flow: 'pending'
+          },
+          message: 'Please complete signup to finish connecting your HubSpot account'
+        })
+      }
     } catch (error) {
       // Enhanced error logging with context
       const errorDetails = {
@@ -164,6 +264,104 @@ export const getConnections = asyncHandler(
       success: true,
       data: connections
     })
+  }
+)
+
+/**
+ * Claim a pending HubSpot connection (Marketplace-first flow)
+ * After user completes signup, this endpoint claims the pending connection
+ */
+export const claimPendingConnection = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth!.userId
+    const { state } = req.body
+
+    console.log('🔄 [HubSpot Controller] Claiming pending connection', {
+      userId,
+      state: state ? state.substring(0, 10) + '...' : 'MISSING'
+    })
+
+    if (!state) {
+      throw createError('State parameter is required', 400)
+    }
+
+    // Validate state format
+    if (!hubspotOAuthService.isValidStateFormat(state)) {
+      throw createError('Invalid state parameter format', 400)
+    }
+
+    // Get pending connection
+    const pendingConnection = await db.getPendingHubSpotConnection(state)
+
+    if (!pendingConnection) {
+      console.warn('❌ [HubSpot Controller] Pending connection not found or expired', { state: state.substring(0, 10) + '...' })
+      throw createError('Connection not found or expired. Please reconnect from HubSpot.', 404)
+    }
+
+    try {
+      // Parse stored token data (encrypted tokens stored in oauth_code field)
+      const tokenData = JSON.parse(pendingConnection.oauthCode)
+      const { decrypt } = await import('../services/encryption.js')
+
+      // Decrypt tokens
+      const accessToken = decrypt(tokenData.accessToken)
+      const refreshToken = decrypt(tokenData.refreshToken)
+
+      // Calculate expiration time
+      const expiresAt = new Date(Date.now() + tokenData.expiresIn * 1000)
+
+      // Store connection in hubspot_connections table
+      console.log('🔄 [HubSpot Controller] Storing claimed connection', {
+        userId,
+        portalId: pendingConnection.hubspotPortalId,
+        region: tokenData.region
+      })
+
+      const connectionId = await db.createHubSpotConnection({
+        userId,
+        hubspotPortalId: pendingConnection.hubspotPortalId!,
+        portalName: pendingConnection.portalName || undefined,
+        accessToken: tokenData.accessToken, // Already encrypted
+        refreshToken: tokenData.refreshToken, // Already encrypted
+        tokenExpiresAt: expiresAt,
+        scopes: pendingConnection.scopes || [],
+        region: tokenData.region
+      })
+
+      // Mark pending connection as claimed (atomic operation handled by database function)
+      await db.claimPendingHubSpotConnection(state, userId)
+
+      console.log('✅ [HubSpot Controller] Pending connection claimed successfully', {
+        userId,
+        connectionId,
+        portalId: pendingConnection.hubspotPortalId
+      })
+
+      res.json({
+        success: true,
+        data: {
+          connectionId,
+          portalId: pendingConnection.hubspotPortalId,
+          portalName: pendingConnection.portalName,
+          scopes: pendingConnection.scopes
+        },
+        message: 'HubSpot account connected successfully'
+      })
+
+    } catch (error) {
+      console.error('❌ [HubSpot Controller] Failed to claim pending connection', {
+        userId,
+        state: state.substring(0, 10) + '...',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+
+      // If it's a token/decryption error, provide helpful message
+      if (error instanceof Error && (error.message.includes('decrypt') || error.message.includes('JSON'))) {
+        throw createError('Connection data is corrupted. Please reconnect from HubSpot.', 500)
+      }
+
+      throw error
+    }
   }
 )
 

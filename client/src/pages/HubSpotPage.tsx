@@ -177,11 +177,25 @@ export default function HubSpotPage() {
     const redirectUri = `${window.location.origin}/hubspot/callback`
     const scopes = ['content', 'oauth'] // Required scopes for CMS access
 
+    // Generate secure state parameter for CSRF protection
+    const stateArray = new Uint8Array(32)
+    crypto.getRandomValues(stateArray)
+    const state = btoa(String.fromCharCode.apply(null, Array.from(stateArray)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+
+    // Store state in session storage for validation on callback
+    sessionStorage.setItem('hubspot_oauth_state', state)
+
+    console.log('🔐 [HubSpot OAuth] Generated state parameter:', state.substring(0, 10) + '...')
+
     // Build HubSpot authorization URL
     const authUrl = new URL('https://app.hubspot.com/oauth/authorize')
     authUrl.searchParams.set('client_id', clientId)
     authUrl.searchParams.set('redirect_uri', redirectUri)
     authUrl.searchParams.set('scope', scopes.join(' '))
+    authUrl.searchParams.set('state', state) // Add state parameter for CSRF protection
 
     // Redirect to HubSpot authorization page
     window.location.href = authUrl.toString()

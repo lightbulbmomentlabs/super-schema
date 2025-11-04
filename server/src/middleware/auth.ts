@@ -120,18 +120,71 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
 
 export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   // Optional authentication - doesn't fail if no auth provided
+  console.log('🔓 [Auth] Processing optional auth:', {
+    url: req.url,
+    method: req.method,
+    hasAuthHeader: !!req.headers.authorization
+  })
+
   const authHeader = req.headers.authorization
 
-  if (!authHeader) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('🔓 [Auth] No auth header, continuing without authentication')
     return next()
   }
 
-  if (authHeader.startsWith('Bearer ')) {
-    req.auth = {
-      userId: 'mock-user-id',
-      sessionId: 'mock-session-id'
-    }
-  }
+  const token = authHeader.substring(7) // Remove 'Bearer ' prefix
 
-  next()
+  try {
+    // Decode JWT token (same logic as authMiddleware)
+    const parts = token.split('.')
+    if (parts.length !== 3) {
+      console.warn('⚠️ [Auth] Invalid token format, continuing without auth')
+      return next()
+    }
+
+    const base64Payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString())
+
+    if (payload.sub) {
+      console.log('✅ [Auth] Optional auth decoded successfully:', {
+        userId: payload.sub,
+        email: payload.email || payload.primary_email_address_id
+      })
+
+      req.auth = {
+        userId: payload.sub,
+        sessionId: payload.sid || 'unknown-session',
+        email: payload.email || payload.primary_email_address_id,
+        firstName: payload.first_name || payload.given_name,
+        lastName: payload.last_name || payload.family_name
+      }
+      req.userId = payload.sub
+
+      // Fetch team context if teams feature is enabled
+      if (FEATURE_FLAGS.TEAMS_ENABLED || FEATURE_FLAGS.TEAMS_MIGRATION_COMPLETE) {
+        getUserActiveTeam(payload.sub)
+          .then(async (teamId) => {
+            if (req.auth && teamId) {
+              req.auth.teamId = teamId
+              req.auth.isTeamOwner = await isTeamOwner(payload.sub, teamId)
+            }
+            next()
+          })
+          .catch((error) => {
+            console.warn('⚠️ [Auth] Failed to fetch team context:', error)
+            next()
+          })
+      } else {
+        next()
+      }
+    } else {
+      console.warn('⚠️ [Auth] Token missing "sub" field, continuing without auth')
+      next()
+    }
+  } catch (error) {
+    console.warn('⚠️ [Auth] Failed to decode optional auth token:', error)
+    // Continue without auth instead of failing
+    next()
+  }
 }

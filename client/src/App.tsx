@@ -58,6 +58,9 @@ import { TeamProvider } from './contexts/TeamContext'
 // Providers
 import { ApiProvider } from './providers/ApiProvider'
 
+// Hooks
+import { usePendingHubSpotConnection } from './hooks/usePendingHubSpotConnection'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -77,16 +80,13 @@ const queryClient = new QueryClient({
   },
 })
 
-function App() {
+function AppContent() {
+  // Auto-claim pending HubSpot connections after signup (marketplace-first flow)
+  usePendingHubSpotConnection()
+
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <ApiProvider>
-          <TeamProvider>
-            <OnboardingProvider>
-              <ScrollToTop />
-              <div className="min-h-screen bg-background">
-                <Routes>
+    <div className="min-h-screen bg-background">
+      <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/pricing" element={<PricingPage />} />
@@ -196,8 +196,20 @@ function App() {
 
           {/* Fallback route */}
           <Route path="*" element={<div>404 - Page Not Found</div>} />
-                </Routes>
-              </div>
+      </Routes>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider>
+          <TeamProvider>
+            <OnboardingProvider>
+              <ScrollToTop />
+              <AppContent />
               {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
             </OnboardingProvider>
           </TeamProvider>

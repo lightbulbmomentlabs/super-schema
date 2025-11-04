@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authMiddleware } from '../middleware/auth.js'
+import { authMiddleware, optionalAuth } from '../middleware/auth.js'
 import * as hubspotController from '../controllers/hubspotController.js'
 
 const router = Router()
@@ -7,11 +7,16 @@ const router = Router()
 // Health check endpoint (public - no auth required)
 router.get('/health', hubspotController.healthCheck)
 
-// All routes below require authentication (callback is called from authenticated client)
+// OAuth callback - supports BOTH authenticated and unauthenticated requests
+// - Authenticated: SuperSchema-first flow (user creates account, then connects)
+// - Unauthenticated: Marketplace-first flow (user installs from HubSpot, then creates account)
+router.post('/callback', optionalAuth, hubspotController.handleOAuthCallback)
+
+// All routes below require authentication
 router.use(authMiddleware)
 
-// OAuth callback - receives code from client after HubSpot redirect
-router.post('/callback', hubspotController.handleOAuthCallback)
+// Claim pending connection (marketplace-first flow)
+router.post('/claim', hubspotController.claimPendingConnection)
 
 // Connection management
 router.get('/connections', hubspotController.getConnections)

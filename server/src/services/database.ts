@@ -2425,6 +2425,188 @@ class DatabaseService {
     }
   }
 
+  // ============================================
+  // Pending HubSpot Connections Methods
+  // ============================================
+
+  /**
+   * Create a pending HubSpot connection for marketplace-first installations
+   * This allows users to install from HubSpot Marketplace before creating a SuperSchema account
+   */
+  async createPendingHubSpotConnection(params: {
+    stateToken: string
+    oauthCode: string
+    hubspotPortalId?: string
+    portalName?: string
+    redirectUri: string
+    scopes?: string[]
+    expiresInMinutes?: number
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createPendingHubSpotConnection', params)
+      return 'mock-pending-id'
+    }
+
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + (params.expiresInMinutes || 30))
+
+    const { data, error } = await this.supabase
+      .from('pending_hubspot_connections')
+      .insert({
+        state_token: params.stateToken,
+        oauth_code: params.oauthCode,
+        hubspot_portal_id: params.hubspotPortalId,
+        portal_name: params.portalName,
+        redirect_uri: params.redirectUri,
+        scopes: params.scopes,
+        expires_at: expiresAt.toISOString()
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('[Pending Connection] Error creating:', error)
+      throw error
+    }
+
+    console.log(`[Pending Connection] Created for state ${params.stateToken}, expires ${expiresAt.toISOString()}`)
+    return data.id
+  }
+
+  /**
+   * Get a pending HubSpot connection by state token
+   */
+  async getPendingHubSpotConnection(stateToken: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getPendingHubSpotConnection', { stateToken })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('pending_hubspot_connections')
+      .select('*')
+      .eq('state_token', stateToken)
+      .is('claimed_at', null)
+      .single()
+
+    if (error) {
+      // Not found is not an error for this use case
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+
+    // Check if expired
+    if (new Date(data.expires_at) < new Date()) {
+      console.warn(`[Pending Connection] State ${stateToken} has expired`)
+      return null
+    }
+
+    return {
+      id: data.id,
+      stateToken: data.state_token,
+      oauthCode: data.oauth_code,
+      hubspotPortalId: data.hubspot_portal_id,
+      portalName: data.portal_name,
+      redirectUri: data.redirect_uri,
+      scopes: data.scopes,
+      expiresAt: data.expires_at,
+      createdAt: data.created_at
+    }
+  }
+
+  /**
+   * Claim a pending HubSpot connection (atomically)
+   * Uses the database function for row-level locking
+   */
+  async claimPendingHubSpotConnection(
+    stateToken: string,
+    userId: string
+  ): Promise<{
+    oauthCode: string
+    redirectUri: string
+    portalId?: string
+    portalName?: string
+  } | null> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: claimPendingHubSpotConnection', { stateToken, userId })
+      return {
+        oauthCode: 'mock-code',
+        redirectUri: 'http://localhost',
+        portalId: 'mock-portal',
+        portalName: 'Mock Portal'
+      }
+    }
+
+    try {
+      const { data, error } = await this.supabase.rpc('claim_pending_hubspot_connection', {
+        p_state_token: stateToken,
+        p_user_id: userId
+      })
+
+      if (error) {
+        console.error('[Pending Connection] Error claiming:', error)
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        console.warn(`[Pending Connection] No connection found or already claimed: ${stateToken}`)
+        return null
+      }
+
+      const connection = Array.isArray(data) ? data[0] : data
+
+      console.log(`[Pending Connection] Successfully claimed by user ${userId}`)
+      return {
+        oauthCode: connection.oauth_code,
+        redirectUri: connection.redirect_uri,
+        portalId: connection.portal_id,
+        portalName: connection.portal_name
+      }
+    } catch (error: any) {
+      // Handle specific error cases
+      if (error.message?.includes('expired')) {
+        console.warn(`[Pending Connection] State ${stateToken} has expired`)
+        return null
+      }
+      if (error.message?.includes('already claimed')) {
+        console.warn(`[Pending Connection] State ${stateToken} already claimed`)
+        return null
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Clean up expired pending connections
+   * Should be called periodically (e.g., via cron job)
+   */
+  async cleanupExpiredPendingConnections(): Promise<number> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: cleanupExpiredPendingConnections')
+      return 0
+    }
+
+    try {
+      const { data, error } = await this.supabase.rpc('cleanup_expired_pending_hubspot_connections')
+
+      if (error) {
+        console.error('[Pending Connection] Cleanup error:', error)
+        throw error
+      }
+
+      const count = data as number
+      if (count > 0) {
+        console.log(`[Pending Connection] Cleaned up ${count} expired connections`)
+      }
+      return count
+    } catch (error) {
+      console.error('[Pending Connection] Cleanup failed:', error)
+      throw error
+    }
+  }
+
   async createHubSpotSyncJob(params: {
     userId: string
     connectionId: string
