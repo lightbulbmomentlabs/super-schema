@@ -466,7 +466,7 @@ export const JOKES: Joke[] = [
   { id: 459, delivery: "What do you call Santa when he takes a selfie?", punchline: "Elfie Claus." },
   { id: 460, delivery: "Why did the Christmas lights file a complaint?", punchline: "They were getting burned out." },
   { id: 461, delivery: "What’s Santa’s favorite shape?", punchline: "A snow-hexagon." },
-  { id: 462, delivery: "What did Mrs. Claus say when Santa tracked in snow?", punchline: "\\"I told you to wipe your boots, you snow better!\\"" },
+  { id: 462, delivery: "What did Mrs. Claus say when Santa tracked in snow?", punchline: "I told you to wipe your boots, you snow better!" },
   { id: 463, delivery: "Why did the elf wear headphones?", punchline: "He was listening to wrap music." },
   { id: 464, delivery: "What do you call a snowman with a carrot nose and a bad attitude?", punchline: "Rude-olph." },
   { id: 465, delivery: "Why did the candy cane break up with the lollipop?", punchline: "It couldn’t handle the stickiness." },
