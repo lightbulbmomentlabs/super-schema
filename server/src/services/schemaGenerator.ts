@@ -50,6 +50,12 @@ class SchemaGeneratorService {
     const startTime = Date.now()
     let generationId: string | null = null
 
+    // Move these outside try block so they're accessible in catch block
+    const isLocalhost = process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL
+    const shouldChargeCredits = request.shouldChargeCredits !== false  // Default to true
+    const useAtomicCredits = process.env.ENABLE_ATOMIC_CREDITS !== 'false'
+    let creditsConsumed = false
+
     try {
       // 1. Validate URL accessibility
       const urlValidation = await scraperService.validateUrl(request.url)
@@ -58,13 +64,6 @@ class SchemaGeneratorService {
       }
 
       // 2. Check if user has sufficient credits (skip in localhost/development or if not charging)
-      const isLocalhost = process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL
-      const shouldChargeCredits = request.shouldChargeCredits !== false  // Default to true
-
-      // Feature flag for atomic credit consumption (default: enabled)
-      const useAtomicCredits = process.env.ENABLE_ATOMIC_CREDITS !== 'false'
-
-      let creditsConsumed = false
 
       if (!isLocalhost && shouldChargeCredits) {
         // OPTION C: Consume credits BEFORE generation (prevents race condition)
@@ -266,8 +265,8 @@ class SchemaGeneratorService {
         ipAddress: request.ipAddress || 'unknown',
         userAgent: request.userAgent || 'unknown',
         requestedSchemaType: request.schemaType || 'Auto',
-        shouldChargeCredits: request.shouldChargeCredits !== false,
-        isLocalhost: process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL,
+        shouldChargeCredits: shouldChargeCredits,
+        isLocalhost: isLocalhost,
         timestamp: new Date().toISOString()
       }
 
