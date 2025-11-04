@@ -59,10 +59,30 @@ class SchemaGeneratorService {
       const isLocalhost = process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL
       const shouldChargeCredits = request.shouldChargeCredits !== false  // Default to true
 
+      // Feature flag for atomic credit consumption (default: enabled)
+      const useAtomicCredits = process.env.ENABLE_ATOMIC_CREDITS !== 'false'
+
+      let creditsConsumed = false
+
       if (!isLocalhost && shouldChargeCredits) {
-        const user = await db.getUser(request.userId)
-        if (!user || user.creditBalance < 1) {
-          throw new Error('Insufficient credits')
+        // OPTION C: Consume credits BEFORE generation (prevents race condition)
+        if (useAtomicCredits) {
+          console.log('💰 [Atomic Credits] Consuming credits BEFORE generation')
+          creditsConsumed = await db.consumeCreditsAtomic(
+            request.userId,
+            1,
+            `Schema generation (pre-paid) for ${request.url}`
+          )
+
+          if (!creditsConsumed) {
+            throw new Error('Insufficient credits or credit system busy')
+          }
+        } else {
+          // Legacy flow: Check credits first
+          const user = await db.getUser(request.userId)
+          if (!user || user.creditBalance < 1) {
+            throw new Error('Insufficient credits')
+          }
         }
       } else {
         if (isLocalhost) {
@@ -155,23 +175,21 @@ class SchemaGeneratorService {
         console.warn(`🚨 Development mode: Using all ${schemasToUse.length} schemas (${validSchemas.length} passed strict validation)`)
       }
 
-      // 9. Consume credits only on successful generation (skip in localhost/development or if not charging)
-      if (!isLocalhost && shouldChargeCredits) {
-        const creditsConsumed = await db.consumeCredits(
+      // 9. Credits already consumed (moved to step 2 for atomic operation)
+      // Legacy mode (useAtomicCredits=false): Consume credits AFTER generation
+      if (!isLocalhost && shouldChargeCredits && !useAtomicCredits) {
+        const legacyCreditsConsumed = await db.consumeCredits(
           request.userId,
           1,
           `Schema generation (${schemaType}) for ${request.url}`
         )
 
-        if (!creditsConsumed) {
+        if (!legacyCreditsConsumed) {
           throw new Error('Failed to consume credits')
         }
-      } else {
-        if (isLocalhost) {
-          console.log('🚀 Development mode: Skipping credit consumption for localhost testing')
-        } else {
-          console.log('💰 Additional schema: No credits charged (URL already paid for)')
-        }
+        console.log('💰 [Legacy Mode] Credits consumed AFTER successful generation')
+      } else if (!isLocalhost && shouldChargeCredits && useAtomicCredits) {
+        console.log('💰 [Atomic Credits] Credits already consumed at start - no additional charge')
       }
 
       // 10. Schema quality calculation removed for simplified version
@@ -253,6 +271,22 @@ class SchemaGeneratorService {
       // Include scraper diagnostics if available (Phase 1.5: Enhanced Scraper Debugging)
       if (error && typeof error === 'object' && 'scraperDiagnostics' in error) {
         requestContext.scraperDiagnostics = (error as any).scraperDiagnostics
+      }
+
+      // OPTION C: Refund credits if they were consumed but generation failed (atomic mode only)
+      if (!isLocalhost && shouldChargeCredits && useAtomicCredits && creditsConsumed) {
+        try {
+          await db.refundCredits(
+            request.userId,
+            1,
+            `Refund: Schema generation failed for ${request.url} - ${errorMessage.substring(0, 100)}`
+          )
+          console.log('💰 [Atomic Credits] Refunded 1 credit due to generation failure')
+          requestContext.creditRefunded = true
+        } catch (refundError) {
+          console.error('❌ [Atomic Credits] Failed to refund credits:', refundError)
+          requestContext.creditRefundFailed = true
+        }
       }
 
       // Update generation record with detailed failure information (if record was created)
@@ -519,7 +553,9 @@ class SchemaGeneratorService {
 
     // Check for credit/authorization issues
     if (errorMessage.includes('credits') ||
-        errorMessage.includes('Insufficient credits')) {
+        errorMessage.includes('Insufficient credits') ||
+        errorMessage.includes('Failed to consume credits') ||
+        errorMessage.includes('credit system busy')) {
       return 'insufficient_credits'
     }
 
@@ -531,6 +567,15 @@ class SchemaGeneratorService {
   private determineFailureStage(errorMessage: string, stackTrace: string): string {
     // Check stack trace and error message for clues about failure stage
     const combinedContext = `${errorMessage} ${stackTrace}`.toLowerCase()
+
+    // Credit consumption stage indicators (check FIRST before generic post_processing)
+    if (errorMessage.includes('credits') ||
+        errorMessage.includes('Insufficient credits') ||
+        errorMessage.includes('Failed to consume credits') ||
+        errorMessage.includes('credit system busy') ||
+        combinedContext.includes('consumecredits')) {
+      return 'post_processing'
+    }
 
     // Scraping stage indicators
     if (combinedContext.includes('scrapeurl') ||
@@ -555,9 +600,8 @@ class SchemaGeneratorService {
       return 'validation'
     }
 
-    // Post-processing stage indicators
-    if (combinedContext.includes('consumecredits') ||
-        combinedContext.includes('updateschemageneration') ||
+    // Post-processing stage indicators (generic)
+    if (combinedContext.includes('updateschemageneration') ||
         combinedContext.includes('database')) {
       return 'post_processing'
     }

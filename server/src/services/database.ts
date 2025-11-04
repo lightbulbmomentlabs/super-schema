@@ -471,6 +471,86 @@ class DatabaseService {
     return data || false
   }
 
+  /**
+   * Atomically consume credits with pessimistic row-level locking
+   * Prevents race conditions where concurrent requests could cause negative balances
+   * @param userId - The user ID
+   * @param amount - Number of credits to consume
+   * @param description - Description for the credit transaction
+   * @returns true if credits were consumed, false if insufficient credits or lock unavailable
+   */
+  async consumeCreditsAtomic(
+    userId: string,
+    amount: number,
+    description: string
+  ): Promise<boolean> {
+    if (!this.isDatabaseAvailable()) {
+      // Fallback to non-atomic version for mock environment
+      return this.consumeCredits(userId, amount, description)
+    }
+
+    try {
+      const { data, error } = await this.supabase.rpc('consume_credits_atomic', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_description: description
+      })
+
+      if (error) {
+        // Check if it's a lock timeout error
+        if (error.message?.includes('lock_not_available') ||
+            error.message?.includes('could not obtain lock')) {
+          console.warn(`[Credit Lock] Lock unavailable for user ${userId}, will retry`)
+          return false
+        }
+        throw error
+      }
+
+      return data || false
+    } catch (error) {
+      console.error('[Credit Atomic] Error consuming credits:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Refund credits to a user
+   * Used when schema generation fails after credits were consumed
+   * @param userId - The user ID
+   * @param amount - Number of credits to refund
+   * @param description - Description for the refund transaction
+   */
+  async refundCredits(
+    userId: string,
+    amount: number,
+    description: string
+  ): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: refundCredits', { userId, amount, description })
+      const user = this.mockUsers.get(userId)
+      if (user) {
+        user.creditBalance += amount
+        user.totalCreditsUsed -= amount
+        user.updatedAt = new Date().toISOString()
+        this.mockUsers.set(userId, user)
+      }
+      return
+    }
+
+    const { error } = await this.supabase.rpc('refund_credits', {
+      p_user_id: userId,
+      p_amount: amount,
+      p_description: description
+    })
+
+    if (error) {
+      console.error('[Credit Refund] Error refunding credits:', error)
+      throw error
+    }
+
+    console.log(`[Credit Refund] Refunded ${amount} credits to user ${userId}: ${description}`)
+  }
+
   async getCreditTransactions(
     userId: string,
     page: number = 1,
