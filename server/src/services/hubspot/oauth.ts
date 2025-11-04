@@ -95,15 +95,17 @@ export class HubSpotOAuthService {
 
   /**
    * Exchange authorization code for access token
-   * Automatically detects and uses the correct regional endpoint
+   * Uses unified api.hubapi.com endpoint with automatic region routing
+   * HubSpot's Cloudflare Worker routes based on the authorization code prefix
    */
   async exchangeCodeForTokens(code: string, redirectUri: string): Promise<HubSpotTokenResponse> {
     const region = getRegionFromCode(code)
-    const baseUrl = getHubSpotApiBaseUrl(region)
-    const tokenUrl = `${baseUrl}/oauth/v1/token`
+    // IMPORTANT: Always use api.hubapi.com - HubSpot handles regional routing automatically
+    // Region-specific endpoints like api.eu1.hubapi.com do NOT exist in DNS
+    const tokenUrl = 'https://api.hubapi.com/oauth/v1/token'
 
     try {
-      console.log('🔄 [HubSpot OAuth] Exchanging code for tokens', {
+      console.log('🔄 [HubSpot OAuth] Exchanging code for tokens (unified endpoint with auto-routing)', {
         region,
         codePrefix: code.substring(0, 4) + '...',
         endpoint: tokenUrl
@@ -157,14 +159,16 @@ export class HubSpotOAuthService {
 
   /**
    * Refresh access token using refresh token
-   * Note: Refresh tokens don't have region prefix, so region must be provided
+   * Uses unified api.hubapi.com endpoint with automatic region routing
+   * HubSpot's refresh tokens contain region info for automatic routing
    */
   async refreshAccessToken(refreshToken: string, region: string = 'na1'): Promise<HubSpotTokenResponse> {
-    const baseUrl = getHubSpotApiBaseUrl(region)
-    const tokenUrl = `${baseUrl}/oauth/v1/token`
+    // IMPORTANT: Always use api.hubapi.com - HubSpot handles regional routing automatically
+    // The refresh token itself contains region information for routing
+    const tokenUrl = 'https://api.hubapi.com/oauth/v1/token'
 
     try {
-      console.log('🔄 [HubSpot OAuth] Refreshing access token', { region })
+      console.log('🔄 [HubSpot OAuth] Refreshing access token (unified endpoint with auto-routing)', { region })
 
       const response = await axios.post<HubSpotTokenResponse>(
         tokenUrl,
@@ -202,15 +206,16 @@ export class HubSpotOAuthService {
 
   /**
    * Get account information using access token
-   * Note: Access tokens encode the region, HubSpot will route automatically
-   * but we still need to use the correct regional endpoint
+   * Uses unified api.hubapi.com endpoint with automatic region routing
+   * HubSpot's access tokens contain region info for automatic routing
    */
   async getAccountInfo(accessToken: string, region: string = 'na1'): Promise<HubSpotAccountInfo> {
-    const baseUrl = getHubSpotApiBaseUrl(region)
-    const accountInfoUrl = `${baseUrl}/oauth/v1/access-tokens/${accessToken}`
+    // IMPORTANT: Always use api.hubapi.com - HubSpot handles regional routing automatically
+    // The access token itself contains region information for routing
+    const accountInfoUrl = `https://api.hubapi.com/oauth/v1/access-tokens/${accessToken}`
 
     try {
-      console.log('🔄 [HubSpot OAuth] Getting account information', {
+      console.log('🔄 [HubSpot OAuth] Getting account information (unified endpoint with auto-routing)', {
         region,
         endpoint: accountInfoUrl,
         tokenPrefix: accessToken.substring(0, 10) + '...'
