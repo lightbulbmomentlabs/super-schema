@@ -1343,29 +1343,68 @@ export default function LibraryPage() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold">Schema Quality</h2>
-                    <button
-                      onClick={handleRefineSchema}
-                      disabled={isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
-                        isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      )}
-                    >
-                      {isRefining ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Refining...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3 w-3" />
-                          Refine with AI ({MAX_REFINEMENTS - (selectedSchemaRecord?.refinementCount || 0)} left)
-                        </>
-                      )}
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={handleRefineSchema}
+                        disabled={isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
+                          isRefining || (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS
+                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        )}
+                        title={
+                          (selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS
+                            ? `Maximum of ${MAX_REFINEMENTS} refinements reached`
+                            : undefined
+                        }
+                      >
+                        {isRefining ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Refining...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3" />
+                            Refine with AI
+                          </>
+                        )}
+                      </button>
+                      {/* Refinement counter */}
+                      <div className="text-xs">
+                        {(selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS ? (
+                          <span className="text-destructive font-medium">
+                            No refinements left
+                          </span>
+                        ) : (
+                          <span className="text-primary font-medium">
+                            {MAX_REFINEMENTS - (selectedSchemaRecord?.refinementCount || 0)} refinement{MAX_REFINEMENTS - (selectedSchemaRecord?.refinementCount || 0) !== 1 ? 's' : ''} left
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Refinement Limit Alert */}
+                  {(selectedSchemaRecord?.refinementCount || 0) >= MAX_REFINEMENTS && (
+                    <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                      <div className="flex items-start">
+                        <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                            AI Refinement Limit Reached
+                          </h4>
+                          <p className="text-sm text-amber-800 dark:text-amber-200">
+                            You've used all {MAX_REFINEMENTS} AI refinements for this schema. To make further improvements, generate a new schema or manually edit the current one.
+                          </p>
+                          <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                            {selectedSchemaRecord?.refinementCount || 0}/{MAX_REFINEMENTS} refinements used
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Changes Banner */}
                   {showChangesBanner && highlightedChanges.length > 0 && (

@@ -3,6 +3,7 @@ import {
   TrendingUp,
   CheckCircle,
   AlertTriangle,
+  AlertCircle,
   Info,
   Star,
   Award,
@@ -266,27 +267,62 @@ export default function SchemaScore({
         </div>
       </div>
 
+      {/* Refinement Limit Alert - Show when limit reached */}
+      {!canRefine && onRefineSchema && (
+        <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                AI Refinement Limit Reached
+              </h4>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                You've used all {maxRefinements} AI refinements for this schema. To make further improvements, generate a new schema or manually edit the current one.
+              </p>
+              <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                {refinementCount}/{maxRefinements} refinements used
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 pb-6 border-t border-border">
         <div className="flex items-center space-x-4">
           {onRefineSchema && (
-            <button
-              onClick={onRefineSchema}
-              disabled={isRefining || !canRefine}
-              className="flex items-center px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isRefining ? (
-                <>
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
-                  Refining Schema...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Refine with AI ({maxRefinements - refinementCount} left)
-                </>
-              )}
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={onRefineSchema}
+                disabled={isRefining || !canRefine}
+                className="flex items-center px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!canRefine ? `Maximum of ${maxRefinements} refinements reached` : undefined}
+              >
+                {isRefining ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
+                    Refining Schema...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Refine with AI
+                  </>
+                )}
+              </button>
+              {/* Always show refinement counter below button */}
+              <div className="text-xs text-center text-muted-foreground">
+                {canRefine ? (
+                  <span className="text-primary font-medium">
+                    {maxRefinements - refinementCount} refinement{maxRefinements - refinementCount !== 1 ? 's' : ''} left
+                  </span>
+                ) : (
+                  <span className="text-destructive font-medium">
+                    No refinements left
+                  </span>
+                )}
+              </div>
+            </div>
           )}
           <button
             onClick={() => setShowDetails(!showDetails)}
@@ -305,11 +341,6 @@ export default function SchemaScore({
             View Original Page
           </a>
         </div>
-        {!canRefine && (
-          <div className="text-xs text-muted-foreground">
-            {refinementCount}/{maxRefinements} refinements used
-          </div>
-        )}
       </div>
 
       {/* Strengths */}
