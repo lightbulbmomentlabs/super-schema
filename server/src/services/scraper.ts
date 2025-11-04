@@ -288,7 +288,48 @@ class ScraperService {
 
     } catch (error) {
       console.error(`Scraping error for ${url}:`, error)
-      throw new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+      // Capture rich diagnostics for debugging
+      const diagnostics: any = {
+        requestedUrl: url,
+        errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      }
+
+      try {
+        // Try to capture page state (may fail if page never loaded)
+        const currentUrl = await page.url().catch(() => null)
+        const pageTitle = await page.title().catch(() => null)
+        const htmlContent = await page.content().catch(() => null)
+
+        diagnostics.currentUrl = currentUrl
+        diagnostics.pageTitle = pageTitle
+        diagnostics.htmlSize = htmlContent ? htmlContent.length : 0
+
+        // Extract timeout details from error message if present
+        if (diagnostics.errorMessage.includes('Waiting for selector')) {
+          const selectorMatch = diagnostics.errorMessage.match(/Waiting for selector `([^`]+)`/)
+          const timeoutMatch = diagnostics.errorMessage.match(/(\d+)ms exceeded/)
+          diagnostics.timeoutSelector = selectorMatch ? selectorMatch[1] : null
+          diagnostics.timeoutDuration = timeoutMatch ? parseInt(timeoutMatch[1]) : null
+        }
+
+        // Check if this was a specific operation timeout
+        if (diagnostics.errorMessage.toLowerCase().includes('timeout') ||
+            diagnostics.errorMessage.toLowerCase().includes('timed out')) {
+          diagnostics.isTimeout = true
+        }
+      } catch (diagnosticsError) {
+        // If diagnostics collection fails, just note it
+        diagnostics.diagnosticsError = 'Failed to capture some diagnostics'
+      }
+
+      // Create enhanced error with diagnostics attached
+      const enhancedError: any = new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      enhancedError.scraperDiagnostics = diagnostics
+      enhancedError.originalError = error
+
+      throw enhancedError
     } finally {
       await page.close()
     }

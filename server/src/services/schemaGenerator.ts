@@ -241,13 +241,18 @@ class SchemaGeneratorService {
         : 'openai-gpt-4o'
 
       // Build request context for debugging
-      const requestContext = {
+      const requestContext: any = {
         ipAddress: request.ipAddress || 'unknown',
         userAgent: request.userAgent || 'unknown',
         requestedSchemaType: request.schemaType || 'Auto',
         shouldChargeCredits: request.shouldChargeCredits !== false,
         isLocalhost: process.env.NODE_ENV === 'development' || !process.env.SUPABASE_URL,
         timestamp: new Date().toISOString()
+      }
+
+      // Include scraper diagnostics if available (Phase 1.5: Enhanced Scraper Debugging)
+      if (error && typeof error === 'object' && 'scraperDiagnostics' in error) {
+        requestContext.scraperDiagnostics = (error as any).scraperDiagnostics
       }
 
       // Update generation record with detailed failure information (if record was created)
@@ -467,6 +472,8 @@ class SchemaGeneratorService {
     if (errorMessage.includes('URL not accessible') ||
         errorMessage.includes('scrape') ||
         errorMessage.includes('fetch') ||
+        errorMessage.includes('Waiting for selector') ||
+        errorMessage.toLowerCase().includes('waiting for') ||
         errorMessage.includes('ENOTFOUND') ||
         errorMessage.includes('ECONNREFUSED') ||
         errorMessage.includes('getaddrinfo')) {

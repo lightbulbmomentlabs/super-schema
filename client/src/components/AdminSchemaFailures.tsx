@@ -272,6 +272,58 @@ export default function AdminSchemaFailures() {
                         </div>
                       </div>
 
+                      {/* Scraper Diagnostics (Phase 1.5: Enhanced Scraper Debugging) */}
+                      {failure.requestContext?.scraperDiagnostics && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">Scraper Diagnostics:</p>
+                          <div className="bg-muted/50 p-3 rounded space-y-2 text-xs">
+                            {failure.requestContext.scraperDiagnostics.currentUrl && (
+                              <div>
+                                <span className="font-semibold">Current URL:</span>{' '}
+                                <span className="font-mono">{failure.requestContext.scraperDiagnostics.currentUrl}</span>
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.pageTitle && (
+                              <div>
+                                <span className="font-semibold">Page Title:</span>{' '}
+                                <span>{failure.requestContext.scraperDiagnostics.pageTitle}</span>
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.htmlSize !== undefined && (
+                              <div>
+                                <span className="font-semibold">HTML Size:</span>{' '}
+                                <span>{failure.requestContext.scraperDiagnostics.htmlSize.toLocaleString()} chars</span>
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.timeoutSelector && (
+                              <div>
+                                <span className="font-semibold">Timeout Selector:</span>{' '}
+                                <span className="font-mono text-orange-600 dark:text-orange-400">
+                                  {failure.requestContext.scraperDiagnostics.timeoutSelector}
+                                </span>
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.timeoutDuration && (
+                              <div>
+                                <span className="font-semibold">Timeout Duration:</span>{' '}
+                                <span>{failure.requestContext.scraperDiagnostics.timeoutDuration}ms</span>
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.isTimeout && (
+                              <div className="text-orange-600 dark:text-orange-400 font-semibold">
+                                ⏱️ Operation Timeout Detected
+                              </div>
+                            )}
+                            {failure.requestContext.scraperDiagnostics.errorType && (
+                              <div>
+                                <span className="font-semibold">Error Type:</span>{' '}
+                                <span className="font-mono">{failure.requestContext.scraperDiagnostics.errorType}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Request Context */}
                       {failure.requestContext && Object.keys(failure.requestContext).length > 0 && (
                         <div>
