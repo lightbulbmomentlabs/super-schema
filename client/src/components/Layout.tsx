@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { UserButton, useUser } from '@clerk/clerk-react'
+import { UserButton, useUser, useAuth } from '@clerk/clerk-react'
 import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard,
@@ -23,6 +23,7 @@ import { NotificationBadge } from './NotificationBadge'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
 import { apiService } from '@/services/api'
+import { HeaderSkeleton } from './skeletons/HeaderSkeleton'
 
 interface LayoutProps {
   children: ReactNode
@@ -37,7 +38,8 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const { user } = useUser()
+  const { user, isLoaded: isUserLoaded } = useUser()
+  const { isLoaded: isAuthLoaded } = useAuth()
   const isAdmin = useIsAdmin()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -50,6 +52,9 @@ export default function Layout({ children }: LayoutProps) {
 
   const notes = notesData?.data || []
   const { unreadCount } = useWhatsNewNotifications(notes)
+
+  // Check if user and auth are still loading
+  const isLoading = !isUserLoaded || !isAuthLoaded
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,20 +70,26 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
-            <ResourcesDropdown />
-            <TeamSwitcher />
-            <span className="text-sm text-muted-foreground">
-              Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-            </span>
-            <ThemeToggle />
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: "h-8 w-8"
-                }
-              }}
-            />
+            {isLoading ? (
+              <HeaderSkeleton />
+            ) : (
+              <>
+                <ResourcesDropdown />
+                <TeamSwitcher />
+                <span className="text-sm text-muted-foreground">
+                  Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                </span>
+                <ThemeToggle />
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: "h-8 w-8"
+                    }
+                  }}
+                />
+              </>
+            )}
           </div>
 
           {/* Mobile Controls */}

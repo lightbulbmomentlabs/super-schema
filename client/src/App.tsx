@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { useAuth } from '@clerk/clerk-react'
 
 // Pages
 import LandingPage from './pages/LandingPage'
@@ -46,6 +47,7 @@ import JoinTeamPage from './pages/JoinTeamPage'
 // Components
 import ModelTester from './components/ModelTester'
 import ScrollToTop from './components/ScrollToTop'
+import { AuthLoadingScreen } from './components/AuthLoadingScreen'
 
 // Layout
 import Layout from './components/Layout'
@@ -83,6 +85,15 @@ const queryClient = new QueryClient({
 function AppContent() {
   // Auto-claim pending HubSpot connections after signup (marketplace-first flow)
   usePendingHubSpotConnection()
+
+  // Check if Clerk auth is loaded
+  const { isLoaded } = useAuth()
+
+  // Show loading screen while Clerk initializes
+  // This prevents flash of Welcome page for authenticated users
+  if (!isLoaded) {
+    return <AuthLoadingScreen />
+  }
 
   return (
     <div className="min-h-screen bg-background">

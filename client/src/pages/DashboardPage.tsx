@@ -9,6 +9,8 @@ import LightningBoltIcon from '@/components/icons/LightningBoltIcon'
 import SuperSchemaLogo from '@/components/SuperSchemaLogo'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import OnboardingWelcomeModal from '@/components/OnboardingWelcomeModal'
+import { StatCardsGridSkeleton } from '@/components/skeletons/StatCardSkeleton'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function DashboardPage() {
   // Use real Clerk user
@@ -103,6 +105,10 @@ export default function DashboardPage() {
     !onboarding.hasSeenWelcome &&
     stats.total_schemas_generated === 0
 
+  // Check if any critical data is still loading
+  const isLoadingStats = statsQuery.isLoading || creditsQuery.isLoading || !statsQuery.data
+  const isLoadingLibrary = !libraryUrlsData
+
   return (
     <div className="space-y-8 p-6">
       {/* Welcome Modal for first-time users */}
@@ -125,6 +131,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Overview Cards */}
+      {isLoadingStats ? (
+        <StatCardsGridSkeleton count={4} />
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total URLs Discovered */}
         <div className="rounded-lg border border-border bg-card p-6">
@@ -182,8 +191,32 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Quick Actions & Incomplete URLs */}
+      {isLoadingLibrary ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton variant="text" className="w-48 h-6" />
+              <Skeleton variant="text" className="w-16 h-5" />
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} variant="rectangle" className="w-full h-16 rounded-md" />
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+            <Skeleton variant="text" className="w-40 h-6" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} variant="button" className="w-full h-20" />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* URLs Needing Schema */}
         <div className="rounded-lg border border-border bg-card p-6">
@@ -311,9 +344,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Schema Type Breakdown */}
-      {schemaTypeArray.length > 0 && (
+      {!isLoadingLibrary && schemaTypeArray.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Schema Type Distribution</h2>
@@ -346,7 +380,17 @@ export default function DashboardPage() {
       )}
 
       {/* Recent Generations */}
-      {recentGenerations.length > 0 && (
+      {!historyData && (
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <Skeleton variant="text" className="w-48 h-6" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} variant="rectangle" className="w-full h-20 rounded-md" />
+            ))}
+          </div>
+        </div>
+      )}
+      {historyData && recentGenerations.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-6">
           <h2 className="text-xl font-semibold mb-4">Recent Generations</h2>
           <div className="space-y-3">

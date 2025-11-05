@@ -64,6 +64,16 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Consolas', 'monospace'],
       },
+      keyframes: {
+        shimmer: {
+          '100%': {
+            transform: 'translateX(100%)',
+          },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite',
+      },
     },
   },
   plugins: [],
