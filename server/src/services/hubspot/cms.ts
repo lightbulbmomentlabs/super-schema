@@ -65,14 +65,19 @@ export class HubSpotCMSService {
    * Create axios instance with authorization
    */
   private async createAuthorizedClient(connectionId: string): Promise<AxiosInstance> {
-    const accessToken = await hubspotOAuthService.ensureFreshToken(connectionId)
+    try {
+      const accessToken = await hubspotOAuthService.ensureFreshToken(connectionId)
 
-    return axios.create({
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    })
+      return axios.create({
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+    } catch (error) {
+      console.error('❌ [HubSpot CMS] Failed to create authorized client:', error)
+      throw new Error('Failed to authenticate with HubSpot. Please reconnect your account.')
+    }
   }
 
   /**
@@ -93,6 +98,13 @@ export class HubSpotCMSService {
 
       while (allPosts.length < maxPosts) {
         console.log(`🔍 [HubSpot CMS] Fetching blog posts batch (offset: ${offset}, region: ${region})`)
+        console.log(`🔍 [HubSpot CMS] Request details:`, {
+          url: urls.blogPostsV2,
+          region,
+          connectionId,
+          offset,
+          limit
+        })
 
         const response = await client.get<{
           objects: HubSpotBlogPostV2[]
@@ -104,7 +116,8 @@ export class HubSpotCMSService {
             params: {
               limit,
               offset
-            }
+            },
+            timeout: 30000 // 30 second timeout
           }
         )
 
@@ -140,14 +153,33 @@ export class HubSpotCMSService {
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list blog posts:', error)
       if (axios.isAxiosError(error)) {
+        const status = error.response?.status
+        const errorData = error.response?.data
+
         console.error('❌ [HubSpot CMS] API Error details:', {
-          status: error.response?.status,
+          status,
           statusText: error.response?.statusText,
-          data: error.response?.data
+          data: errorData
         })
-        throw new Error(
-          error.response?.data?.message || 'Failed to retrieve blog posts'
-        )
+
+        // Provide specific error messages based on status code
+        let errorMessage = 'Failed to retrieve blog posts'
+
+        if (status === 401 || status === 403) {
+          errorMessage = 'Authentication failed. Please reconnect your HubSpot account.'
+        } else if (status === 404) {
+          errorMessage = 'Blog posts endpoint not found. This portal may not have blogs enabled.'
+        } else if (status === 429) {
+          errorMessage = 'HubSpot API rate limit exceeded. Please try again later.'
+        } else if (errorData?.message) {
+          errorMessage = `HubSpot API error: ${errorData.message}`
+        }
+
+        // Include status code in error for better debugging
+        const enhancedError = new Error(errorMessage) as any
+        enhancedError.statusCode = status
+        enhancedError.hubspotError = errorData
+        throw enhancedError
       }
       throw error
     }
@@ -171,6 +203,13 @@ export class HubSpotCMSService {
 
       while (allPages.length < maxPages) {
         console.log(`🔍 [HubSpot CMS] Fetching pages batch (offset: ${offset}, region: ${region})`)
+        console.log(`🔍 [HubSpot CMS] Request details:`, {
+          url: urls.pagesV3,
+          region,
+          connectionId,
+          offset,
+          limit
+        })
 
         const response = await client.get<{
           results: HubSpotPageV3[]
@@ -181,7 +220,8 @@ export class HubSpotCMSService {
             params: {
               limit,
               offset
-            }
+            },
+            timeout: 30000 // 30 second timeout
           }
         )
 
@@ -217,14 +257,33 @@ export class HubSpotCMSService {
     } catch (error) {
       console.error('❌ [HubSpot CMS] Failed to list pages:', error)
       if (axios.isAxiosError(error)) {
+        const status = error.response?.status
+        const errorData = error.response?.data
+
         console.error('❌ [HubSpot CMS] API Error details:', {
-          status: error.response?.status,
+          status,
           statusText: error.response?.statusText,
-          data: error.response?.data
+          data: errorData
         })
-        throw new Error(
-          error.response?.data?.message || 'Failed to retrieve pages'
-        )
+
+        // Provide specific error messages based on status code
+        let errorMessage = 'Failed to retrieve pages'
+
+        if (status === 401 || status === 403) {
+          errorMessage = 'Authentication failed. Please reconnect your HubSpot account.'
+        } else if (status === 404) {
+          errorMessage = 'Pages endpoint not found. This portal may not have pages enabled.'
+        } else if (status === 429) {
+          errorMessage = 'HubSpot API rate limit exceeded. Please try again later.'
+        } else if (errorData?.message) {
+          errorMessage = `HubSpot API error: ${errorData.message}`
+        }
+
+        // Include status code in error for better debugging
+        const enhancedError = new Error(errorMessage) as any
+        enhancedError.statusCode = status
+        enhancedError.hubspotError = errorData
+        throw enhancedError
       }
       throw error
     }

@@ -13,9 +13,21 @@ import { openaiService } from './openai.js'
  * - NOT "cleaning up" or inventing data
  * - Better than GPT-4o for this exact use case
  */
+
+interface AnthropicError {
+  status?: number
+  error?: {
+    type: string
+    message: string
+  }
+  message?: string
+}
+
 class AnthropicService {
   private client: Anthropic | null = null
   private clientInitialized = false
+  private readonly MAX_RETRIES = 3
+  private readonly INITIAL_RETRY_DELAY = 1000 // 1 second
 
   private initializeClient(): Anthropic | null {
     if (this.clientInitialized) {
@@ -35,12 +47,85 @@ class AnthropicService {
     } else {
       console.log('Initializing Anthropic Claude client with API key')
       this.client = new Anthropic({
-        apiKey: apiKey
+        apiKey: apiKey,
+        timeout: 120000 // 2 minutes timeout for long-running schema generation
       })
     }
 
     this.clientInitialized = true
     return this.client
+  }
+
+  /**
+   * Check if an error is retryable (transient)
+   */
+  private isRetryableError(error: any): boolean {
+    const status = error.status
+    const errorType = error.error?.type
+
+    // Retry on overloaded (529), internal errors (500), and rate limits (429)
+    if (status === 529 || status === 500 || status === 429) {
+      return true
+    }
+
+    // Also check error type
+    if (errorType === 'overloaded_error' || errorType === 'api_error' || errorType === 'rate_limit_error') {
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * Get user-friendly error message based on error type
+   */
+  private getErrorMessage(error: any): string {
+    const status = error.status
+    const errorType = error.error?.type
+    const errorMessage = error.error?.message || error.message
+
+    // Map status codes to user-friendly, on-brand messages
+    if (status === 401 || errorType === 'authentication_error') {
+      return 'Oops! Our AI assistant lost its credentials. Please contact support.'
+    }
+
+    if (status === 403 || errorType === 'permission_error') {
+      return 'Hmm, we don\'t have permission to access that resource. Please contact support.'
+    }
+
+    if (status === 404 || errorType === 'not_found_error') {
+      return 'We couldn\'t find what we were looking for. The AI model might be temporarily unavailable.'
+    }
+
+    if (status === 413 || errorType === 'request_too_large') {
+      return 'This page is too large for us to process. Try a simpler page or contact support for help.'
+    }
+
+    if (status === 429 || errorType === 'rate_limit_error') {
+      return 'Whoa! We\'re generating schemas faster than expected. Give us a moment to catch our breath and try again.'
+    }
+
+    if (status === 500 || errorType === 'api_error') {
+      return 'Our AI hit a small bump. Don\'t worry, we\'ll try again automatically!'
+    }
+
+    if (status === 529 || errorType === 'overloaded_error') {
+      return '🔋 Recharging our superpowers! Our AI is experiencing high demand. Please try again in a moment.'
+    }
+
+    // Default message with actual error
+    if (errorMessage) {
+      return `Something unexpected happened: ${errorMessage}`
+    }
+
+    return 'Unable to generate your schemas right now. Please try again or contact support.'
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   async generateSchemas(
@@ -62,72 +147,110 @@ class AnthropicService {
     const systemPrompt = this.buildSystemPrompt(options.requestedSchemaTypes)
     const userPrompt = this.buildUserPrompt(analysis, options)
 
-    try {
-      const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
+    // Retry loop with exponential backoff
+    let lastError: any = null
 
-      console.log(`🚀 Calling Claude ${model} for schema generation...`)
-
-      const response = await client.messages.create({
-        model,
-        max_tokens: 8000,
-        temperature: 0.0,  // Maximum determinism - Claude excels at this
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ]
-      })
-
-      const contentBlock = response.content[0]
-      if (contentBlock.type !== 'text') {
-        throw new Error('Unexpected response type from Claude')
-      }
-
-      const responseText = contentBlock.text
-      console.log(`📝 Claude response length: ${responseText.length} characters`)
-
-      // Parse JSON response
-      let result: any
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
-        // Claude may wrap JSON in markdown code blocks
-        const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/\{[\s\S]*\}/)
-        const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText
-        result = JSON.parse(jsonText)
-      } catch (parseError) {
-        console.error('Failed to parse Claude response:', responseText.substring(0, 500))
-        throw new Error(`Failed to parse Claude JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+        const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
+
+        if (attempt > 1) {
+          console.log(`🔄 Retry attempt ${attempt}/${this.MAX_RETRIES} for Claude API call...`)
+        } else {
+          console.log(`🚀 Calling Claude ${model} for schema generation...`)
+        }
+
+        const response = await client.messages.create({
+          model,
+          max_tokens: 8000,
+          temperature: 0.0,  // Maximum determinism - Claude excels at this
+          system: systemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: userPrompt
+            }
+          ]
+        })
+
+        const contentBlock = response.content[0]
+        if (contentBlock.type !== 'text') {
+          throw new Error('Unexpected response type from Claude')
+        }
+
+        const responseText = contentBlock.text
+        console.log(`📝 Claude response length: ${responseText.length} characters`)
+
+        // Parse JSON response
+        let result: any
+        try {
+          // Claude may wrap JSON in markdown code blocks
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || responseText.match(/\{[\s\S]*\}/)
+          const jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText
+          result = JSON.parse(jsonText)
+        } catch (parseError) {
+          console.error('Failed to parse Claude response:', responseText.substring(0, 500))
+          throw new Error(`Failed to parse Claude JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+        }
+
+        const schemas = result.schemas || []
+
+        if (schemas.length === 0) {
+          throw new Error('No valid schemas generated by Claude')
+        }
+
+        console.log(`✅ Claude generated ${schemas.length} schemas successfully`)
+        console.log('🔍 Raw schemas from Claude:',
+          schemas.map((s: any) => ({ '@type': s['@type'], hasRequiredProps: !!s['@context'] && !!s['@type'] }))
+        )
+
+        // CRITICAL: Clean and enhance schemas just like OpenAI does
+        // This adds missing keywords, images, publisher logos, etc.
+        console.log(`🔧 Cleaning and enhancing ${schemas.length} Claude-generated schema(s)...`)
+        const cleanedSchemas = schemas.map((schema: any) => openaiService.cleanSchemaProperties(schema))
+        const enhancedSchemas = await openaiService.validateAndEnhanceSchemas(cleanedSchemas, analysis)
+
+        if (enhancedSchemas.length === 0) {
+          throw new Error('No valid schemas after enhancement')
+        }
+
+        console.log(`✅ Enhanced ${enhancedSchemas.length} Claude schemas successfully`)
+        return enhancedSchemas
+
+      } catch (error: any) {
+        lastError = error
+
+        // Log error details
+        console.error(`❌ Claude API error (attempt ${attempt}/${this.MAX_RETRIES}):`, {
+          status: error.status,
+          type: error.error?.type,
+          message: error.error?.message || error.message
+        })
+
+        // Check if error is retryable
+        const isRetryable = this.isRetryableError(error)
+
+        if (!isRetryable || attempt === this.MAX_RETRIES) {
+          // Non-retryable error or max retries reached
+          console.error(`❌ Claude API error (not retrying):`, error)
+
+          const userMessage = this.getErrorMessage(error)
+          const enhancedError = new Error(userMessage) as any
+          enhancedError.status = error.status
+          enhancedError.errorType = error.error?.type
+          enhancedError.originalError = error
+          throw enhancedError
+        }
+
+        // Calculate delay with exponential backoff: 1s, 2s, 4s
+        const delayMs = this.INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1)
+        console.log(`⏳ Waiting ${delayMs}ms before retry...`)
+        await this.sleep(delayMs)
       }
-
-      const schemas = result.schemas || []
-
-      if (schemas.length === 0) {
-        throw new Error('No valid schemas generated by Claude')
-      }
-
-      console.log(`✅ Claude generated ${schemas.length} schemas successfully`)
-      console.log('🔍 Raw schemas from Claude:',
-        schemas.map((s: any) => ({ '@type': s['@type'], hasRequiredProps: !!s['@context'] && !!s['@type'] }))
-      )
-
-      // CRITICAL: Clean and enhance schemas just like OpenAI does
-      // This adds missing keywords, images, publisher logos, etc.
-      console.log(`🔧 Cleaning and enhancing ${schemas.length} Claude-generated schema(s)...`)
-      const cleanedSchemas = schemas.map((schema: any) => openaiService.cleanSchemaProperties(schema))
-      const enhancedSchemas = await openaiService.validateAndEnhanceSchemas(cleanedSchemas, analysis)
-
-      if (enhancedSchemas.length === 0) {
-        throw new Error('No valid schemas after enhancement')
-      }
-
-      console.log(`✅ Enhanced ${enhancedSchemas.length} Claude schemas successfully`)
-      return enhancedSchemas
-
-    } catch (error) {
-      console.error('Claude schema generation error:', error)
-      throw new Error(`Failed to generate schemas with Claude: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
+
+    // Should never reach here, but TypeScript needs it
+    throw lastError || new Error('Failed to generate schemas with Claude AI')
   }
 
   private buildSystemPrompt(requestedTypes?: string[]): string {
