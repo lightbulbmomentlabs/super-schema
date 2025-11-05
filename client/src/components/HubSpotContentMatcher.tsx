@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { hubspotApi } from '@/services/hubspot'
-import { X, Loader2, CheckCircle, ExternalLink, Search } from 'lucide-react'
+import { X, Loader2, CheckCircle, ExternalLink, Search, Globe } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { HubSpotContentMatchResult } from 'aeo-schema-generator-shared/types'
 
@@ -21,6 +22,18 @@ export default function HubSpotContentMatcher({
   targetUrl
 }: HubSpotContentMatcherProps) {
   const [selectedMatch, setSelectedMatch] = useState<HubSpotContentMatchResult | null>(null)
+  const navigate = useNavigate()
+
+  // Fetch connection details to check for associated domains
+  const { data: connectionsResponse } = useQuery({
+    queryKey: ['hubspot-connections'],
+    queryFn: () => hubspotApi.getConnections(),
+    enabled: isOpen
+  })
+
+  // Find the specific connection
+  const connection = connectionsResponse?.data?.find(conn => conn.id === connectionId)
+  const hasAssociatedDomains = connection?.associatedDomains && connection.associatedDomains.length > 0
 
   // Auto-match URL to content
   const { data: matchResponse, isLoading: isMatching } = useQuery({
@@ -218,8 +231,47 @@ export default function HubSpotContentMatcher({
                   )}
 
                   {allPosts.length === 0 && allPages.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground">No content found in your HubSpot portal</p>
+                    <div className="text-center py-12 px-6">
+                      {!hasAssociatedDomains ? (
+                        // No domains linked - primary scenario
+                        <>
+                          <Globe className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
+                          <h3 className="text-lg font-semibold mb-2">Time to Link Your Domain!</h3>
+                          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                            Looks like your HubSpot portal is ready to go, but we need to connect it to your website domain first.
+                            Once linked, we'll discover all your pages and posts automatically—like magic, but real.
+                          </p>
+                          <button
+                            onClick={() => {
+                              onClose()
+                              navigate('/hubspot')
+                            }}
+                            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium inline-flex items-center gap-2"
+                          >
+                            <Globe className="h-4 w-4" />
+                            Link Your Domain
+                          </button>
+                        </>
+                      ) : (
+                        // Domains linked but no content found
+                        <>
+                          <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
+                          <h3 className="text-lg font-semibold mb-2">No Content Found (Yet!)</h3>
+                          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                            Your domain is linked, but we couldn't find any blog posts or pages in your HubSpot portal.
+                            Create some content in HubSpot first, then come back to supercharge it with schema!
+                          </p>
+                          <button
+                            onClick={() => {
+                              onClose()
+                              navigate('/hubspot')
+                            }}
+                            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                          >
+                            Check Connection Settings
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
