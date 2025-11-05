@@ -1,12 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, TrendingDown, Users, Globe, ChevronDown, ChevronUp, Clock, Code } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, TrendingDown, Users, ChevronDown, ChevronUp, Clock, Code, Trash2 } from 'lucide-react'
 import { apiService } from '@/services/api'
 import { useState } from 'react'
+import ConfirmModal from './ConfirmModal'
+import { toast } from 'react-hot-toast'
 
 export default function AdminSchemaFailures() {
   const [expandedFailure, setExpandedFailure] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const limit = 10
+  const queryClient = useQueryClient()
 
   // Fetch failure statistics
   const { data: statsData, isLoading: statsLoading } = useQuery({
@@ -20,6 +24,21 @@ export default function AdminSchemaFailures() {
     queryKey: ['admin-schema-failures', page],
     queryFn: () => apiService.getSchemaFailures({ page, limit }),
     refetchInterval: 60000
+  })
+
+  // Delete mutation
+  const deleteFailure = useMutation({
+    mutationFn: (id: string) => apiService.deleteSchemaFailure(id),
+    onSuccess: () => {
+      toast.success('Failure record deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['admin-schema-failures'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-schema-failure-stats'] })
+      setDeleteConfirmId(null)
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to delete failure record')
+      setDeleteConfirmId(null)
+    }
   })
 
   const stats = statsData?.data
@@ -181,28 +200,6 @@ export default function AdminSchemaFailures() {
         </div>
       </div>
 
-      {/* Top Failing URLs */}
-      {stats.topFailingUrls.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold">Top Failing URLs</h3>
-          </div>
-          <div className="space-y-2">
-            {stats.topFailingUrls.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border border-border rounded-md bg-muted/20">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-mono truncate">{item.url}</p>
-                </div>
-                <span className="ml-4 text-sm font-semibold">
-                  {item.count} {item.count === 1 ? 'failure' : 'failures'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Recent Failures List */}
       <div className="rounded-lg border border-border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">Recent Failures</h3>
@@ -217,12 +214,12 @@ export default function AdminSchemaFailures() {
               {failures.map((failure) => (
                 <div key={failure.id} className="border border-border rounded-md bg-muted/10">
                   {/* Failure Header - Always Visible */}
-                  <div
-                    className="p-4 cursor-pointer hover:bg-muted/20 transition-colors"
-                    onClick={() => toggleExpanded(failure.id)}
-                  >
+                  <div className="p-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => toggleExpanded(failure.id)}
+                      >
                         <div className="flex items-center gap-3 mb-2">
                           <span className={`text-xs font-semibold px-2 py-1 rounded ${getReasonColor(failure.failureReason)} bg-muted`}>
                             {formatReason(failure.failureReason)}
@@ -239,13 +236,28 @@ export default function AdminSchemaFailures() {
                           User: {failure.userEmail}
                         </p>
                       </div>
-                      <button className="ml-4 text-muted-foreground hover:text-primary">
-                        {expandedFailure === failure.id ? (
-                          <ChevronUp className="w-5 h-5" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5" />
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteConfirmId(failure.id)
+                          }}
+                          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
+                          title="Delete this failure record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => toggleExpanded(failure.id)}
+                          className="p-2 text-muted-foreground hover:text-primary rounded transition-colors"
+                        >
+                          {expandedFailure === failure.id ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -376,6 +388,18 @@ export default function AdminSchemaFailures() {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => deleteFailure.mutate(deleteConfirmId!)}
+        title="Delete Failure Record"
+        message="Are you sure you want to permanently delete this failure record? This action cannot be undone."
+        confirmText="Delete"
+        confirmVariant="destructive"
+        isLoading={deleteFailure.isPending}
+      />
     </div>
   )
 }

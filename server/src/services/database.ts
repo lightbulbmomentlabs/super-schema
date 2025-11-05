@@ -2813,6 +2813,31 @@ class DatabaseService {
   }
 
   /**
+   * Delete a schema failure record (hard delete)
+   * Only allows deletion of records with status = 'failed' for safety
+   */
+  async deleteSchemaFailure(id: string): Promise<boolean> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteSchemaFailure', id)
+      return true
+    }
+
+    // Delete only if status is 'failed' (safety check)
+    const { error } = await this.supabase
+      .from('schema_generations')
+      .delete()
+      .eq('id', id)
+      .eq('status', 'failed')
+
+    if (error) {
+      console.error('Failed to delete schema failure:', error)
+      throw error
+    }
+
+    return true
+  }
+
+  /**
    * Get aggregated schema failure statistics
    * Part of Phase 1: Enhanced Failure Tracking
    */

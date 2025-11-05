@@ -15,7 +15,8 @@ import {
   getErrorStats,
   getHubSpotStats,
   getSchemaFailures,
-  getSchemaFailureStats
+  getSchemaFailureStats,
+  deleteSchemaFailure
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -71,5 +72,8 @@ router.get('/schema-failures', getSchemaFailures)
 
 // GET /api/admin/schema-failures/stats - Get aggregated failure statistics
 router.get('/schema-failures/stats', getSchemaFailureStats)
+
+// DELETE /api/admin/schema-failures/:id - Delete a schema failure record
+router.delete('/schema-failures/:id', deleteSchemaFailure)
 
 export default router

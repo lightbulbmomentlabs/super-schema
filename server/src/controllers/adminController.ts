@@ -297,3 +297,22 @@ export const getSchemaFailureStats = asyncHandler(async (req: AuthenticatedReque
     data: stats
   })
 })
+
+/**
+ * Delete a schema failure record (hard delete)
+ * Allows admins to remove investigated failures from the list
+ */
+export const deleteSchemaFailure = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params
+
+  if (!id) {
+    throw createError('Failure ID is required', 400)
+  }
+
+  await db.deleteSchemaFailure(id)
+
+  res.json({
+    success: true,
+    message: 'Schema failure deleted successfully'
+  })
+})

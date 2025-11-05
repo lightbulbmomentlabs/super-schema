@@ -634,6 +634,11 @@ class ApiService {
     return response.data
   }
 
+  async deleteSchemaFailure(id: string): Promise<ApiResponse<void>> {
+    const response = await api.delete(`/admin/schema-failures/${id}`)
+    return response.data
+  }
+
   // Support ticket endpoints
   async createSupportTicket(data: CreateSupportTicketRequest): Promise<ApiResponse<SupportTicket>> {
     const response = await api.post('/support/tickets', data)
