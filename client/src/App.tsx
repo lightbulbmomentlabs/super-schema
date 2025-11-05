@@ -203,8 +203,12 @@ function AppContent() {
             </Layout>
           } />
 
-          {/* Admin - Nested routes with tabs */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* Admin - Nested routes with tabs, wrapped in main Layout for sidebar */}
+          <Route path="/admin" element={
+            <Layout>
+              <AdminLayout />
+            </Layout>
+          }>
             <Route index element={<Navigate to="/admin/analytics" replace />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="users" element={<AdminUsers />} />
