@@ -1564,6 +1564,16 @@ class DatabaseService {
     totalSchemas: number
     totalCreditsDistributed: number
     totalCreditsUsed: number
+    totalRevenue: number
+    revenueThisMonth: number
+    payingCustomers: number
+    conversionRate: number
+    newUsersThisWeek: number
+    newUsersThisMonth: number
+    schemasToday: number
+    schemasThisWeek: number
+    averageCreditsPerUser: number
+    creditPackBreakdown: Array<{ packId: string; packName: string; purchases: number; revenue: number }>
   }> {
     if (!this.isDatabaseAvailable()) {
       console.log('Mock: getPlatformStats')
@@ -1572,7 +1582,17 @@ class DatabaseService {
         activeUsers: this.mockUsers.size,
         totalSchemas: 0,
         totalCreditsDistributed: 0,
-        totalCreditsUsed: 0
+        totalCreditsUsed: 0,
+        totalRevenue: 0,
+        revenueThisMonth: 0,
+        payingCustomers: 0,
+        conversionRate: 0,
+        newUsersThisWeek: 0,
+        newUsersThisMonth: 0,
+        schemasToday: 0,
+        schemasThisWeek: 0,
+        averageCreditsPerUser: 0,
+        creditPackBreakdown: []
       }
     }
 
@@ -1615,13 +1635,108 @@ class DatabaseService {
 
     const totalCreditsDistributed = creditStats.reduce((sum, u) => sum + u.credit_balance, 0)
     const totalCreditsUsed = creditStats.reduce((sum, u) => sum + u.total_credits_used, 0)
+    const averageCreditsPerUser = totalUsers ? Math.round(totalCreditsUsed / (totalUsers || 1)) : 0
+
+    // Get revenue stats from succeeded payment intents
+    const { data: payments, error: paymentsError } = await this.supabase
+      .from('payment_intents')
+      .select('amount_in_cents, credits, credit_pack_id, user_id, created_at')
+      .eq('status', 'succeeded')
+
+    if (paymentsError) throw paymentsError
+
+    const totalRevenue = payments ? payments.reduce((sum, p) => sum + p.amount_in_cents, 0) / 100 : 0
+
+    // Revenue this month
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const revenueThisMonth = payments
+      ? payments
+          .filter(p => new Date(p.created_at) >= startOfMonth)
+          .reduce((sum, p) => sum + p.amount_in_cents, 0) / 100
+      : 0
+
+    // Paying customers (unique users with successful payments)
+    const payingCustomers = payments
+      ? new Set(payments.map(p => p.user_id)).size
+      : 0
+
+    // Conversion rate
+    const conversionRate = totalUsers ? ((payingCustomers / (totalUsers || 1)) * 100) : 0
+
+    // New users this week
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
+    const { count: newUsersThisWeek, error: newUsersWeekError } = await this.supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', oneWeekAgo.toISOString())
+
+    if (newUsersWeekError) throw newUsersWeekError
+
+    // New users this month
+    const { count: newUsersThisMonth, error: newUsersMonthError } = await this.supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfMonth.toISOString())
+
+    if (newUsersMonthError) throw newUsersMonthError
+
+    // Schemas generated today
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const { count: schemasToday, error: schemasTodayError } = await this.supabase
+      .from('schema_generations')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfToday.toISOString())
+
+    if (schemasTodayError) throw schemasTodayError
+
+    // Schemas generated this week
+    const { count: schemasThisWeek, error: schemasWeekError } = await this.supabase
+      .from('schema_generations')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', oneWeekAgo.toISOString())
+
+    if (schemasWeekError) throw schemasWeekError
+
+    // Credit pack breakdown
+    const { data: creditPacks, error: creditPacksError } = await this.supabase
+      .from('credit_packs')
+      .select('id, name')
+
+    if (creditPacksError) throw creditPacksError
+
+    const creditPackBreakdown = creditPacks ? creditPacks.map(pack => {
+      const packPayments = payments?.filter(p => p.credit_pack_id === pack.id) || []
+      return {
+        packId: pack.id,
+        packName: pack.name,
+        purchases: packPayments.length,
+        revenue: packPayments.reduce((sum, p) => sum + p.amount_in_cents, 0) / 100
+      }
+    }).sort((a, b) => b.purchases - a.purchases) : []
 
     return {
       totalUsers: totalUsers || 0,
       activeUsers: activeUsers || 0,
       totalSchemas: totalSchemas || 0,
       totalCreditsDistributed,
-      totalCreditsUsed
+      totalCreditsUsed,
+      totalRevenue,
+      revenueThisMonth,
+      payingCustomers,
+      conversionRate,
+      newUsersThisWeek: newUsersThisWeek || 0,
+      newUsersThisMonth: newUsersThisMonth || 0,
+      schemasToday: schemasToday || 0,
+      schemasThisWeek: schemasThisWeek || 0,
+      averageCreditsPerUser,
+      creditPackBreakdown
     }
   }
 

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useAuth } from '@clerk/clerk-react'
@@ -11,7 +11,12 @@ import GeneratePage from './pages/GeneratePage'
 import CreditsPage from './pages/CreditsPage'
 import LibraryPage from './pages/LibraryPage'
 import SettingsPage from './pages/SettingsPage'
-import AdminPage from './pages/AdminPage'
+import AdminLayout from './components/AdminLayout'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminMonitoring from './pages/admin/AdminMonitoring'
+import AdminTickets from './pages/admin/AdminTickets'
+import AdminContent from './pages/admin/AdminContent'
 import HubSpotPage from './pages/HubSpotPage'
 import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
 import WhatsNewPage from './pages/WhatsNewPage'
@@ -198,12 +203,15 @@ function AppContent() {
             </Layout>
           } />
 
-          {/* Admin - Standalone route for admin access */}
-          <Route path="/admin" element={
-            <Layout>
-              <AdminPage />
-            </Layout>
-          } />
+          {/* Admin - Nested routes with tabs */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/analytics" replace />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="monitoring" element={<AdminMonitoring />} />
+            <Route path="tickets" element={<AdminTickets />} />
+            <Route path="content" element={<AdminContent />} />
+          </Route>
 
           {/* Fallback route */}
           <Route path="*" element={<div>404 - Page Not Found</div>} />
