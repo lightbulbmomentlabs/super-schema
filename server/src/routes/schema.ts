@@ -11,7 +11,8 @@ import {
   refineSchema,
   refineLibrarySchema,
   extractSchemaFromUrl,
-  deleteSchemaType
+  deleteSchemaType,
+  getUnviewedCount
 } from '../controllers/schemaController.js'
 import { authMiddleware } from '../middleware/auth.js'
 
@@ -51,6 +52,9 @@ router.get('/stats', authMiddleware, getGenerationStats)
 
 // GET /api/schema/insights
 router.get('/insights', authMiddleware, getGenerationInsights)
+
+// GET /api/schema/unviewed-count - Stub for deprecated feature
+router.get('/unviewed-count', authMiddleware, getUnviewedCount)
 
 // DELETE /api/schema/:schemaId - Delete a schema type (soft delete for regeneration tracking)
 router.delete('/:schemaId', authMiddleware, deleteSchemaType)

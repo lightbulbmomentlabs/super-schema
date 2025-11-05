@@ -782,3 +782,16 @@ export const deleteSchemaType = asyncHandler(async (req: AuthenticatedRequest, r
     )
   }
 })
+
+// Stub endpoint for deprecated pre-existing schema detection feature
+// Returns safe default to prevent errors for cached clients calling removed endpoint
+export const getUnviewedCount = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // This feature was removed but old cached clients may still call it
+    // Return zero count to gracefully handle these requests
+    res.json({
+      success: true,
+      data: { count: 0 }
+    })
+  }
+)
