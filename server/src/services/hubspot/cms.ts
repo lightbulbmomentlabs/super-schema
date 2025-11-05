@@ -89,8 +89,14 @@ export class HubSpotCMSService {
       console.log('📚 [HubSpot CMS] Fetching blog posts (up to', maxPosts, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
-      const region = await this.getConnectionRegion(connectionId)
+      const connection = await db.getHubSpotConnection(connectionId)
+      const region = connection?.region || 'na1'
       const urls = this.buildApiUrls(region)
+
+      // Warn if no associated domains (likely cause of 500 errors)
+      if (!connection?.associatedDomains || connection.associatedDomains.length === 0) {
+        console.warn('⚠️ [HubSpot CMS] No associated domains configured for this connection. This may cause blog API calls to fail with 500 errors. Please ensure your HubSpot portal has a blog domain configured.')
+      }
 
       const allPosts: HubSpotBlogPost[] = []
       let offset = 0
@@ -106,20 +112,39 @@ export class HubSpotCMSService {
           limit
         })
 
-        const response = await client.get<{
-          objects: HubSpotBlogPostV2[]
-          total?: number
-          total_count?: number
-        }>(
-          urls.blogPostsV2,
-          {
-            params: {
-              limit,
-              offset
-            },
-            timeout: 30000 // 30 second timeout
+        // Retry logic for transient 500 errors (3 attempts with exponential backoff)
+        let response: any
+        let lastError: any
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            response = await client.get<{
+              objects: HubSpotBlogPostV2[]
+              total?: number
+              total_count?: number
+            }>(
+              urls.blogPostsV2,
+              {
+                params: {
+                  limit,
+                  offset
+                },
+                timeout: 30000 // 30 second timeout
+              }
+            )
+            break // Success, exit retry loop
+          } catch (error) {
+            lastError = error
+            // Only retry on 500 errors
+            if (axios.isAxiosError(error) && error.response?.status === 500 && attempt < 3) {
+              const delay = Math.pow(2, attempt) * 1000 // 2s, 4s
+              console.warn(`⚠️ [HubSpot CMS] 500 error, retrying in ${delay}ms... (attempt ${attempt}/3)`)
+              await new Promise(resolve => setTimeout(resolve, delay))
+              continue
+            }
+            // Non-retryable error or final attempt, throw
+            throw error
           }
-        )
+        }
 
         const batch = response.data.objects || []
         if (batch.length === 0) break // No more results
@@ -171,6 +196,11 @@ export class HubSpotCMSService {
           errorMessage = 'Blog posts endpoint not found. This portal may not have blogs enabled.'
         } else if (status === 429) {
           errorMessage = 'HubSpot API rate limit exceeded. Please try again later.'
+        } else if (status === 500) {
+          // Server errors often indicate missing configuration
+          errorMessage = errorData?.message
+            ? `HubSpot server error: ${errorData.message}. This may indicate your portal doesn't have a blog domain configured or blogs are not enabled.`
+            : 'HubSpot server error while retrieving blog posts. Please ensure your HubSpot portal has blogs enabled and a blog domain configured in Settings > Website > Blog.'
         } else if (errorData?.message) {
           errorMessage = `HubSpot API error: ${errorData.message}`
         }
@@ -178,6 +208,7 @@ export class HubSpotCMSService {
         // Include status code in error for better debugging
         const enhancedError = new Error(errorMessage) as any
         enhancedError.statusCode = status
+        enhancedError.isOperational = true // Mark as operational error
         enhancedError.hubspotError = errorData
         throw enhancedError
       }
@@ -194,8 +225,14 @@ export class HubSpotCMSService {
       console.log('📄 [HubSpot CMS] Fetching pages (up to', maxPages, ')')
 
       const client = await this.createAuthorizedClient(connectionId)
-      const region = await this.getConnectionRegion(connectionId)
+      const connection = await db.getHubSpotConnection(connectionId)
+      const region = connection?.region || 'na1'
       const urls = this.buildApiUrls(region)
+
+      // Warn if no associated domains (likely cause of 500 errors)
+      if (!connection?.associatedDomains || connection.associatedDomains.length === 0) {
+        console.warn('⚠️ [HubSpot CMS] No associated domains configured for this connection. This may cause pages API calls to fail with 500 errors. Please ensure your HubSpot portal has a website domain configured.')
+      }
 
       const allPages: HubSpotPage[] = []
       let offset = 0
@@ -211,19 +248,38 @@ export class HubSpotCMSService {
           limit
         })
 
-        const response = await client.get<{
-          results: HubSpotPageV3[]
-          total?: number
-        }>(
-          urls.pagesV3,
-          {
-            params: {
-              limit,
-              offset
-            },
-            timeout: 30000 // 30 second timeout
+        // Retry logic for transient 500 errors (3 attempts with exponential backoff)
+        let response: any
+        let lastError: any
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            response = await client.get<{
+              results: HubSpotPageV3[]
+              total?: number
+            }>(
+              urls.pagesV3,
+              {
+                params: {
+                  limit,
+                  offset
+                },
+                timeout: 30000 // 30 second timeout
+              }
+            )
+            break // Success, exit retry loop
+          } catch (error) {
+            lastError = error
+            // Only retry on 500 errors
+            if (axios.isAxiosError(error) && error.response?.status === 500 && attempt < 3) {
+              const delay = Math.pow(2, attempt) * 1000 // 2s, 4s
+              console.warn(`⚠️ [HubSpot CMS] 500 error, retrying in ${delay}ms... (attempt ${attempt}/3)`)
+              await new Promise(resolve => setTimeout(resolve, delay))
+              continue
+            }
+            // Non-retryable error or final attempt, throw
+            throw error
           }
-        )
+        }
 
         const batch = response.data.results || []
         if (batch.length === 0) break // No more results
@@ -275,6 +331,11 @@ export class HubSpotCMSService {
           errorMessage = 'Pages endpoint not found. This portal may not have pages enabled.'
         } else if (status === 429) {
           errorMessage = 'HubSpot API rate limit exceeded. Please try again later.'
+        } else if (status === 500) {
+          // Server errors often indicate missing configuration
+          errorMessage = errorData?.message
+            ? `HubSpot server error: ${errorData.message}. This may indicate your portal doesn't have a website domain configured or pages are not enabled.`
+            : 'HubSpot server error while retrieving pages. Please ensure your HubSpot portal has pages enabled and a website domain configured in Settings > Website > Pages.'
         } else if (errorData?.message) {
           errorMessage = `HubSpot API error: ${errorData.message}`
         }
@@ -282,6 +343,7 @@ export class HubSpotCMSService {
         // Include status code in error for better debugging
         const enhancedError = new Error(errorMessage) as any
         enhancedError.statusCode = status
+        enhancedError.isOperational = true // Mark as operational error
         enhancedError.hubspotError = errorData
         throw enhancedError
       }

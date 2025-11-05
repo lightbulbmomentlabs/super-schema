@@ -65,8 +65,17 @@ export const errorHandler = async (
     path: req.url
   }
 
+  // Include statusCode for operational errors (helps client distinguish error types)
+  if (err.isOperational && err.statusCode) {
+    response.statusCode = err.statusCode
+  }
+
   if (process.env.NODE_ENV === 'development') {
     response.stack = err.stack
+    // Include additional error details in development for debugging
+    if ((err as any).hubspotError) {
+      response.hubspotError = (err as any).hubspotError
+    }
   }
 
   res.status(statusCode).json(response)
