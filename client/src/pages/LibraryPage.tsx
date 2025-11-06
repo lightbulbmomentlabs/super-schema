@@ -511,6 +511,22 @@ export default function LibraryPage() {
     setIsRefining(true)
     setShowChangesBanner(false)
 
+    // Optimistically increment refinement count BEFORE API call
+    // This prevents race conditions where users could double-click before the count updates
+    const previousRefinementCount = selectedSchemaRecord.refinementCount || 0
+    queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
+      if (!old?.data) return old
+      const updatedRecords = [...old.data]
+      updatedRecords[selectedSchemaIndex] = {
+        ...updatedRecords[selectedSchemaIndex],
+        refinementCount: previousRefinementCount + 1
+      }
+      return {
+        ...old,
+        data: updatedRecords
+      }
+    })
+
     try {
       const result = await apiService.refineLibrarySchema(
         selectedSchemaRecord.id, // Use schema record ID instead of URL ID
@@ -519,7 +535,7 @@ export default function LibraryPage() {
       )
 
       if (result.success && result.data) {
-        // Update the schemas and refinement count in the UI
+        // Update the schemas and refinement count in the UI (with actual server values)
         queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
           if (!old?.data) return old
           const updatedRecords = [...old.data]
@@ -544,9 +560,35 @@ export default function LibraryPage() {
           `Schema refined successfully! ${refinementsLeft} refinement${refinementsLeft !== 1 ? 's' : ''} remaining.`
         )
       } else {
+        // Rollback optimistic update on failure
+        queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
+          if (!old?.data) return old
+          const updatedRecords = [...old.data]
+          updatedRecords[selectedSchemaIndex] = {
+            ...updatedRecords[selectedSchemaIndex],
+            refinementCount: previousRefinementCount
+          }
+          return {
+            ...old,
+            data: updatedRecords
+          }
+        })
         toast.error('Failed to refine schema')
       }
     } catch (error: any) {
+      // Rollback optimistic update on error
+      queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
+        if (!old?.data) return old
+        const updatedRecords = [...old.data]
+        updatedRecords[selectedSchemaIndex] = {
+          ...updatedRecords[selectedSchemaIndex],
+          refinementCount: previousRefinementCount
+        }
+        return {
+          ...old,
+          data: updatedRecords
+        }
+      })
       const errorMessage = error?.response?.data?.error || 'Failed to refine schema'
       toast.error(errorMessage)
     } finally {
