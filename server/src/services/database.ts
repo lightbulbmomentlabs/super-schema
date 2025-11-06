@@ -30,6 +30,7 @@ export interface Database {
           credit_balance: number
           total_credits_used: number
           is_active: boolean
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -41,6 +42,7 @@ export interface Database {
           credit_balance?: number
           total_credits_used?: number
           is_active?: boolean
+          is_admin?: boolean
         }
         Update: {
           email?: string
@@ -49,6 +51,7 @@ export interface Database {
           credit_balance?: number
           total_credits_used?: number
           is_active?: boolean
+          is_admin?: boolean
         }
       }
       credit_transactions: {
@@ -356,6 +359,7 @@ class DatabaseService {
       creditBalance: data.credit_balance,
       totalCreditsUsed: data.total_credits_used,
       isActive: data.is_active,
+      isAdmin: data.is_admin || false,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     } : null
@@ -407,6 +411,43 @@ class DatabaseService {
       creditBalance: data.credit_balance,
       totalCreditsUsed: data.total_credits_used,
       isActive: data.is_active,
+      isAdmin: data.is_admin || false,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  }
+
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<User> {
+    console.log('🔧 [Database] Updating user admin status:', { userId, isAdmin })
+
+    const { data, error } = await this.supabase
+      .from('users')
+      .update({ is_admin: isAdmin })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ [Database] Update admin status error:', error)
+      throw error
+    }
+
+    console.log('✅ [Database] User admin status updated successfully:', {
+      userId: data.id,
+      email: data.email,
+      isAdmin: data.is_admin
+    })
+
+    return {
+      id: data.id,
+      email: data.email,
+      firstName: data.first_name || undefined,
+      lastName: data.last_name || undefined,
+      organizationName: data.organization_name || undefined,
+      creditBalance: data.credit_balance,
+      totalCreditsUsed: data.total_credits_used,
+      isActive: data.is_active,
+      isAdmin: data.is_admin,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     }
@@ -1430,9 +1471,11 @@ class DatabaseService {
       email: row.email,
       firstName: row.first_name || undefined,
       lastName: row.last_name || undefined,
+      organizationName: row.organization_name || undefined,
       creditBalance: row.credit_balance,
       totalCreditsUsed: row.total_credits_used,
       isActive: row.is_active,
+      isAdmin: row.is_admin || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }))
@@ -1457,9 +1500,11 @@ class DatabaseService {
       email: row.email,
       firstName: row.first_name || undefined,
       lastName: row.last_name || undefined,
+      organizationName: row.organization_name || undefined,
       creditBalance: row.credit_balance,
       totalCreditsUsed: row.total_credits_used,
       isActive: row.is_active,
+      isAdmin: row.is_admin || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }))

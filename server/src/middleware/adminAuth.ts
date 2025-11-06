@@ -55,14 +55,22 @@ export const adminAuthMiddleware = async (
 
     console.log('👤 [AdminAuth] User found:', {
       userId: user.id,
-      email: user.email
+      email: user.email,
+      isAdmin: user.isAdmin
     })
 
-    // Check if user's email is in admin whitelist
+    // Check if user has admin flag in database (primary check)
+    if (user.isAdmin) {
+      console.log(`✅ [AdminAuth] Admin access GRANTED via database flag for: ${user.email}`)
+      req.auth.isAdmin = true
+      return next()
+    }
+
+    // Fallback: Check if user's email is in admin whitelist (for backward compatibility)
     const adminEmails = getAdminEmails()
     const userEmail = user.email.toLowerCase()
 
-    console.log('📋 [AdminAuth] Checking whitelist:', {
+    console.log('📋 [AdminAuth] Checking email whitelist (fallback):', {
       userEmail,
       adminEmails,
       isInWhitelist: adminEmails.includes(userEmail)
@@ -73,7 +81,7 @@ export const adminAuthMiddleware = async (
       throw createError('Forbidden: Admin access required', 403)
     }
 
-    console.log(`✅ [AdminAuth] Admin access GRANTED for: ${userEmail}`)
+    console.log(`✅ [AdminAuth] Admin access GRANTED via email whitelist for: ${userEmail}`)
 
     // Add admin flag to request
     req.auth.isAdmin = true

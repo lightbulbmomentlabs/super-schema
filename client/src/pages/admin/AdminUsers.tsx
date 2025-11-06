@@ -7,7 +7,9 @@ import {
   Plus,
   Minus,
   Trash2,
-  X
+  X,
+  Shield,
+  ShieldCheck
 } from 'lucide-react'
 import { apiService } from '@/services/api'
 import type { User } from '@shared/types'
@@ -21,6 +23,8 @@ export default function AdminUsers() {
   const [creditReason, setCreditReason] = useState('')
   const [showCreditModal, setShowCreditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showAdminConfirm, setShowAdminConfirm] = useState(false)
+  const [pendingAdminStatus, setPendingAdminStatus] = useState<boolean>(false)
 
   // Mark this tab as viewed when component mounts
   // This resets the badge count for the Users tab
@@ -72,6 +76,22 @@ export default function AdminUsers() {
       queryClient.invalidateQueries({ queryKey: ['admin-platform-stats'] })
       setSelectedUser(null)
       setShowDeleteConfirm(false)
+    }
+  })
+
+  // Toggle admin status mutation
+  const toggleAdminStatus = useMutation({
+    mutationFn: ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) =>
+      apiService.toggleAdminStatus(userId, isAdmin),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-details', selectedUser?.id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-search-users'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-all-users'] })
+      setShowAdminConfirm(false)
+      // Show success message
+      if (response.data) {
+        console.log(response.message)
+      }
     }
   })
 
@@ -149,7 +169,15 @@ export default function AdminUsers() {
                       : 'border-border bg-muted/30 hover:bg-muted/50'
                   }`}
                 >
-                  <p className="font-medium">{user.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{user.email}</p>
+                    {user.isAdmin && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <ShieldCheck className="h-3 w-3" />
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-sm text-muted-foreground">
                       {user.firstName} {user.lastName}
@@ -257,6 +285,29 @@ export default function AdminUsers() {
                   >
                     <Minus className="h-3 w-3" />
                     Deduct
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPendingAdminStatus(!userDetails.user.isAdmin)
+                      setShowAdminConfirm(true)
+                    }}
+                    className={`px-3 py-1.5 text-xs border border-border rounded-md hover:bg-muted transition-colors flex items-center gap-1.5 ${
+                      userDetails.user.isAdmin
+                        ? 'text-orange-600 hover:text-orange-700'
+                        : 'text-blue-600 hover:text-blue-700'
+                    }`}
+                  >
+                    {userDetails.user.isAdmin ? (
+                      <>
+                        <Shield className="h-3 w-3" />
+                        Remove Admin
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-3 w-3" />
+                        Make Admin
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
@@ -440,6 +491,75 @@ export default function AdminUsers() {
                   className="flex-1 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleteUser.isPending ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Status Confirm Modal */}
+      {showAdminConfirm && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                {pendingAdminStatus ? (
+                  <>
+                    <ShieldCheck className="h-5 w-5 text-blue-600" />
+                    Grant Admin Privileges
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-5 w-5 text-orange-600" />
+                    Revoke Admin Privileges
+                  </>
+                )}
+              </h3>
+              <button
+                onClick={() => setShowAdminConfirm(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm">
+                Are you sure you want to {pendingAdminStatus ? 'grant admin privileges to' : 'revoke admin privileges from'}{' '}
+                <strong>{selectedUser.email}</strong>?
+              </p>
+              {pendingAdminStatus ? (
+                <p className="text-sm text-muted-foreground">
+                  This user will have full access to the admin dashboard and can manage all users, view analytics, and access platform settings.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This user will lose access to the admin dashboard and all admin features. They will retain their regular user account.
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAdminConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-border rounded-md hover:bg-muted/50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedUser) {
+                      toggleAdminStatus.mutate({ userId: selectedUser.id, isAdmin: pendingAdminStatus })
+                    }
+                  }}
+                  disabled={toggleAdminStatus.isPending}
+                  className={`flex-1 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    pendingAdminStatus
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-orange-600 text-white hover:bg-orange-700'
+                  }`}
+                >
+                  {toggleAdminStatus.isPending ? 'Updating...' : pendingAdminStatus ? 'Grant Admin' : 'Revoke Admin'}
                 </button>
               </div>
             </div>

@@ -7,6 +7,7 @@ import {
   getUserDetails,
   deleteUser,
   modifyUserCredits,
+  toggleAdminStatus,
   getPlatformStats,
   adminHealthCheck,
   getErrorLogs,
@@ -46,6 +47,9 @@ router.delete('/users/:userId', deleteUser)
 
 // POST /api/admin/users/credits - Modify user credits
 router.post('/users/credits', modifyUserCredits)
+
+// PATCH /api/admin/users/admin-status - Toggle admin status
+router.patch('/users/admin-status', toggleAdminStatus)
 
 // Error Logging Routes
 

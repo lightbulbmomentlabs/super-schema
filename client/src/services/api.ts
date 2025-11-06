@@ -534,6 +534,17 @@ class ApiService {
     return response.data
   }
 
+  async toggleAdminStatus(userId: string, isAdmin: boolean): Promise<ApiResponse<{
+    data: User
+    message: string
+  }>> {
+    const response = await api.patch('/admin/users/admin-status', {
+      userId,
+      isAdmin
+    })
+    return response.data
+  }
+
   // Error logging admin endpoints
   async getErrorLogs(params?: {
     limit?: number

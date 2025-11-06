@@ -19,6 +19,11 @@ const modifyCreditsSchema = z.object({
   reason: z.string().min(1)
 })
 
+const toggleAdminStatusSchema = z.object({
+  userId: z.string().min(1),
+  isAdmin: z.boolean()
+})
+
 // Health check endpoint for admin access verification
 export const adminHealthCheck = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   console.log('✅ [AdminController] Health check passed for user:', req.auth?.userId)
@@ -123,6 +128,56 @@ export const modifyUserCredits = asyncHandler(async (req: AuthenticatedRequest, 
     success: true,
     data: updatedUser,
     message: `Credits ${amount > 0 ? 'added' : 'deducted'} successfully`
+  })
+})
+
+export const toggleAdminStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { userId, isAdmin } = toggleAdminStatusSchema.parse(req.body)
+
+  // Security check: Only super admin can toggle admin status
+  const currentUserId = req.auth?.userId
+  if (!currentUserId) {
+    throw createError('Authentication required', 401)
+  }
+
+  // Get the super admin IDs from environment
+  const getAdminUserIds = (): string[] => {
+    const defaultAdminIds = 'user_33hfeOP0UYLcyLEkfcCdITEYY6W,user_33Fdrdz4hyXRWshiOjEsVOGmbTv'
+    const adminUserIds = process.env.ADMIN_USER_IDS || defaultAdminIds
+    return adminUserIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
+  }
+
+  const superAdminIds = getAdminUserIds()
+
+  // Only super admins can toggle admin status
+  if (!superAdminIds.includes(currentUserId)) {
+    throw createError('Forbidden: Only super admins can manage admin privileges', 403)
+  }
+
+  // Prevent super admin from removing their own admin status (prevent lockout)
+  if (userId === currentUserId && !isAdmin) {
+    throw createError('Cannot remove your own admin privileges', 400)
+  }
+
+  // Check if target user exists
+  const user = await db.getUser(userId)
+  if (!user) {
+    throw createError('User not found', 404)
+  }
+
+  console.log(`🔐 [AdminController] ${isAdmin ? 'Granting' : 'Revoking'} admin privileges:`, {
+    targetUser: user.email,
+    targetUserId: userId,
+    grantedBy: currentUserId
+  })
+
+  // Update admin status
+  const updatedUser = await db.updateUserAdminStatus(userId, isAdmin)
+
+  res.json({
+    success: true,
+    data: updatedUser,
+    message: `Admin privileges ${isAdmin ? 'granted to' : 'revoked from'} ${user.email}`
   })
 })
 

@@ -10,6 +10,7 @@ export interface User {
   creditBalance: number
   totalCreditsUsed: number
   isActive: boolean
+  isAdmin?: boolean
 }
 
 // Credit Transaction Types
