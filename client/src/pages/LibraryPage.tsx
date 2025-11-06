@@ -46,6 +46,7 @@ export default function LibraryPage() {
   const [showDeleteDomainModal, setShowDeleteDomainModal] = useState(false)
   const [domainToDelete, setDomainToDelete] = useState<{ id: string; domain: string } | null>(null)
   const [isRefining, setIsRefining] = useState(false)
+  const [isRecalculating, setIsRecalculating] = useState(false)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
   const [showChangesBanner, setShowChangesBanner] = useState(false)
   const [showHubSpotMatcher, setShowHubSpotMatcher] = useState(false)
@@ -550,6 +551,58 @@ export default function LibraryPage() {
       toast.error(errorMessage)
     } finally {
       setIsRefining(false)
+    }
+  }
+
+  const handleRecalculateScore = async () => {
+    if (!selectedUrlId || !schemasArray || schemasArray.length === 0 || !selectedSchemaRecord) {
+      toast.error('No schema to recalculate')
+      return
+    }
+
+    console.log('🔢 Starting score recalculation:', {
+      schemaId: selectedSchemaRecord.id,
+      schemaTypes: schemasArray.map(s => s['@type'])
+    })
+
+    setIsRecalculating(true)
+
+    try {
+      const result = await apiService.recalculateScore(
+        selectedSchemaRecord.id,
+        schemasArray
+      )
+
+      if (result.success && result.data) {
+        console.log('✅ Score recalculated:', {
+          schemaId: selectedSchemaRecord.id,
+          newScore: result.data.schemaScore.overallScore
+        })
+
+        // Update the schema score in the UI
+        queryClient.setQueryData(['urlSchemas', selectedUrlId], (old: any) => {
+          if (!old?.data) return old
+          const updatedRecords = [...old.data]
+          updatedRecords[selectedSchemaIndex] = {
+            ...updatedRecords[selectedSchemaIndex],
+            schemaScore: result.data.schemaScore
+          }
+          return {
+            ...old,
+            data: updatedRecords
+          }
+        })
+
+        toast.success(`Schema score recalculated: ${result.data.schemaScore.overallScore}`)
+      } else {
+        toast.error('Failed to recalculate score')
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || 'Failed to recalculate score'
+      toast.error(errorMessage)
+      console.error('Score recalculation error:', error)
+    } finally {
+      setIsRecalculating(false)
     }
   }
 
@@ -1434,7 +1487,11 @@ export default function LibraryPage() {
                     </div>
                   )}
 
-                  <SchemaScoreCompact score={displayScore} />
+                  <SchemaScoreCompact
+                    score={displayScore}
+                    onRecalculateScore={handleRecalculateScore}
+                    isRecalculating={isRecalculating}
+                  />
                 </div>
               )}
 

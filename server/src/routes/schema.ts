@@ -10,6 +10,7 @@ import {
   batchGenerateSchemasStream,
   refineSchema,
   refineLibrarySchema,
+  recalculateScore,
   extractSchemaFromUrl,
   deleteSchemaType,
   getUnviewedCount
@@ -37,6 +38,9 @@ router.post('/refine', authMiddleware, refineSchema)
 
 // POST /api/schema/refine-library
 router.post('/refine-library', authMiddleware, refineLibrarySchema)
+
+// POST /api/schema/recalculate-score
+router.post('/recalculate-score', authMiddleware, recalculateScore)
 
 // POST /api/schema/validate
 router.post('/validate', authMiddleware, validateSchema)

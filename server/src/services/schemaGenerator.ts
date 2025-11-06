@@ -622,6 +622,11 @@ class SchemaGeneratorService {
     return 'unknown'
   }
 
+  // Public method to calculate schema score
+  calculateSchemaScore(schemas: JsonLdSchema[]): any {
+    return this.calculateBasicScore(schemas)
+  }
+
   // Calculate a comprehensive score for schemas
   private calculateBasicScore(schemas: JsonLdSchema[]): any {
     const schema = schemas[0] // For now, score the first schema

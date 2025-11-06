@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Zap,
   Clock,
-  TrendingDown
+  TrendingDown,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { SchemaScore, ActionItem } from '@shared/types'
@@ -29,6 +30,8 @@ interface SchemaScoreProps {
   previousScore?: number
   refinementCount?: number
   maxRefinements?: number
+  onRecalculateScore?: () => void
+  isRecalculating?: boolean
 }
 
 const getScoreColor = (score: number) => {
@@ -101,7 +104,9 @@ export default function SchemaScore({
   canRefine = true,
   previousScore,
   refinementCount = 0,
-  maxRefinements = 2
+  maxRefinements = 2,
+  onRecalculateScore,
+  isRecalculating = false
 }: SchemaScoreProps) {
   const [showDetails, setShowDetails] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -324,6 +329,26 @@ export default function SchemaScore({
               </div>
             </div>
           )}
+          {onRecalculateScore && (
+            <button
+              onClick={onRecalculateScore}
+              disabled={isRecalculating}
+              className="flex items-center px-4 py-2 text-sm rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Recalculate schema quality score"
+            >
+              {isRecalculating ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" />
+                  Recalculating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Recalculate Score
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={() => setShowDetails(!showDetails)}
             className="flex items-center text-sm text-primary hover:text-primary/80 transition-colors"
@@ -528,6 +553,19 @@ export default function SchemaScore({
           </div>
         </div>
       )}
+
+      {/* Link to Schema Property Reference */}
+      <div className="text-center pt-4 mt-4 border-t border-border">
+        <a
+          href="/schema-markup/improve-quality-score"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
+        >
+          Need help improving your score?
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
     </div>
   )
 }

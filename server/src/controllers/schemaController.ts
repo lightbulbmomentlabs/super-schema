@@ -341,6 +341,59 @@ export const refineLibrarySchema = asyncHandler(async (req: AuthenticatedRequest
   }
 })
 
+export const recalculateScore = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+  const { schemaId, schemas } = req.body
+
+  console.log('🔢 Schema score recalculation request:', { userId, schemaId })
+
+  // Validation
+  if (!schemaId) {
+    throw createError('Schema ID is required', 400)
+  }
+
+  if (!Array.isArray(schemas) || schemas.length === 0) {
+    throw createError('Schemas array is required', 400)
+  }
+
+  try {
+    // Get schema record to verify ownership
+    const schemaRecord = await db.getSchemaById(schemaId)
+
+    if (!schemaRecord) {
+      throw createError('Schema not found', 404)
+    }
+
+    if (schemaRecord.userId !== userId) {
+      throw createError('Unauthorized', 403)
+    }
+
+    // Calculate new score using the service's public method
+    const newScore = schemaGeneratorService.calculateSchemaScore(schemas)
+
+    // Update database with new score and schemas
+    await db.updateSchemaGeneration(schemaId, {
+      schemas: schemas,
+      schemaScore: newScore
+    })
+
+    console.log(`✅ Schema score recalculated: ${newScore.overallScore}`)
+
+    res.json({
+      success: true,
+      data: {
+        schemaScore: newScore
+      },
+      message: `Schema score recalculated: ${newScore.overallScore}`
+    })
+  } catch (error) {
+    throw createError(
+      error instanceof Error ? error.message : 'Schema score recalculation failed',
+      500
+    )
+  }
+})
+
 export const validateSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   // Validate request body
   const { schema: schemaToValidate, strict } = schemaValidationRequestSchema.parse(req.body)

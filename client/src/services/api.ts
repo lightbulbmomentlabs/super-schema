@@ -247,6 +247,16 @@ class ApiService {
     return response.data
   }
 
+  async recalculateScore(schemaId: string, schemas: JsonLdSchema[]): Promise<ApiResponse<{
+    schemaScore: any
+  }>> {
+    const response = await api.post('/schema/recalculate-score', {
+      schemaId,
+      schemas
+    })
+    return response.data
+  }
+
   async getGenerationHistory(page = 1, limit = 10): Promise<ApiResponse<PaginatedResponse<SchemaGenerationResult>>> {
     const response = await api.get('/schema/history', {
       params: { page, limit }

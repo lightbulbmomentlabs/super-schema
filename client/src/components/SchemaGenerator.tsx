@@ -78,6 +78,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [previousScore, setPreviousScore] = useState<number | undefined>(undefined)
   const [refinementCount, setRefinementCount] = useState(0)
   const [isRefining, setIsRefining] = useState(false)
+  const [isRecalculating, setIsRecalculating] = useState(false)
   const [isAddingSchemaType, setIsAddingSchemaType] = useState(false)
   const [pendingSchemaType, setPendingSchemaType] = useState<string | null>(null)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
@@ -866,6 +867,36 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  const handleRecalculateScore = async () => {
+    if (!generatedSchemas.length || !generationMetadata?.schemaId || isRecalculating) return
+
+    console.log('🔢 Starting score recalculation:', {
+      schemaId: generationMetadata?.schemaId,
+      schemaTypes: generatedSchemas.map(s => s['@type'])
+    })
+
+    setIsRecalculating(true)
+
+    try {
+      const response = await apiService.recalculateScore(generationMetadata.schemaId, generatedSchemas)
+
+      if (response.success && response.data) {
+        console.log('✅ Score recalculated:', {
+          schemaId: generationMetadata?.schemaId,
+          newScore: response.data.schemaScore.overallScore
+        })
+
+        setSchemaScore(response.data.schemaScore)
+        toast.success(`Schema score recalculated: ${response.data.schemaScore.overallScore}`)
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to recalculate score')
+      console.error('Score recalculation error:', error)
+    } finally {
+      setIsRecalculating(false)
+    }
+  }
+
   // Mutation for updating schema
   const updateSchemaMutation = useMutation({
     mutationFn: ({ urlId, schemas }: { urlId: string; schemas: any[]; schemaIndex: number }) =>
@@ -1269,6 +1300,8 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
               previousScore={previousScore}
               refinementCount={refinementCount}
               maxRefinements={MAX_REFINEMENTS}
+              onRecalculateScore={handleRecalculateScore}
+              isRecalculating={isRecalculating}
             />
           )}
 

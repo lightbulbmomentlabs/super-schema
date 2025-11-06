@@ -1,10 +1,11 @@
-import React from 'react'
 import {
   CheckCircle,
   Target,
   Award,
   TrendingUp,
-  Star
+  Star,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { SchemaScore } from '@shared/types'
@@ -12,6 +13,8 @@ import type { SchemaScore } from '@shared/types'
 interface SchemaScoreCompactProps {
   score: SchemaScore
   className?: string
+  onRecalculateScore?: () => void
+  isRecalculating?: boolean
 }
 
 const getScoreColor = (score: number) => {
@@ -60,7 +63,9 @@ const getProgressBarColor = (value: number) => {
 
 export default function SchemaScoreCompact({
   score,
-  className
+  className,
+  onRecalculateScore,
+  isRecalculating = false
 }: SchemaScoreCompactProps) {
   const overallScore = score.overallScore
   const grade = getScoreGrade(overallScore)
@@ -186,7 +191,7 @@ export default function SchemaScoreCompact({
 
       {/* Strengths */}
       {score.strengths.length > 0 && (
-        <div className="bg-success border border-success rounded-md p-3">
+        <div className="bg-success border border-success rounded-md p-3 mb-3">
           <h4 className="text-xs font-semibold text-success-foreground mb-1.5 flex items-center">
             <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
             Strengths ({score.strengths.length})
@@ -201,6 +206,43 @@ export default function SchemaScoreCompact({
           </ul>
         </div>
       )}
+
+      {/* Recalculate Button */}
+      {onRecalculateScore && (
+        <div className="mb-3">
+          <button
+            onClick={onRecalculateScore}
+            disabled={isRecalculating}
+            className="w-full flex items-center justify-center px-3 py-2 text-xs rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Recalculate schema quality score"
+          >
+            {isRecalculating ? (
+              <>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" />
+                Recalculating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3 w-3 mr-2" />
+                Recalculate Score
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Link to Schema Property Reference */}
+      <div className="text-center pt-2 border-t border-border">
+        <a
+          href="/schema-markup/improve-quality-score"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
+        >
+          Need help improving your score?
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
     </div>
   )
 }
