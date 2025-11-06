@@ -76,7 +76,7 @@ envs:
   value: EV[1:PLACEHOLDER_REPLACE_WITH_YOUR_ENCRYPTED_API_KEY]
 - key: HUBSPOT_CRM_LIST_ID
   scope: RUN_AND_BUILD_TIME
-  value: YOUR_LIST_ID_HERE
+  value: "2234"
 ingress:
   rules:
   - component:
