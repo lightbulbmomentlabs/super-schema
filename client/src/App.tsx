@@ -48,6 +48,7 @@ import HowAIEnginesRankSourcesPage from './pages/HowAIEnginesRankSourcesPage'
 import EntityBasedSeoStrategiesPage from './pages/EntityBasedSeoStrategiesPage'
 import TeamSettingsPage from './pages/TeamSettingsPage'
 import JoinTeamPage from './pages/JoinTeamPage'
+import SchemaPropertyReferencePage from './pages/SchemaPropertyReferencePage'
 
 // Components
 import ModelTester from './components/ModelTester'
@@ -133,6 +134,7 @@ function AppContent() {
           <Route path="/ai-search-optimization/how-ai-engines-rank-sources" element={<HowAIEnginesRankSourcesPage />} />
           <Route path="/schema-markup" element={<SchemaMarkupPillarPage />} />
           <Route path="/schema-markup/json-ld-vs-microdata" element={<JsonLdVsMicrodataPage />} />
+          <Route path="/schema-markup/improve-quality-score" element={<SchemaPropertyReferencePage />} />
 
           {/* Free Tools */}
           <Route path="/schema-markup-grader" element={<SchemaMarkupGraderPage />} />

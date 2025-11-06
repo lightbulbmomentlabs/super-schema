@@ -103,6 +103,13 @@ export default function PillarPageNav() {
                   Schema Markup Guide
                 </Link>
                 <Link
+                  to="/schema-markup/improve-quality-score"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"
+                >
+                  Improve Schema Quality Score
+                </Link>
+                <Link
                   to="/schema-markup-grader"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"

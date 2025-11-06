@@ -33,7 +33,8 @@ export default function ResourcesDropdown({ className }: ResourcesDropdownProps)
     { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' },
     { name: 'GEO Guide', path: '/geo', description: 'Generative Engine Optimization - be the source AI chooses' },
     { name: 'AI Search Optimization', path: '/ai-search-optimization', description: 'Get cited by AI engines (SGE, Copilot, Perplexity)' },
-    { name: 'Schema Markup Guide', path: '/schema-markup', description: 'What, why, and how of structured data' }
+    { name: 'Schema Markup Guide', path: '/schema-markup', description: 'What, why, and how of structured data' },
+    { name: 'Improve Schema Quality Score', path: '/schema-markup/improve-quality-score', description: 'Copy-paste snippets to boost your schema score' }
   ]
 
   const schemaGenerators = [
