@@ -107,12 +107,15 @@ export class HubSpotOAuthService {
     // IMPORTANT: Always use api.hubapi.com - HubSpot handles regional routing automatically
     // Region-specific endpoints like api.eu1.hubapi.com do NOT exist in DNS
     const tokenUrl = 'https://api.hubapi.com/oauth/v1/token'
+    const startTime = Date.now()
 
     try {
       console.log('🔄 [HubSpot OAuth] Exchanging code for tokens (unified endpoint with auto-routing)', {
         region,
         codePrefix: code.substring(0, 4) + '...',
-        endpoint: tokenUrl
+        endpoint: tokenUrl,
+        redirectUri,
+        startTime: new Date(startTime).toISOString()
       })
 
       const response = await axios.post<HubSpotTokenResponse>(
@@ -132,15 +135,25 @@ export class HubSpotOAuthService {
         }
       )
 
-      console.log('✅ [HubSpot OAuth] Successfully exchanged code for tokens', { region })
+      const duration = Date.now() - startTime
+      console.log('✅ [HubSpot OAuth] Successfully exchanged code for tokens', {
+        region,
+        durationMs: duration,
+        hasAccessToken: !!response.data.access_token,
+        hasRefreshToken: !!response.data.refresh_token,
+        expiresIn: response.data.expires_in
+      })
       return response.data
     } catch (error) {
+      const duration = Date.now() - startTime
       console.error('❌ [HubSpot OAuth] Failed to exchange code:', {
         region,
         endpoint: tokenUrl,
         error: error instanceof Error ? error.message : 'Unknown error',
         statusCode: axios.isAxiosError(error) ? error.response?.status : undefined,
-        responseData: axios.isAxiosError(error) ? error.response?.data : undefined
+        responseData: axios.isAxiosError(error) ? error.response?.data : undefined,
+        durationMs: duration,
+        codePrefix: code.substring(0, 4) + '...'
       })
 
       if (axios.isAxiosError(error)) {

@@ -195,14 +195,26 @@ export const handleOAuthCallback = asyncHandler(
       }
     } catch (error) {
       // Enhanced error logging with context
-      const errorDetails = {
-        userId,
+      const errorDetails: any = {
+        userId: userId || 'UNAUTHENTICATED',
+        hasCode: !!code,
+        codePreview: code ? code.substring(0, 20) + '...' : null,
+        statePreview: state ? state.substring(0, 10) + '...' : null,
         region,
+        requestTimestamp,
         timestamp: new Date().toISOString(),
         errorType: error instanceof Error ? error.constructor.name : 'Unknown',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorStack: error instanceof Error ? error.stack : undefined,
         duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
+      }
+
+      // Add HubSpot API error details if available (axios errors)
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any
+        errorDetails.hubspotApiStatus = axiosError.response?.status
+        errorDetails.hubspotApiError = axiosError.response?.data
+        errorDetails.hubspotApiUrl = axiosError.config?.url
       }
 
       console.error('❌ [HubSpot Controller] OAuth callback failed', errorDetails)
@@ -227,6 +239,9 @@ export const handleOAuthCallback = asyncHandler(
         } else if (errMsg.includes('insufficient permissions')) {
           userMessage = 'Please grant all required permissions when connecting HubSpot.'
           statusCode = 403
+        } else if (errMsg.includes('state parameter')) {
+          userMessage = error.message
+          statusCode = 400
         } else if (errMsg.includes('endpoint not found')) {
           userMessage = `HubSpot region (${region}) configuration error. Please contact support.`
           statusCode = 500

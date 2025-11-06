@@ -6,6 +6,7 @@ import SuperSchemaIcon from './icons/SuperSchemaIcon'
 import BatchProgressPanel from './BatchProgressPanel'
 import BatchConfirmModal from './BatchConfirmModal'
 import { cn } from '@/utils/cn'
+import { normalizeDomain } from '@/utils/domain'
 import { apiService } from '@/services/api'
 import { useAuth } from '@clerk/clerk-react'
 import { toast } from 'react-hot-toast'
@@ -166,7 +167,7 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ domain })
+        body: JSON.stringify({ domain: normalizeDomain(domain) })
       })
 
       const result = await response.json()
@@ -194,7 +195,7 @@ export default function UrlDiscovery({ onUrlSelect, className }: UrlDiscoveryPro
   const saveUrlsToLibrary = async (domain: string, urls: DiscoveredUrl[]) => {
     try {
       await apiService.saveDiscoveredUrls({
-        domain,
+        domain: normalizeDomain(domain),
         urls
       })
       console.log(`Saved ${urls.length} URLs to library`)

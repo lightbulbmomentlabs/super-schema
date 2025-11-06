@@ -34,6 +34,20 @@ export default function HubSpotCallbackPage() {
       const error = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
 
+      // Log full callback URL and timing
+      const callbackTime = new Date().toISOString()
+      const initiationTime = sessionStorage.getItem('hubspot_oauth_initiation_time')
+      const timeElapsed = initiationTime
+        ? Math.round((new Date().getTime() - new Date(initiationTime).getTime()) / 1000)
+        : null
+
+      console.log('📋 [HubSpotCallback] Callback received', {
+        fullUrl: window.location.href,
+        callbackTime,
+        initiationTime,
+        timeElapsedSeconds: timeElapsed
+      })
+
       console.log('📋 [HubSpotCallback] OAuth parameters', {
         hasCode: !!code,
         hasState: !!state,
@@ -72,6 +86,15 @@ export default function HubSpotCallbackPage() {
 
       // Validate state parameter (retrieve from session storage)
       const storedState = sessionStorage.getItem('hubspot_oauth_state')
+
+      console.log('🔐 [HubSpotCallback] State parameter validation', {
+        stateFromUrl: state ? state.substring(0, 10) + '...' : null,
+        stateFromStorage: storedState ? storedState.substring(0, 10) + '...' : null,
+        stateMatch: state === storedState,
+        stateExpectedButMissing: !state && !!storedState,
+        storedButNotReceived: !!storedState && !state
+      })
+
       if (state && storedState && state !== storedState) {
         console.error('❌ [HubSpotCallback] State parameter mismatch (CSRF attempt)', {
           receivedState: state?.substring(0, 10) + '...',
@@ -86,7 +109,9 @@ export default function HubSpotCallbackPage() {
       }
 
       // Clear stored state after validation
+      console.log('✅ [HubSpotCallback] State validation passed, clearing session storage')
       sessionStorage.removeItem('hubspot_oauth_state')
+      sessionStorage.removeItem('hubspot_oauth_initiation_time')
 
       // =====================================================
       // FLOW DETECTION: Authenticated vs Unauthenticated
@@ -136,13 +161,23 @@ export default function HubSpotCallbackPage() {
 
         try {
           const redirectUri = `${window.location.origin}/hubspot/callback`
+          const exchangeStartTime = new Date()
 
           console.log('🔄 [HubSpotCallback] Exchanging code for tokens (authenticated flow)', {
             redirectUri,
-            hasState: !!state
+            hasState: !!state,
+            stateValue: state ? state.substring(0, 10) + '...' : null,
+            timeElapsedSinceCallback: timeElapsed,
+            exchangeStartTime: exchangeStartTime.toISOString()
           })
 
           const response = await hubspotApi.handleCallback(code, authToken, redirectUri, state)
+
+          const exchangeDuration = Math.round((new Date().getTime() - exchangeStartTime.getTime()) / 1000)
+          console.log('⏱️ [HubSpotCallback] Token exchange completed', {
+            durationSeconds: exchangeDuration,
+            totalTimeSeconds: timeElapsed ? timeElapsed + exchangeDuration : exchangeDuration
+          })
 
           console.log('✅ [HubSpotCallback] Connection successful', {
             portalId: response.data?.portalId,
