@@ -297,7 +297,7 @@ class ErrorLogger {
       const hoursAgo = timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 720
       const startDate = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString()
 
-      const { data, error } = await db.supabase
+      const { data, error} = await db.supabase
         .from('error_logs')
         .select('error_type, status, occurrence_count')
         .gte('created_at', startDate)
@@ -319,6 +319,153 @@ class ErrorLogger {
     } catch (error) {
       console.error('Failed to fetch error stats:', error)
       return { total: 0, byType: {}, byStatus: {} }
+    }
+  }
+
+  /**
+   * Get AI API health metrics
+   * Tracks 529 errors, success rates, response times, and trends
+   */
+  async getApiHealthMetrics() {
+    try {
+      // Define time windows
+      const now = Date.now()
+      const last1Hour = new Date(now - 60 * 60 * 1000).toISOString()
+      const last24Hours = new Date(now - 24 * 60 * 60 * 1000).toISOString()
+      const last7Days = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+      // Query AI-related errors (529, 429, 500) from error_logs
+      const { data: aiErrors } = await db.supabase
+        .from('error_logs')
+        .select('error_type, response_status, occurrence_count, created_at, user_id')
+        .in('error_type', ['ai_error', 'api_error', 'rate_limit'])
+        .gte('created_at', last7Days)
+        .order('created_at', { ascending: true })
+
+      // Query schema generations for success/failure metrics
+      const { data: generations } = await db.supabase
+        .from('schema_generations')
+        .select('created_at, schemas, processing_time_ms, failure_reason')
+        .gte('created_at', last24Hours)
+        .order('created_at', { ascending: true })
+
+      // Calculate current status (last hour)
+      const errors1h = aiErrors?.filter(e => e.created_at >= last1Hour) || []
+      const total529Errors1h = errors1h
+        .filter(e => e.response_status === 529 || e.error_type === 'api_error')
+        .reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+
+      // Calculate 24h metrics
+      const errors24h = aiErrors?.filter(e => e.created_at >= last24Hours) || []
+      const total529Errors24h = errors24h
+        .filter(e => e.response_status === 529 || e.error_type === 'api_error')
+        .reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+
+      const totalApiErrors24h = errors24h.reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+      const uniqueUsersAffected = new Set(errors24h.map(e => e.user_id).filter(Boolean)).size
+
+      // Calculate success rate from generations
+      const totalGenerations = generations?.length || 0
+      const failedGenerations = generations?.filter(g => g.failure_reason).length || 0
+      const successfulGenerations = totalGenerations - failedGenerations
+      const successRate = totalGenerations > 0 ? (successfulGenerations / totalGenerations) * 100 : 100
+
+      // Calculate average response time
+      const responseTimes = generations
+        ?.filter(g => g.processing_time_ms && !g.failure_reason)
+        .map(g => g.processing_time_ms) || []
+      const avgResponseTime = responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+        : 0
+
+      // Determine current health status
+      const errorRate1h = errors1h.reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+      let status: 'healthy' | 'degraded' | 'down' = 'healthy'
+      if (errorRate1h > 10) {
+        status = 'down'
+      } else if (errorRate1h > 3 || total529Errors1h > 1) {
+        status = 'degraded'
+      }
+
+      // Calculate hourly trends for last 24 hours
+      const hourlyTrends = []
+      for (let i = 23; i >= 0; i--) {
+        const hourStart = new Date(now - (i + 1) * 60 * 60 * 1000).toISOString()
+        const hourEnd = new Date(now - i * 60 * 60 * 1000).toISOString()
+
+        const hourErrors = aiErrors?.filter(e =>
+          e.created_at >= hourStart && e.created_at < hourEnd
+        ) || []
+
+        const hour529s = hourErrors
+          .filter(e => e.response_status === 529 || e.error_type === 'api_error')
+          .reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+
+        const hourGens = generations?.filter(g =>
+          g.created_at >= hourStart && g.created_at < hourEnd
+        ) || []
+
+        hourlyTrends.push({
+          hour: new Date(now - i * 60 * 60 * 1000).toISOString(),
+          errors529: hour529s,
+          totalErrors: hourErrors.reduce((sum, e) => sum + (e.occurrence_count || 1), 0),
+          totalRequests: hourGens.length,
+          successRate: hourGens.length > 0
+            ? ((hourGens.length - hourGens.filter(g => g.failure_reason).length) / hourGens.length) * 100
+            : 100
+        })
+      }
+
+      // Calculate error breakdown by type
+      const errorBreakdown = {
+        error529: total529Errors24h,
+        error429: errors24h
+          .filter(e => e.response_status === 429 || e.error_type === 'rate_limit')
+          .reduce((sum, e) => sum + (e.occurrence_count || 1), 0),
+        error500: errors24h
+          .filter(e => e.response_status === 500)
+          .reduce((sum, e) => sum + (e.occurrence_count || 1), 0),
+        other: errors24h
+          .filter(e => e.response_status !== 529 && e.response_status !== 429 && e.response_status !== 500)
+          .reduce((sum, e) => sum + (e.occurrence_count || 1), 0)
+      }
+
+      return {
+        current: {
+          status,
+          errorRate: errorRate1h,
+          avgResponseTime: Math.round(avgResponseTime)
+        },
+        last24Hours: {
+          total529Errors: total529Errors24h,
+          totalApiErrors: totalApiErrors24h,
+          totalRequests: totalGenerations,
+          successfulRequests: successfulGenerations,
+          failedRequests: failedGenerations,
+          successRate: Math.round(successRate * 10) / 10,
+          usersAffected: uniqueUsersAffected,
+          errorBreakdown
+        },
+        trends: {
+          hourly: hourlyTrends
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch API health metrics:', error)
+      return {
+        current: { status: 'healthy' as const, errorRate: 0, avgResponseTime: 0 },
+        last24Hours: {
+          total529Errors: 0,
+          totalApiErrors: 0,
+          totalRequests: 0,
+          successfulRequests: 0,
+          failedRequests: 0,
+          successRate: 100,
+          usersAffected: 0,
+          errorBreakdown: { error529: 0, error429: 0, error500: 0, other: 0 }
+        },
+        trends: { hourly: [] }
+      }
     }
   }
 }

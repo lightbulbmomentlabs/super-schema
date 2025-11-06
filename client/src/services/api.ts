@@ -562,6 +562,41 @@ class ApiService {
     return response.data
   }
 
+  async getApiHealthMetrics(): Promise<ApiResponse<{
+    current: {
+      status: 'healthy' | 'degraded' | 'down'
+      errorRate: number
+      avgResponseTime: number
+    }
+    last24Hours: {
+      total529Errors: number
+      totalApiErrors: number
+      totalRequests: number
+      successfulRequests: number
+      failedRequests: number
+      successRate: number
+      usersAffected: number
+      errorBreakdown: {
+        error529: number
+        error429: number
+        error500: number
+        other: number
+      }
+    }
+    trends: {
+      hourly: Array<{
+        hour: string
+        errors529: number
+        totalErrors: number
+        totalRequests: number
+        successRate: number
+      }>
+    }
+  }>> {
+    const response = await api.get('/admin/api-health')
+    return response.data
+  }
+
   async getHubSpotStats(): Promise<ApiResponse<{
     totalConnections: number
     activeConnections: number

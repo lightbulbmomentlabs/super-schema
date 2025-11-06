@@ -12,6 +12,7 @@ import {
   TrendingDown
 } from 'lucide-react'
 import { apiService } from '@/services/api'
+import AdminApiHealthWidget from '@/components/AdminApiHealthWidget'
 
 export default function AdminAnalytics() {
   // Fetch platform stats
@@ -64,6 +65,15 @@ export default function AdminAnalytics() {
         <p className="text-muted-foreground mt-1">
           Comprehensive overview of platform usage, revenue, and performance
         </p>
+      </div>
+
+      {/* AI API Health Monitoring */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">AI API Health</h2>
+        </div>
+        <AdminApiHealthWidget />
       </div>
 
       {/* Revenue Metrics */}

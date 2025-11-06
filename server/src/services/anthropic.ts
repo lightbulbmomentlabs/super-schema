@@ -26,8 +26,15 @@ interface AnthropicError {
 class AnthropicService {
   private client: Anthropic | null = null
   private clientInitialized = false
+
+  // Standard retry configuration for most errors
   private readonly MAX_RETRIES = 3
   private readonly INITIAL_RETRY_DELAY = 1000 // 1 second
+
+  // Extended retry configuration for 529 overload errors
+  // These errors need more time for Anthropic's service to recover
+  private readonly MAX_RETRIES_FOR_529 = 5
+  private readonly RETRY_DELAYS_FOR_529 = [2000, 5000, 10000, 20000, 30000] // 2s, 5s, 10s, 20s, 30s = 67s total
 
   private initializeClient(): Anthropic | null {
     if (this.clientInitialized) {
@@ -128,6 +135,33 @@ class AnthropicService {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
 
+  /**
+   * Check if error is a 529 overload error
+   */
+  private is529Error(error: any): boolean {
+    return error.status === 529 || error.error?.type === 'overloaded_error'
+  }
+
+  /**
+   * Get maximum retry attempts based on error type
+   */
+  private getMaxRetries(error: any): number {
+    return this.is529Error(error) ? this.MAX_RETRIES_FOR_529 : this.MAX_RETRIES
+  }
+
+  /**
+   * Calculate retry delay based on error type and attempt number
+   */
+  private getRetryDelay(attempt: number, error: any): number {
+    if (this.is529Error(error)) {
+      // Use predefined delays for 529 errors: 2s, 5s, 10s, 20s, 30s
+      const index = attempt - 1
+      return this.RETRY_DELAYS_FOR_529[index] || 30000 // Default to 30s if beyond array
+    }
+    // Standard exponential backoff for other errors: 1s, 2s, 4s
+    return this.INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1)
+  }
+
   async generateSchemas(
     analysis: ContentAnalysis,
     options: SchemaGenerationOptions = {}
@@ -147,15 +181,17 @@ class AnthropicService {
     const systemPrompt = this.buildSystemPrompt(options.requestedSchemaTypes)
     const userPrompt = this.buildUserPrompt(analysis, options)
 
-    // Retry loop with exponential backoff
+    // Retry loop with dynamic retry configuration based on error type
     let lastError: any = null
+    let maxRetries = this.MAX_RETRIES // Will be updated based on error type
 
-    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
 
         if (attempt > 1) {
-          console.log(`🔄 Retry attempt ${attempt}/${this.MAX_RETRIES} for Claude API call...`)
+          const errorType = this.is529Error(lastError) ? '529 overload' : 'API error'
+          console.log(`🔄 Retry attempt ${attempt}/${maxRetries} for ${errorType}...`)
         } else {
           console.log(`🚀 Calling Claude ${model} for schema generation...`)
         }
@@ -220,19 +256,28 @@ class AnthropicService {
       } catch (error: any) {
         lastError = error
 
-        // Log error details
-        console.error(`❌ Claude API error (attempt ${attempt}/${this.MAX_RETRIES}):`, {
+        // Update maxRetries based on error type (529 errors get more attempts)
+        maxRetries = this.getMaxRetries(error)
+
+        // Log error details with enhanced context
+        const is529 = this.is529Error(error)
+        console.error(`❌ Claude API error (attempt ${attempt}/${maxRetries})${is529 ? ' [529 OVERLOAD]' : ''}:`, {
           status: error.status,
           type: error.error?.type,
-          message: error.error?.message || error.message
+          message: error.error?.message || error.message,
+          willRetry: attempt < maxRetries
         })
 
         // Check if error is retryable
         const isRetryable = this.isRetryableError(error)
 
-        if (!isRetryable || attempt === this.MAX_RETRIES) {
+        if (!isRetryable || attempt === maxRetries) {
           // Non-retryable error or max retries reached
-          console.error(`❌ Claude API error (not retrying):`, error)
+          if (is529) {
+            console.error(`❌ Claude API 529 overload persists after ${maxRetries} attempts over ~67 seconds`)
+          } else {
+            console.error(`❌ Claude API error (not retrying):`, error)
+          }
 
           const userMessage = this.getErrorMessage(error)
           const enhancedError = new Error(userMessage) as any
@@ -242,9 +287,14 @@ class AnthropicService {
           throw enhancedError
         }
 
-        // Calculate delay with exponential backoff: 1s, 2s, 4s
-        const delayMs = this.INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1)
-        console.log(`⏳ Waiting ${delayMs}ms before retry...`)
+        // Calculate delay based on error type
+        const delayMs = this.getRetryDelay(attempt, error)
+        const delaySec = (delayMs / 1000).toFixed(1)
+        if (is529) {
+          console.log(`⏳ [529 OVERLOAD] Waiting ${delaySec}s for Anthropic service to recover...`)
+        } else {
+          console.log(`⏳ Waiting ${delaySec}s before retry...`)
+        }
         await this.sleep(delayMs)
       }
     }

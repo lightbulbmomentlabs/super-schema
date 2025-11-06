@@ -13,6 +13,7 @@ import {
   getErrorLog,
   updateErrorLogStatus,
   getErrorStats,
+  getApiHealthMetrics,
   getHubSpotStats,
   getSchemaFailures,
   getSchemaFailureStats,
@@ -59,6 +60,11 @@ router.get('/errors/:id', getErrorLog)
 
 // PATCH /api/admin/errors/:id/status - Update error log status
 router.patch('/errors/:id/status', updateErrorLogStatus)
+
+// AI API Health Monitoring
+
+// GET /api/admin/api-health - Get AI API health metrics (529 errors, success rates, trends)
+router.get('/api-health', getApiHealthMetrics)
 
 // HubSpot Integration Monitoring
 

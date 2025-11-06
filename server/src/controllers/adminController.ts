@@ -237,6 +237,22 @@ export const getErrorStats = asyncHandler(async (req: AuthenticatedRequest, res:
 })
 
 /**
+ * Get AI API health metrics
+ * Tracks 529 errors, success rates, response times, and hourly trends
+ * Used by admin dashboard to monitor AI service health
+ */
+export const getApiHealthMetrics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { errorLogger } = await import('../services/errorLogger.js')
+
+  const metrics = await errorLogger.getApiHealthMetrics()
+
+  res.json({
+    success: true,
+    data: metrics
+  })
+})
+
+/**
  * Get HubSpot connection statistics
  * Helps monitor the HubSpot integration health, especially for regional API support
  */
