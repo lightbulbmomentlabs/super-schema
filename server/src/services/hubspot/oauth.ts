@@ -2,12 +2,11 @@
  * HubSpot OAuth Service
  * Manages OAuth token lifecycle for HubSpot integration
  *
- * IMPORTANT: HubSpot uses region-specific API endpoints:
- * - NA1 (North America): api.hubapi.com
- * - EU1 (Europe): api.eu1.hubapi.com
- * - AP1 (Asia Pacific): api.ap1.hubapi.com
- *
- * Authorization codes are prefixed with the region (e.g., na1-, eu1-, ap1-)
+ * IMPORTANT: HubSpot uses a unified API endpoint (api.hubapi.com) for ALL regions
+ * - The endpoint automatically routes to the correct region based on tokens
+ * - Authorization codes are prefixed with the region (e.g., na1-, eu1-, ap1-)
+ * - HubSpot's infrastructure handles regional routing via Cloudflare Workers
+ * - Region-specific endpoints like api.eu1.hubapi.com do NOT exist in DNS
  */
 
 import axios from 'axios'
@@ -22,13 +21,18 @@ function getRegionFromCode(code: string): string {
   return regionMatch ? regionMatch[1] : 'na1' // Default to NA1 for backwards compatibility
 }
 
+/**
+ * Get HubSpot API base URL
+ *
+ * IMPORTANT: Always returns api.hubapi.com for ALL regions (na1, eu1, ap1)
+ * HubSpot's infrastructure automatically routes API calls to the correct region
+ * based on the access token or authorization code used in the request.
+ *
+ * Region-specific endpoints (api.eu1.hubapi.com, api.ap1.hubapi.com) do NOT exist.
+ */
 export function getHubSpotApiBaseUrl(region: string): string {
-  const baseUrls: Record<string, string> = {
-    'na1': 'https://api.hubapi.com',
-    'eu1': 'https://api.eu1.hubapi.com',
-    'ap1': 'https://api.ap1.hubapi.com'
-  }
-  return baseUrls[region] || baseUrls['na1']
+  // Always use unified endpoint - HubSpot handles regional routing automatically
+  return 'https://api.hubapi.com'
 }
 
 interface HubSpotTokenResponse {
