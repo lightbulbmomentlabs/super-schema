@@ -15,13 +15,14 @@ import {
   deleteSchemaType,
   getUnviewedCount
 } from '../controllers/schemaController.js'
-import { authMiddleware } from '../middleware/auth.js'
+import { authMiddleware, optionalAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-// PUBLIC ROUTES (no auth required)
+// PUBLIC ROUTES (no auth required, but captures user info if authenticated)
 // POST /api/schema/extract - Public endpoint for schema grader
-router.post('/extract', extractSchemaFromUrl)
+// Uses optionalAuth to log user email when available, without requiring authentication
+router.post('/extract', optionalAuth, extractSchemaFromUrl)
 
 // PROTECTED ROUTES (auth required)
 // POST /api/schema/generate
