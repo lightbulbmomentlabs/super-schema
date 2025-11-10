@@ -197,17 +197,28 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
     if (result.success) {
       // If we have a schema record, update it with refined version and increment refinement count
       if (schemaRecord) {
-        await db.updateSchemaContent(schemaRecord.id, result.schemas)
-        await db.incrementRefinementCount(schemaRecord.id)
         currentRefinements++
 
-        // Also update the schema score
-        if (result.schemaScore) {
-          await db.updateSchemaGeneration(schemaRecord.id, {
-            schemas: result.schemas,
-            schemaScore: result.schemaScore
-          })
-        }
+        // Detailed logging for debugging score updates
+        const schemasIdentical = JSON.stringify(schemas) === JSON.stringify(result.schemas)
+        const scoreChanged = schemaRecord.schema_score?.overallScore !== result.schemaScore?.overallScore
+
+        console.log(`🔍 REFINEMENT #${currentRefinements} DETAILED DEBUG:`)
+        console.log(`  📊 Score Comparison:`)
+        console.log(`     Previous: ${schemaRecord.schema_score?.overallScore}`)
+        console.log(`     New:      ${result.schemaScore?.overallScore}`)
+        console.log(`     Changed:  ${scoreChanged}`)
+        console.log(`  📄 Schema Comparison:`)
+        console.log(`     Identical: ${schemasIdentical}`)
+        console.log(`     Changes:   ${result.highlightedChanges?.length || 0} highlighted changes`)
+        console.log(`  📝 Full Score Object:`, result.schemaScore)
+
+        // Consolidate all updates into a single atomic database operation
+        await db.updateSchemaGeneration(schemaRecord.id, {
+          schemas: result.schemas,
+          schemaScore: result.schemaScore || null,
+          refinementCount: currentRefinements
+        })
 
         console.log(`💾 Schema updated in database with ${currentRefinements} refinements`)
       }

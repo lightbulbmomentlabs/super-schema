@@ -847,6 +847,16 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           schemaTypes: response.data.schemas.map(s => s['@type'])
         })
 
+        console.log('🔍 FRONTEND: Refinement Response Debug:', {
+          refinementNumber: refinementCount + 1,
+          hasSchemaScore: !!response.data.schemaScore,
+          newOverallScore: response.data.schemaScore?.overallScore,
+          currentStateScore: schemaScore?.overallScore,
+          previousScoreTracked: previousScore,
+          scoreWillChange: response.data.schemaScore?.overallScore !== schemaScore?.overallScore,
+          changesCount: response.data.highlightedChanges?.length || 0
+        })
+
         setGeneratedSchemas(response.data.schemas)
         setHtmlScriptTags(response.data.htmlScriptTags || '')
         setSchemaScore(response.data.schemaScore || null)
@@ -855,6 +865,29 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         // Update refinement count from server response if available
         const newRefinementCount = response.data.refinementCount ?? (refinementCount + 1)
         setRefinementCount(newRefinementCount)
+
+        // Update React Query cache to persist the new score and schemas
+        if (currentUrlId) {
+          queryClient.setQueryData(['urlSchemas', currentUrlId], (old: any) => {
+            if (!old?.data) return old
+            const updatedRecords = [...old.data]
+            updatedRecords[selectedSchemaIndex] = {
+              ...updatedRecords[selectedSchemaIndex],
+              schemas: response.data.schemas,
+              schemaScore: response.data.schemaScore || null,
+              refinementCount: newRefinementCount
+            }
+            console.log('🔍 FRONTEND: React Query cache updated:', {
+              urlId: currentUrlId,
+              schemaIndex: selectedSchemaIndex,
+              newCachedScore: updatedRecords[selectedSchemaIndex].schemaScore?.overallScore
+            })
+            return {
+              ...old,
+              data: updatedRecords
+            }
+          })
+        }
 
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
         toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)

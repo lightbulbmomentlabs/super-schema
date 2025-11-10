@@ -42,6 +42,10 @@ interface TeamContextType {
   isAcceptingInvite: boolean
   acceptInviteError: Error | null
 
+  createTeam: (organizationName?: string) => Promise<any>
+  isCreatingTeam: boolean
+  createTeamError: Error | null
+
   // Team invites data
   teamInvites: any[] | undefined
   isLoadingInvites: boolean
@@ -55,6 +59,7 @@ interface TeamContextType {
   // Computed properties
   isTeamOwner: boolean
   hasMultipleTeams: boolean
+  ownsTeam: boolean
   isLoading: boolean
 }
 

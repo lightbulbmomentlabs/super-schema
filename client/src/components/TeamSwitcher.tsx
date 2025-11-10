@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useTeamContext } from '@/contexts/TeamContext'
-import { ChevronDown, Users, Settings, Check, Loader2, Share2 } from 'lucide-react'
+import { ChevronDown, Users, Settings, Check, Crown, Plus } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toast } from 'react-hot-toast'
+import CreateTeamModal from './CreateTeamModal'
 
 interface TeamSwitcherProps {
   className?: string
@@ -11,8 +12,8 @@ interface TeamSwitcherProps {
 
 export default function TeamSwitcher({ className }: TeamSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
 
   const {
     currentTeam,
@@ -21,7 +22,10 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
     currentTeamError,
     switchTeam,
     isSwitchingTeam,
-    hasMultipleTeams
+    hasMultipleTeams,
+    createTeam,
+    isCreatingTeam,
+    ownsTeam
   } = useTeamContext()
 
   useEffect(() => {
@@ -45,21 +49,44 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
       await switchTeam(teamId)
       toast.success('Switched team successfully')
       setIsOpen(false)
-      // Refresh the page to reload all team-specific data
-      window.location.reload()
+      // React Query will automatically refetch invalidated queries
     } catch (error) {
       console.error('Failed to switch team:', error)
       toast.error('Failed to switch team')
     }
   }
 
-  // Don't render anything if there's an error (feature not enabled or API issue)
-  if (currentTeamError) {
+  const handleCreateTeam = async (organizationName?: string) => {
+    try {
+      await createTeam(organizationName)
+      toast.success('Team created successfully with 2 free credits!')
+      setShowCreateModal(false)
+      setIsOpen(false)
+      // React Query will automatically refetch invalidated queries
+    } catch (error: any) {
+      console.error('Failed to create team:', error)
+      if (error?.response?.data?.error?.includes('maximum limit')) {
+        toast.error('You have reached the maximum limit of 10 teams')
+      } else {
+        toast.error('Failed to create team. Please try again.')
+      }
+    }
+  }
+
+  // If currently loading, show nothing (will render quickly)
+  if (isLoading) {
     return null
   }
 
-  // Show loading only briefly, then hide if it takes too long
-  if (isLoading || !currentTeam) {
+  // If there's an error or no team data, don't render the switcher
+  // This handles cases where teams feature is disabled or there's a persistent error
+  // Temporary API errors (like rate limits) will resolve when queries retry
+  if (!currentTeam && currentTeamError) {
+    return null
+  }
+
+  // If we have no current team but no error, we're still loading
+  if (!currentTeam) {
     return null
   }
 
@@ -122,7 +149,7 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
 
                   return (
                     <button
-                      key={team.teamId}
+                      key={team.id}
                       onClick={() => !isCurrentTeam && handleSwitchTeam(team.teamId)}
                       disabled={isCurrentTeam || isSwitchingTeam}
                       className={cn(
@@ -134,7 +161,11 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
                       )}
                     >
                       <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4" />
+                        {team.isOwner ? (
+                          <Crown className="h-4 w-4 text-amber-500" />
+                        ) : (
+                          <Users className="h-4 w-4" />
+                        )}
                         <span>{teamDisplayName}</span>
                       </div>
                       {isCurrentTeam && <Check className="h-4 w-4" />}
@@ -147,6 +178,18 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
 
           {/* Actions */}
           <div className="py-2">
+            {!ownsTeam && (
+              <button
+                onClick={() => {
+                  setShowCreateModal(true)
+                  setIsOpen(false)
+                }}
+                className="w-full flex items-center space-x-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create a new Team</span>
+              </button>
+            )}
             <Link
               to="/team/settings"
               onClick={() => setIsOpen(false)}
@@ -155,20 +198,17 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
               <Settings className="h-4 w-4" />
               <span>Team Settings</span>
             </Link>
-
-            {currentTeam.isOwner && (
-              <Link
-                to="/team/invite"
-                onClick={() => setIsOpen(false)}
-                className="w-full flex items-center space-x-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
-              >
-                <Share2 className="h-4 w-4" />
-                <span>Invite Members</span>
-              </Link>
-            )}
           </div>
         </div>
       )}
+
+      {/* Create Team Modal */}
+      <CreateTeamModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateTeam}
+        isCreating={isCreatingTeam}
+      />
     </div>
   )
 }

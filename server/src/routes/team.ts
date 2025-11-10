@@ -19,7 +19,8 @@ import {
   leaveTeam,
   listTeams,
   switchTeam,
-  getCurrentTeam
+  getCurrentTeam,
+  createNewTeam
 } from '../controllers/teamController.js'
 
 const router = Router()
@@ -141,6 +142,15 @@ router.post(
  * Requires: Authentication
  */
 router.get('/list', authMiddleware, requireTeamsEnabled, listTeams)
+
+/**
+ * POST /api/team/create
+ * Create a new team for the current user
+ * User remains in their current team and can switch later
+ * Grants 2 free credits to the new team
+ * Requires: Authentication
+ */
+router.post('/create', authMiddleware, requireTeamsEnabled, createNewTeam)
 
 /**
  * POST /api/team/switch/:teamId

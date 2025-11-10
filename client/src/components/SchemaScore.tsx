@@ -139,7 +139,7 @@ export default function SchemaScore({
             </span>
           </div>
           <div className="text-sm">
-            <span className="text-muted-foreground">{previousScore}</span>
+            <span className="text-white/90">{previousScore}</span>
             <span className="mx-2">→</span>
             <span className="font-bold">{overallScore}</span>
           </div>
@@ -272,21 +272,15 @@ export default function SchemaScore({
         </div>
       </div>
 
-      {/* Refinement Limit Alert - Show when limit reached */}
+      {/* Refinement Limit Notice - Show when limit reached */}
       {!canRefine && onRefineSchema && (
-        <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+        <div className="mb-4 p-3 rounded-lg border border-border bg-muted/20">
           <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
+            <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 mr-2.5 flex-shrink-0" />
             <div className="flex-1">
-              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                AI Refinement Limit Reached
-              </h4>
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                You've used all {maxRefinements} AI refinements for this schema. To make further improvements, generate a new schema or manually edit the current one.
+              <p className="text-sm text-muted-foreground">
+                You've used all {maxRefinements} AI refinements for this schema ({refinementCount}/{maxRefinements}). To make further improvements, generate a new schema or manually edit the current one.
               </p>
-              <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                {refinementCount}/{maxRefinements} refinements used
-              </div>
             </div>
           </div>
         </div>
@@ -294,7 +288,7 @@ export default function SchemaScore({
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 pb-6 border-t border-border">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start space-x-4">
           {onRefineSchema && (
             <div className="flex flex-col gap-1">
               <button
@@ -351,20 +345,11 @@ export default function SchemaScore({
           )}
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center text-sm text-primary hover:text-primary/80 transition-colors"
+            className="flex items-center px-4 py-2 text-sm rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
           >
-            <Info className="h-4 w-4 mr-1" />
+            <Info className="h-4 w-4 mr-2" />
             {showDetails ? 'Hide Details' : 'Show Details'}
           </button>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ExternalLink className="h-4 w-4 mr-1" />
-            View Original Page
-          </a>
         </div>
       </div>
 

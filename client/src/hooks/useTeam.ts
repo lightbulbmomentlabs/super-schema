@@ -69,9 +69,13 @@ export function useTeam() {
   const switchTeamMutation = useMutation({
     mutationFn: (teamId: string) => apiService.switchTeam(teamId),
     onSuccess: () => {
-      // Invalidate and refetch team queries after switching
+      // Only invalidate team and user queries - let React Query's staleTime handle the rest
+      // This prevents burst of API requests that can trigger rate limits
       queryClient.invalidateQueries({ queryKey: ['team'] })
-      queryClient.invalidateQueries({ queryKey: ['user'] }) // User data may change with team context
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+
+      // Note: Schema and library queries will refresh naturally based on their staleTime
+      // This gradual refresh is better for rate limiting and user experience
     }
   })
 
@@ -98,7 +102,7 @@ export function useTeam() {
   const leaveTeamMutation = useMutation({
     mutationFn: () => apiService.leaveTeam(),
     onSuccess: () => {
-      // Invalidate all team queries after leaving
+      // Only invalidate team and user queries
       queryClient.invalidateQueries({ queryKey: ['team'] })
       queryClient.invalidateQueries({ queryKey: ['user'] })
     }
@@ -108,7 +112,17 @@ export function useTeam() {
   const acceptInviteMutation = useMutation({
     mutationFn: (token: string) => apiService.acceptTeamInvite(token),
     onSuccess: () => {
-      // Refetch all team data after joining a new team
+      // Only invalidate team and user queries
+      queryClient.invalidateQueries({ queryKey: ['team'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+    }
+  })
+
+  // Mutation: Create new team
+  const createTeamMutation = useMutation({
+    mutationFn: (organizationName?: string) => apiService.createTeam(organizationName),
+    onSuccess: () => {
+      // Only invalidate team and user queries
       queryClient.invalidateQueries({ queryKey: ['team'] })
       queryClient.invalidateQueries({ queryKey: ['user'] })
     }
@@ -179,6 +193,10 @@ export function useTeam() {
     isAcceptingInvite: acceptInviteMutation.isPending,
     acceptInviteError: acceptInviteMutation.error,
 
+    createTeam: createTeamMutation.mutateAsync,
+    isCreatingTeam: createTeamMutation.isPending,
+    createTeamError: createTeamMutation.error,
+
     // Team invites data
     teamInvites,
     isLoadingInvites,
@@ -192,6 +210,7 @@ export function useTeam() {
     // Computed properties
     isTeamOwner: currentTeam?.isOwner ?? false,
     hasMultipleTeams: (allTeams?.count ?? 0) > 1,
+    ownsTeam: allTeams?.teams.some(t => t.isOwner) ?? false,
     isLoading: isLoadingCurrentTeam || isLoadingAllTeams
   }
 }

@@ -27,7 +27,6 @@ export default function JoinTeamPage() {
   const [showSignUp, setShowSignUp] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
   const { acceptInvite, refetchAllTeams } = useTeamContext()
-  const previousAuthState = useRef(isSignedIn)
 
   // Set page title
   useEffect(() => {
@@ -52,6 +51,18 @@ export default function JoinTeamPage() {
     retry: false
   })
 
+  // Extract validation data early (before useEffect hooks that use it)
+  const validation = validationResponse?.data
+  const isValid = validation?.valid
+
+  // Store pending invite in sessionStorage for OAuth flow persistence
+  useEffect(() => {
+    if (token && !isSignedIn) {
+      // User is not signed in, store the token for post-OAuth auto-accept
+      sessionStorage.setItem('pendingTeamInvite', token)
+    }
+  }, [token, isSignedIn])
+
   // Refetch validation after user signs in
   useEffect(() => {
     if (isAuthLoaded && isSignedIn && validation) {
@@ -59,25 +70,23 @@ export default function JoinTeamPage() {
     }
   }, [isSignedIn, isAuthLoaded])
 
-  // Auto-accept invite after authentication completes
+  // Auto-accept invite after OAuth authentication
   useEffect(() => {
-    // Only auto-accept when:
-    // 1. User just became authenticated (transition from false to true)
+    // Check if there's a pending invite from sessionStorage
+    const pendingInvite = sessionStorage.getItem('pendingTeamInvite')
+
+    // Auto-accept when:
+    // 1. User is now authenticated
     // 2. Auth is fully loaded
     // 3. Validation is complete and valid
-    // 4. Not already joining
-    const justAuthenticated = !previousAuthState.current && isSignedIn
-
-    if (justAuthenticated && isAuthLoaded && isValid && !isJoining) {
+    // 4. There's a pending invite in sessionStorage
+    // 5. Not already joining
+    if (isSignedIn && isAuthLoaded && isValid && pendingInvite && !isJoining) {
+      // Clear the pending invite immediately to prevent double-acceptance
+      sessionStorage.removeItem('pendingTeamInvite')
       handleAcceptInvite()
     }
-
-    // Update the ref for next render
-    previousAuthState.current = isSignedIn
-  }, [isSignedIn, isAuthLoaded, isValid])
-
-  const validation = validationResponse?.data
-  const isValid = validation?.valid
+  }, [isSignedIn, isAuthLoaded, isValid, isJoining])
 
   // Get display name - prioritize organization name, then owner's full name, then email
   const getDisplayName = () => {

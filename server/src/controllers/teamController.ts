@@ -369,6 +369,47 @@ export const getCurrentTeam = asyncHandler(
   }
 )
 
+/**
+ * POST /api/team/create
+ * Create a new team for the current user
+ * User remains in their current team and can switch later
+ */
+export const createNewTeam = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth!.userId
+    const { organizationName } = req.body
+
+    console.log('🆕 [TeamController] Creating new team for user:', { userId, organizationName })
+
+    try {
+      // Create new team without switching
+      const team = await teamService.createOwnTeamWithoutSwitching(userId, organizationName)
+
+      // Refetch user's teams list
+      const teams = await teamService.getUserTeams(userId)
+
+      res.json({
+        success: true,
+        data: {
+          team,
+          allTeams: teams
+        },
+        message: 'Team created successfully with 2 free credits'
+      })
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('maximum limit')) {
+          return res.status(400).json({
+            success: false,
+            error: error.message
+          })
+        }
+      }
+      throw error
+    }
+  }
+)
+
 export default {
   createInvite,
   validateInvite,
@@ -378,5 +419,6 @@ export default {
   leaveTeam,
   listTeams,
   switchTeam,
-  getCurrentTeam
+  getCurrentTeam,
+  createNewTeam
 }

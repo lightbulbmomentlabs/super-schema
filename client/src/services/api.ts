@@ -732,6 +732,11 @@ class ApiService {
     return response.data
   }
 
+  async createTeam(organizationName?: string): Promise<ApiResponse<{ team: any; allTeams: TeamMember[]; message: string }>> {
+    const response = await api.post('/team/create', { organizationName })
+    return response.data
+  }
+
   async createTeamInvite(): Promise<ApiResponse<TeamInvite>> {
     const response = await api.post('/team/invite')
     return response.data

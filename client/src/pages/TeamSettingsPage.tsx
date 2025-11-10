@@ -270,7 +270,7 @@ export default function TeamSettingsPage() {
 
         <div className="text-sm text-muted-foreground">
           <p>Team ID: {currentTeam.team.id}</p>
-          <p>Created: {new Date(currentTeam.team.createdAt).toLocaleDateString()}</p>
+          <p>Created: {currentTeam.team.createdAt ? new Date(currentTeam.team.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}</p>
         </div>
       </div>
 
@@ -442,85 +442,124 @@ export default function TeamSettingsPage() {
 
           {/* Active Invites List */}
           {teamInvites && teamInvites.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-border">
-              <h4 className="text-sm font-semibold mb-3">Active Invites ({teamInvites.length})</h4>
-              <div className="space-y-2">
-                {teamInvites.map((invite: any) => {
-                  const status = getInviteStatus(invite)
-                  const inviteUrl = `${window.location.origin}/join/${invite.invite_token}`
+            <div className="mt-6 pt-6 border-t border-border space-y-6">
+              {/* Pending Invites */}
+              {teamInvites.filter((invite: any) => getInviteStatus(invite) === 'pending').length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">
+                    Active Invites ({teamInvites.filter((invite: any) => getInviteStatus(invite) === 'pending').length})
+                  </h4>
+                  <div className="space-y-2">
+                    {teamInvites
+                      .filter((invite: any) => getInviteStatus(invite) === 'pending')
+                      .map((invite: any) => {
+                        const inviteUrl = `${window.location.origin}/team/join/${invite.invite_token}`
 
-                  return (
-                    <div
-                      key={invite.id}
-                      className="flex items-center justify-between p-3 bg-accent/50 rounded-lg border border-border"
-                    >
-                      <div className="flex-1 min-w-0 mr-3">
-                        <div className="flex items-center space-x-2 mb-1">
-                          {/* Status Badge */}
-                          {status === 'pending' && (
-                            <span className="text-xs px-2 py-0.5 bg-green-500/10 text-green-600 rounded font-medium">
-                              Pending
-                            </span>
-                          )}
-                          {status === 'used' && (
-                            <span className="text-xs px-2 py-0.5 bg-gray-500/10 text-gray-600 rounded font-medium">
-                              Used
-                            </span>
-                          )}
-                          {status === 'expired' && (
-                            <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-600 rounded font-medium">
-                              Expired
-                            </span>
-                          )}
-
-                          {/* Expiration Text */}
-                          <span className="text-xs text-muted-foreground">
-                            {getExpirationText(invite.expires_at)}
-                          </span>
-                        </div>
-
-                        {/* Invite Link (truncated) */}
-                        <p className="text-sm text-muted-foreground truncate font-mono">
-                          {inviteUrl}
-                        </p>
-
-                        {/* Used By Info */}
-                        {invite.used_by && invite.users && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Used by {invite.users.email}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center space-x-2">
-                        {/* Copy Button - only for pending invites */}
-                        {status === 'pending' && (
-                          <button
-                            onClick={() => handleCopyInvite(inviteUrl, invite.id)}
-                            className="p-2 text-primary hover:bg-primary/10 rounded-md transition-colors"
-                            title="Copy invite link"
+                        return (
+                          <div
+                            key={invite.id}
+                            className="flex items-center justify-between p-3 bg-accent/50 rounded-lg border border-border"
                           >
-                            <Copy className="h-4 w-4" />
-                          </button>
-                        )}
+                            <div className="flex-1 min-w-0 mr-3">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-xs px-2 py-0.5 bg-green-500/10 text-green-600 rounded font-medium">
+                                  Pending
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {getExpirationText(invite.expires_at)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate font-mono">
+                                {inviteUrl}
+                              </p>
+                            </div>
 
-                        {/* Delete Button - only for pending/expired invites (not used) */}
-                        {status !== 'used' && (
-                          <button
-                            onClick={() => handleDeleteInviteClick(invite.id)}
-                            disabled={isDeletingInvite}
-                            className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
-                            title="Delete invite"
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleCopyInvite(inviteUrl, invite.id)}
+                                className="p-2 text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                title="Copy invite link"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteInviteClick(invite.id)}
+                                disabled={isDeletingInvite}
+                                className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
+                                title="Delete invite"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Expired/Used Invites */}
+              {teamInvites.filter((invite: any) => getInviteStatus(invite) !== 'pending').length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 text-muted-foreground">
+                    Past Invites ({teamInvites.filter((invite: any) => getInviteStatus(invite) !== 'pending').length})
+                  </h4>
+                  <div className="space-y-2">
+                    {teamInvites
+                      .filter((invite: any) => getInviteStatus(invite) !== 'pending')
+                      .map((invite: any) => {
+                        const status = getInviteStatus(invite)
+                        const inviteUrl = `${window.location.origin}/team/join/${invite.invite_token}`
+
+                        return (
+                          <div
+                            key={invite.id}
+                            className="flex items-center justify-between p-3 bg-accent/30 rounded-lg border border-border opacity-75"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                            <div className="flex-1 min-w-0 mr-3">
+                              <div className="flex items-center space-x-2 mb-1">
+                                {status === 'used' && (
+                                  <span className="text-xs px-2 py-0.5 bg-gray-500/10 text-gray-600 rounded font-medium">
+                                    Used
+                                  </span>
+                                )}
+                                {status === 'expired' && (
+                                  <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-600 rounded font-medium">
+                                    Expired
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {getExpirationText(invite.expires_at)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate font-mono">
+                                {inviteUrl}
+                              </p>
+                              {invite.used_by && invite.users && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Used by {invite.users.email}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              {status === 'expired' && (
+                                <button
+                                  onClick={() => handleDeleteInviteClick(invite.id)}
+                                  disabled={isDeletingInvite}
+                                  className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
+                                  title="Delete invite"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

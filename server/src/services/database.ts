@@ -759,13 +759,16 @@ class DatabaseService {
     console.log(`💾 updateSchemaGeneration: Updating record ${id} with:`, {
       hasSchemas: !!updateData.schemas,
       status: updateData.status,
-      schema_type: updateData.schema_type
+      schema_type: updateData.schema_type,
+      schema_score: updateData.schema_score,
+      refinement_count: updateData.refinement_count
     })
 
-    const { error } = await this.supabase
+    const { data: updatedData, error } = await this.supabase
       .from('schema_generations')
       .update(updateData)
       .eq('id', id)
+      .select()
 
     if (error) {
       console.error(`❌ updateSchemaGeneration: Database update failed for ${id}:`, error)
@@ -773,6 +776,7 @@ class DatabaseService {
     }
 
     console.log(`✅ updateSchemaGeneration: Successfully updated record ${id}`)
+    console.log(`📊 Updated schema_score:`, updatedData?.[0]?.schema_score)
   }
 
   async getSchemaGenerations(
@@ -1237,6 +1241,12 @@ class DatabaseService {
       if (error.code === 'PGRST116') return null // Not found
       throw error
     }
+
+    console.log(`🔍 getSchemaById: Fetched schema ${schemaId}:`, {
+      schema_score: data.schema_score,
+      refinement_count: data.refinement_count,
+      hasSchemas: !!data.schemas
+    })
 
     return {
       id: data.id,

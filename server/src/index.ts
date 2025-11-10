@@ -51,19 +51,21 @@ app.use(cors({
   credentials: true
 }))
 
-// Rate limiting
+// Rate limiting - disabled in development to avoid blocking local testing
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // Default: 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // Default: 100 requests
   message: 'Too many requests from this IP, please try again later.',
+  skip: () => process.env.NODE_ENV === 'development', // Skip rate limiting in development
 })
 app.use('/api', limiter)
 
-// Schema generation specific rate limiting
+// Schema generation specific rate limiting - disabled in development
 const schemaLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 schema generations per minute
+  windowMs: parseInt(process.env.SCHEMA_RATE_LIMIT_WINDOW_MS || '60000'), // Default: 1 minute
+  max: parseInt(process.env.SCHEMA_RATE_LIMIT_MAX_REQUESTS || '5'), // Default: 5 requests
   message: 'Too many schema generation requests, please try again later.',
+  skip: () => process.env.NODE_ENV === 'development', // Skip rate limiting in development
 })
 app.use('/api/schema/generate', schemaLimiter)
 

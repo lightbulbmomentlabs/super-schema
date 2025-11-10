@@ -91,9 +91,14 @@ export async function createTeam(ownerId: string): Promise<Team> {
  * Get team by ID
  */
 export async function getTeam(teamId: string): Promise<Team | null> {
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('teams')
-    .select('*')
+    .select(`
+      *,
+      users!teams_owner_id_fkey (
+        organization_name
+      )
+    `)
     .eq('id', teamId)
     .single()
 
@@ -105,7 +110,16 @@ export async function getTeam(teamId: string): Promise<Team | null> {
     throw new Error(`Failed to get team: ${error.message}`)
   }
 
-  return data
+  // Flatten the organization_name from the users relation
+  const team = {
+    ...data,
+    organizationName: data.users?.organization_name || undefined
+  }
+
+  // Remove the users object as it's no longer needed
+  delete (team as any).users
+
+  return team
 }
 
 /**
@@ -717,6 +731,82 @@ export async function initializeTeamForUser(userId: string): Promise<Team> {
   return team
 }
 
+/**
+ * Create a new team for an existing user without switching their active team
+ * User remains in their current team and can switch later
+ * Grants 2 free credits to the new team
+ */
+export async function createOwnTeamWithoutSwitching(
+  userId: string,
+  organizationName?: string
+): Promise<Team> {
+  // Check 10-team limit
+  const userTeamCount = await getUserTeamCount(userId)
+  if (userTeamCount >= 10) {
+    throw new Error('You have reached the maximum limit of 10 teams')
+  }
+
+  // Check if user already owns a team (users can only own one team)
+  const existingOwnedTeam = await getTeamByOwnerId(userId)
+  if (existingOwnedTeam) {
+    throw new Error('You already own a team. Users can only own one team but can be members of multiple teams.')
+  }
+
+  // Get current active team before creating new one
+  const currentActiveTeam = await getUserActiveTeam(userId)
+
+  // Create new team with user as owner
+  const team = await createTeam(userId)
+
+  // Update team with organization name if provided
+  if (organizationName) {
+    await supabase
+      .from('teams')
+      .update({ organization_name: organizationName })
+      .eq('id', team.id)
+  }
+
+  // Add user as team member (this will try to update active_team_id)
+  const { data, error } = await supabase
+    .from('team_members')
+    .insert({
+      team_id: team.id,
+      user_id: userId,
+      invited_at: new Date().toISOString(),
+      joined_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('User is already a member of this team')
+    }
+    throw new Error(`Failed to add team member: ${error.message}`)
+  }
+
+  // Restore previous active team (don't switch to new team)
+  if (currentActiveTeam) {
+    await updateUserActiveTeam(userId, currentActiveTeam)
+  }
+
+  // Grant 2 free credits to the new team
+  await supabase
+    .from('credit_transactions')
+    .insert({
+      user_id: userId,
+      team_id: team.id,
+      type: 'bonus',
+      amount: 2,
+      description: 'Free credits for new team',
+      created_at: new Date().toISOString()
+    })
+
+  console.log(`✅ Created new team ${team.id} for user ${userId} with 2 free credits`)
+
+  return team
+}
+
 // =============================================================================
 // MULTI-TEAM SUPPORT
 // =============================================================================
@@ -752,6 +842,7 @@ export async function getUserTeams(userId: string): Promise<TeamMember[]> {
       teams (
         id,
         owner_id,
+        organization_name,
         created_at,
         updated_at
       )
@@ -769,13 +860,14 @@ export async function getUserTeams(userId: string): Promise<TeamMember[]> {
   // Flatten and enrich with ownership and active flags
   return data.map((member: any) => ({
     id: member.id,
-    team_id: member.team_id,
-    user_id: member.user_id,
-    invited_at: member.invited_at,
-    joined_at: member.joined_at,
-    is_owner: member.teams.owner_id === userId,
-    is_active: member.team_id === activeTeamId,
-    team_created_at: member.teams.created_at
+    teamId: member.team_id,
+    userId: member.user_id,
+    invitedAt: member.invited_at,
+    joinedAt: member.joined_at,
+    isOwner: member.teams.owner_id === userId,
+    isActive: member.team_id === activeTeamId,
+    teamCreatedAt: member.teams.created_at,
+    organizationName: member.teams.organization_name || undefined
   }))
 }
 
@@ -843,6 +935,7 @@ export default {
   transferUserResources,
   getUserActiveTeam,
   initializeTeamForUser,
+  createOwnTeamWithoutSwitching,
 
   // Multi-team support
   getUserTeamCount,
