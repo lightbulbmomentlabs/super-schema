@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
 import { apiService } from '@/services/api'
 import { authTokenManager } from '@/utils/authTokenManager'
+import { FEATURE_FLAGS } from '@/config/featureFlags'
 import type { TeamMember, CurrentTeamResponse, ListTeamsResponse } from '@shared/types'
 
 export function useTeam() {
@@ -9,10 +10,12 @@ export function useTeam() {
   const { isSignedIn, isLoaded } = useAuth()
 
   // Only enable queries when:
-  // 1. Clerk auth is loaded
-  // 2. User is signed in
-  // 3. Auth token manager is ready
+  // 1. Teams feature is enabled
+  // 2. Clerk auth is loaded
+  // 3. User is signed in
+  // 4. Auth token manager is ready
   const isAuthReady = isLoaded && isSignedIn && authTokenManager.isReady()
+  const shouldEnableTeamQueries = FEATURE_FLAGS.TEAMS_ENABLED && isAuthReady
 
   // Query: Get current active team
   const {
@@ -26,7 +29,7 @@ export function useTeam() {
       const response = await apiService.getCurrentTeam()
       return response.data
     },
-    enabled: isAuthReady, // Only fetch when auth is ready
+    enabled: shouldEnableTeamQueries, // Only fetch when teams feature is enabled and auth is ready
     staleTime: 30000 // Cache for 30 seconds
   })
 
@@ -42,7 +45,7 @@ export function useTeam() {
       const response = await apiService.listTeams()
       return response.data
     },
-    enabled: isAuthReady, // Only fetch when auth is ready
+    enabled: shouldEnableTeamQueries, // Only fetch when teams feature is enabled and auth is ready
     staleTime: 30000 // Cache for 30 seconds
   })
 
@@ -58,7 +61,7 @@ export function useTeam() {
       const response = await apiService.getTeamMembers()
       return response.data
     },
-    enabled: isAuthReady && !!currentTeam?.team?.id, // Only fetch when auth is ready AND we have a team
+    enabled: shouldEnableTeamQueries && !!currentTeam?.team?.id, // Only fetch when teams feature is enabled, auth is ready, AND we have a team
     staleTime: 30000
   })
 
@@ -123,7 +126,7 @@ export function useTeam() {
       const response = await apiService.getTeamInvites()
       return response.data
     },
-    enabled: isAuthReady && !!currentTeam?.team?.id,
+    enabled: shouldEnableTeamQueries && !!currentTeam?.team?.id,
     staleTime: 30000
   })
 

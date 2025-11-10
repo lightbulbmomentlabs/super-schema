@@ -9,7 +9,7 @@ import ConfirmModal from '@/components/ConfirmModal'
 
 export default function HubSpotPage() {
   const queryClient = useQueryClient()
-  const { isLoaded } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth()
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [newDomain, setNewDomain] = useState<{ [key: string]: string }>({})
   const [showAddDomain, setShowAddDomain] = useState<{ [key: string]: boolean }>({})
