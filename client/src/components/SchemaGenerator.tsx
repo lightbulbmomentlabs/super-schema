@@ -887,6 +887,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
               data: updatedRecords
             }
           })
+
+          // Force refetch to sync component with updated cache
+          await queryClient.invalidateQueries({
+            queryKey: ['urlSchemas', currentUrlId]
+          })
+          console.log('🔄 FRONTEND: Query invalidated, component will re-render with fresh data')
         }
 
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)

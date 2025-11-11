@@ -48,7 +48,7 @@ export function validateRefinedSchema(
   refinedSchema: Record<string, any>,
   originalMetadata?: ContentAnalysis
 ): Record<string, any> {
-  const sanitized = { ...refinedSchema };
+  let sanitized = { ...refinedSchema };
   let modificationsApplied = false;
 
   // Check for protected top-level properties
