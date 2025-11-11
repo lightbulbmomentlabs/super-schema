@@ -1785,8 +1785,9 @@ Return a JSON object with:
     }
   }
 
-  async refineSchemas(schemas: JsonLdSchema[], url: string, options?: { originalMetadata?: any }): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
-    console.log('🤖 AI refining schemas with intelligent enhancements...')
+  async refineSchemas(schemas: JsonLdSchema[], url: string, options?: { originalMetadata?: any, refinementCount?: number }): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
+    const refinementCount = options?.refinementCount || 1
+    console.log(`🤖 AI refining schemas (refinement #${refinementCount}) with intelligent enhancements...`)
 
     // Initialize client lazily
     const client = this.initializeClient()
@@ -1911,7 +1912,7 @@ FORMAT YOUR RESPONSE AS:
 
       // Validate and sanitize the refined schema to prevent hallucinations
       const originalSchema = schemas[0]
-      refinedSchema = validateRefinedSchema(originalSchema, refinedSchema, originalMetadata)
+      refinedSchema = validateRefinedSchema(originalSchema, refinedSchema, originalMetadata, refinementCount)
 
       console.log(`✅ AI refinement completed with ${changes.length} improvements`)
       console.log('📝 Changes made:', changes)

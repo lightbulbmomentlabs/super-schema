@@ -18,6 +18,22 @@ const PROTECTED_PROPERTIES = [
 ] as const;
 
 /**
+ * Properties that are SAFE to enhance even without verification in metadata
+ * These are typically arrays or structural properties that improve schema quality
+ */
+const SAFE_TO_ENHANCE_PROPERTIES = [
+  'keywords',
+  'about',
+  'mentions',
+  'speakable',
+  'potentialAction',
+  'mainEntity',
+  'isPartOf',
+  'hasPart',
+  'breadcrumb',
+] as const;
+
+/**
  * Organization sub-properties that should not be added without verification
  */
 const PROTECTED_ORG_PROPERTIES = [
@@ -41,15 +57,21 @@ const PROTECTED_ORG_PROPERTIES = [
  * @param originalSchema - The schema before refinement
  * @param refinedSchema - The schema after refinement
  * @param originalMetadata - The original scraped metadata for verification
+ * @param refinementCount - The current refinement number (1 for first refinement, 2 for second, etc.)
  * @returns Sanitized schema with unverified properties removed
  */
 export function validateRefinedSchema(
   originalSchema: Record<string, any>,
   refinedSchema: Record<string, any>,
-  originalMetadata?: ContentAnalysis
+  originalMetadata?: ContentAnalysis,
+  refinementCount: number = 1
 ): Record<string, any> {
   let sanitized = { ...refinedSchema };
   let modificationsApplied = false;
+
+  // Log validation tier for debugging
+  const validationTier = refinementCount === 1 ? 'STRICT' : 'RELAXED';
+  console.log(`[Schema Validator] Validating refinement #${refinementCount} (${validationTier} mode)`);
 
   // Check for protected top-level properties
   for (const prop of PROTECTED_PROPERTIES) {
@@ -65,12 +87,20 @@ export function validateRefinedSchema(
     }
   }
 
-  // Check organization sub-properties
+  // For 2nd+ refinements, allow enhancement of safe properties
+  if (refinementCount > 1) {
+    console.log(`[Schema Validator] Skipping strict validation on safe-to-enhance properties (refinement #${refinementCount})`);
+    // Don't remove properties that are safe to enhance
+    // The validator will only check PROTECTED_PROPERTIES and organization details
+  }
+
+  // Check organization sub-properties (only strict on 1st refinement)
   if (refinedSchema.publisher && typeof refinedSchema.publisher === 'object') {
     sanitized.publisher = validateOrganizationProperties(
       originalSchema.publisher || {},
       refinedSchema.publisher,
-      originalMetadata
+      originalMetadata,
+      refinementCount
     );
 
     if (sanitized.publisher !== refinedSchema.publisher) {
@@ -78,7 +108,7 @@ export function validateRefinedSchema(
     }
   }
 
-  // Check mainEntity.provider organization properties
+  // Check mainEntity.provider organization properties (only strict on 1st refinement)
   if (refinedSchema.mainEntity?.provider && typeof refinedSchema.mainEntity.provider === 'object') {
     const originalProvider = originalSchema.mainEntity?.provider || {};
     sanitized.mainEntity = {
@@ -86,7 +116,8 @@ export function validateRefinedSchema(
       provider: validateOrganizationProperties(
         originalProvider,
         refinedSchema.mainEntity.provider,
-        originalMetadata
+        originalMetadata,
+        refinementCount
       )
     };
 
@@ -112,18 +143,27 @@ export function validateRefinedSchema(
 function validateOrganizationProperties(
   original: Record<string, any>,
   refined: Record<string, any>,
-  metadata?: ContentAnalysis
+  metadata?: ContentAnalysis,
+  refinementCount: number = 1
 ): Record<string, any> {
   const sanitized = { ...refined };
 
+  // For 2nd+ refinements, be less strict about organization properties
+  // Only remove obviously fake data, allow structural enhancements
   for (const prop of PROTECTED_ORG_PROPERTIES) {
     if (refined[prop] && !original[prop]) {
       // Property was added during refinement
       const isVerified = verifyOrganizationPropertyInMetadata(prop, metadata);
 
       if (!isVerified) {
-        console.warn(`[Schema Validator] Removing unverified organization property: ${prop}`);
-        delete sanitized[prop];
+        // On first refinement: remove unverified org properties
+        // On 2nd+ refinements: only remove if it looks fake (checked in removePlaceholderValues)
+        if (refinementCount === 1) {
+          console.warn(`[Schema Validator] Removing unverified organization property: ${prop}`);
+          delete sanitized[prop];
+        } else {
+          console.log(`[Schema Validator] Allowing organization property enhancement on refinement #${refinementCount}: ${prop}`);
+        }
       }
     }
   }

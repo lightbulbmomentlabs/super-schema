@@ -464,9 +464,13 @@ class SchemaGeneratorService {
       // Use AI to refine the existing schemas with metadata for verification
       // Note: Refinement always uses OpenAI (gpt-4o-mini) for cost efficiency
       // The critical initial generation uses the configured AI provider (Claude/OpenAI)
+      const refinementCount = options?.refinementCount || 1
+      console.log(`🔧 Passing refinement count to OpenAI service: ${refinementCount}`)
+
       const { schemas: refinedSchemas, changes } = await openaiService.refineSchemas(schemas, url, {
         ...options,
-        originalMetadata: scrapedMetadata
+        originalMetadata: scrapedMetadata,
+        refinementCount
       })
 
       // Calculate new score

@@ -185,11 +185,18 @@ export const refineSchema = asyncHandler(async (req: AuthenticatedRequest, res: 
       }
     }
 
+    // Calculate the new refinement count (current + 1)
+    const newRefinementCount = currentRefinements + 1
+    console.log(`🔄 Starting refinement #${newRefinementCount} for schema`)
+
     const result = await schemaGeneratorService.refineSchemas({
       schemas,
       url,
       userId,
-      options,
+      options: {
+        ...options,
+        refinementCount: newRefinementCount
+      },
       ipAddress: req.ip,
       userAgent: req.get('User-Agent')
     })
