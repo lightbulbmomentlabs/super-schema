@@ -28,9 +28,15 @@ const SAFE_TO_ENHANCE_PROPERTIES = [
   'speakable',
   'potentialAction',
   'mainEntity',
+  'mainEntityOfPage',
   'isPartOf',
   'hasPart',
   'breadcrumb',
+  'inLanguage',
+  'url',
+  'wordCount',
+  'articleSection',
+  'articleBody',
 ] as const;
 
 /**

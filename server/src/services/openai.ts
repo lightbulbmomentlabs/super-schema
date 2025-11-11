@@ -1785,6 +1785,117 @@ Return a JSON object with:
     }
   }
 
+  /**
+   * Analyzes a schema to identify missing scored properties and optimization opportunities
+   * Returns a dynamic checklist for the AI refinement prompt
+   */
+  private analyzeSchemaOpportunities(schema: JsonLdSchema): string {
+    // Scored AEO properties (12 total, each worth ~2.1 overall points)
+    const scoredAeoProperties = [
+      { name: 'keywords', safe: true, description: 'Relevant topic keywords as array' },
+      { name: 'about', safe: true, description: 'Topics/entities this content is about' },
+      { name: 'mentions', safe: true, description: 'Related entities mentioned' },
+      { name: 'sameAs', safe: false, description: 'Alternative URLs for same entity' },
+      { name: 'speakable', safe: true, description: 'Voice search optimization' },
+      { name: 'inLanguage', safe: true, description: 'Content language (e.g., "en")' },
+      { name: 'articleSection', safe: false, description: 'Article section/category' },
+      { name: 'wordCount', safe: true, description: 'Estimated word count' },
+      { name: 'isPartOf', safe: true, description: 'Parent WebSite relationship' },
+      { name: 'mainEntityOfPage', safe: true, description: 'Main page identifier' },
+      { name: 'aggregateRating', safe: false, description: 'Overall ratings' },
+      { name: 'review', safe: false, description: 'Reviews of content' }
+    ]
+
+    // Scored recommended properties (7 total, each worth ~3.6 overall points)
+    const scoredRecommendedProperties = [
+      { name: 'description', safe: true, description: 'SEO description' },
+      { name: 'url', safe: true, description: 'Canonical URL' },
+      { name: 'image', safe: true, description: 'Featured image' },
+      { name: 'author', safe: false, description: 'Content author' },
+      { name: 'publisher', safe: false, description: 'Publishing organization' },
+      { name: 'datePublished', safe: false, description: 'Publication date' },
+      { name: 'dateModified', safe: false, description: 'Last modified date' }
+    ]
+
+    // Build missing properties analysis
+    let analysis = '\n📊 MISSING SCORED PROPERTIES ANALYSIS:\n\n'
+
+    // Analyze AEO properties
+    analysis += '🎯 AEO Properties (12 total, each worth ~2.1 overall points):\n'
+    const missingAeo: string[] = []
+    scoredAeoProperties.forEach(prop => {
+      const hasProperty = schema[prop.name]
+      const status = hasProperty ? '✅' : '❌'
+      const safety = prop.safe ? '🟢 SAFE' : '🔴 RISKY'
+      analysis += `${status} ${prop.name.padEnd(20)} ${safety.padEnd(12)} - ${prop.description}\n`
+      if (!hasProperty && prop.safe) {
+        missingAeo.push(prop.name)
+      }
+    })
+
+    // Analyze Recommended properties
+    analysis += '\n🎯 Recommended Properties (7 total, each worth ~3.6 overall points):\n'
+    const missingRecommended: string[] = []
+    scoredRecommendedProperties.forEach(prop => {
+      const hasProperty = schema[prop.name]
+      const status = hasProperty ? '✅' : '❌'
+      const safety = prop.safe ? '🟢 SAFE' : '🔴 RISKY'
+      analysis += `${status} ${prop.name.padEnd(20)} ${safety.padEnd(12)} - ${prop.description}\n`
+      if (!hasProperty && prop.safe) {
+        missingRecommended.push(prop.name)
+      }
+    })
+
+    // Content Quality Optimizations
+    analysis += '\n🎯 Content Quality Optimizations (15% of total score):\n'
+
+    const descLength = schema.description?.length || 0
+    if (descLength < 50 || descLength > 160) {
+      analysis += `❌ Description length: ${descLength} chars (OPTIMIZE to 50-160 for +1.5 points)\n`
+    } else {
+      analysis += `✅ Description length: ${descLength} chars (optimal range)\n`
+    }
+
+    if (typeof schema.image === 'string') {
+      analysis += `❌ Image is string (CONVERT to ImageObject for +1.5 points)\n`
+    } else if (schema.image?.['@type'] === 'ImageObject') {
+      analysis += `✅ Image is ImageObject (optimized)\n`
+    }
+
+    if (schema.publisher && !schema.publisher.logo) {
+      analysis += `❌ Publisher missing logo (ADD for +1.5 points)\n`
+    } else if (schema.publisher?.logo) {
+      analysis += `✅ Publisher has logo (optimized)\n`
+    }
+
+    // Priority recommendations
+    analysis += '\n⚡ TOP PRIORITY ACTIONS FOR THIS REFINEMENT:\n'
+    let priority = 1
+
+    // Highest value missing properties first
+    if (missingRecommended.length > 0) {
+      analysis += `${priority++}. Add missing SAFE recommended properties (${missingRecommended.join(', ')}) - Worth ~3.6 points EACH\n`
+    }
+
+    if (descLength < 50 || descLength > 160) {
+      analysis += `${priority++}. Optimize description to 50-160 characters - Worth ~1.5 points\n`
+    }
+
+    if (typeof schema.image === 'string') {
+      analysis += `${priority++}. Convert image string to ImageObject - Worth ~1.5 points\n`
+    }
+
+    if (missingAeo.length > 0) {
+      analysis += `${priority++}. Add missing SAFE AEO properties (${missingAeo.slice(0, 3).join(', ')}) - Worth ~2.1 points EACH\n`
+    }
+
+    if (schema.publisher && !schema.publisher.logo) {
+      analysis += `${priority++}. Add publisher.logo - Worth ~1.5 points\n`
+    }
+
+    return analysis
+  }
+
   async refineSchemas(schemas: JsonLdSchema[], url: string, options?: { originalMetadata?: any, refinementCount?: number }): Promise<{ schemas: JsonLdSchema[], changes: string[] }> {
     const refinementCount = options?.refinementCount || 1
     console.log(`🤖 AI refining schemas (refinement #${refinementCount}) with intelligent enhancements...`)
@@ -1818,6 +1929,9 @@ ${JSON.stringify({
 ⚠️ USE THIS METADATA TO VERIFY: Only add properties if they exist in the metadata above!`
       }
 
+      // Generate dynamic property analysis for this specific schema
+      const propertyAnalysis = this.analyzeSchemaOpportunities(schemas[0])
+
       // Create a detailed prompt for AI refinement
       const refinementPrompt = `You are an expert in Schema.org structured data and SEO best practices. Your task is to enhance the following JSON-LD schema to achieve the highest possible quality score (aiming for grade A).
 
@@ -1826,12 +1940,50 @@ ${JSON.stringify(schemas[0], null, 2)}
 
 ORIGINAL URL: ${url}${metadataContext}
 
-REFINEMENT OBJECTIVES:
-1. **Enhance Existing Properties**: Improve descriptions, add relevant keywords to existing arrays, ensure completeness
-2. **Add Topical Keywords**: Include relevant industry-specific and topical keywords in appropriate fields (like keywords, about, mentions)
-3. **Follow Best Practices**: Ensure the schema follows Google's Rich Results guidelines and Schema.org specifications
-4. **Improve Discoverability**: Add Schema.org best practices like speakable, breadcrumbs, proper relationships
-5. **Verify Before Adding**: ONLY add new factual properties (author, dates, etc.) if verified in the ORIGINAL SCRAPED METADATA above
+⚡ QUALITY SCORE OPTIMIZATION STRATEGY ⚡
+
+The schema is scored on 4 weighted categories:
+- Required Properties (35%): @context, @type, name/headline
+- Recommended Properties (25%): description, url, image, author, publisher, datePublished, dateModified (7 properties, each worth ~3.6 points)
+- Advanced AEO Features (25%): keywords, about, mentions, sameAs, speakable, inLanguage, articleSection, wordCount, isPartOf, mainEntityOfPage, aggregateRating, review (12 properties, each worth ~2.1 points)
+- Content Quality (15%): Description length, structured objects, image quality
+
+⚠️ CRITICAL SCORING MECHANIC:
+- The score COUNTS UNIQUE PROPERTIES, NOT ARRAY LENGTH
+- Adding 5 more keywords to existing "keywords" array = +0 points (property already exists)
+- Adding NEW property like "wordCount" = +2.1 points (new AEO property)
+- AVOID wasting effort on expanding existing arrays - focus on MISSING properties!
+${propertyAnalysis}
+
+🎯 YOUR TASK FOR THIS REFINEMENT:
+
+Follow the "⚡ TOP PRIORITY ACTIONS" list above from the property analysis. These are the HIGHEST VALUE changes you can make for this specific schema.
+
+**GENERAL REFINEMENT GUIDELINES:**
+
+1. **Focus on MISSING SCORED properties** (marked ❌ in analysis above)
+   - Each missing AEO property = ~2.1 points when added
+   - Each missing Recommended property = ~3.6 points when added
+   - PRIORITIZE properties marked 🟢 SAFE (no verification needed)
+   - AVOID properties marked 🔴 RISKY unless verified in metadata
+
+2. **Description Length Optimization** (Worth ~1.5 overall points if needed)
+   - Current description length: ${schemas[0].description?.length || 0} characters
+   - OPTIMAL: 50-160 characters gets 20/100 content quality points
+   - TOO SHORT (<50) or TOO LONG (>160): Gets only 10/100 content quality points
+   - ACTION: If not in optimal range, rewrite to fit 50-160 chars
+   - ⚠️ DO NOT make descriptions longer if they're already 50-160 characters!
+
+3. **Convert Strings to Structured Objects** (Worth ~1.5 points each)
+   - If image is a string: Convert to {"@type": "ImageObject", "url": "..."}
+   - If publisher exists but no logo: Add {"@type": "ImageObject", "url": "..."} to publisher.logo
+   - DO NOT convert author to object (violates anti-hallucination rules unless verified)
+
+⚠️ PROPERTIES THAT ADD +0 POINTS (DO NOT WASTE TIME ON THESE):
+- breadcrumb (not scored)
+- potentialAction (not scored)
+- Expanding existing arrays (e.g., adding more items to existing "keywords" array)
+- Properties already marked ✅ in the analysis above (already exist, adding them again = +0)
 
 🚫 ANTI-HALLUCINATION PROTOCOL - CRITICAL RULES:
 ❌ NEVER add "author" property unless verified in ORIGINAL SCRAPED METADATA above
@@ -1841,31 +1993,26 @@ REFINEMENT OBJECTIVES:
 ❌ NEVER use placeholder values like "John Doe", "Jane Doe", "example.com", "[Your Company]"
 ❌ NEVER add specific factual claims not present in the original schema or metadata
 ❌ If metadata shows "[NOT FOUND]" for a field, DO NOT ADD that property
+❌ DO NOT make descriptions longer if they're already 50-160 characters!
 
 ✅ ALLOWED ENHANCEMENTS:
-✅ Add relevant keywords to existing keyword/about/mentions arrays
-✅ Improve existing descriptions with better SEO language
+✅ OPTIMIZE description to 50-160 characters (HIGHEST PRIORITY)
+✅ Add inLanguage: "en" (safe, no verification needed)
+✅ Add mainEntityOfPage for articles (safe structural property)
+✅ Convert image strings to ImageObject (structure improvement)
+✅ Add logo to publisher if publisher exists (structure improvement)
+✅ Add relevant keywords to keyword/about/mentions arrays
 ✅ Add Schema.org structural properties: speakable, breadcrumb, isPartOf, potentialAction
-✅ Enhance service/product offers with pricing if already present
-✅ Add inLanguage if you can detect it from the URL
-✅ Improve existing organization/publisher info (don't add new factual details)
-
-SPECIFIC ENHANCEMENTS TO CONSIDER:
-- For Articles: Add keywords, articleSection, speakable if not present
-- For Services: Enhance service descriptions, add serviceType
-- For all types: Add speakable selectors, improve keyword relevance
-- Add breadcrumb navigation if appropriate
-- Enhance existing descriptions for SEO
-- Add relevant "about" and "mentions" topic keywords
+✅ Add wordCount, articleSection for articles
 
 IMPORTANT RULES:
 1. Return ONLY valid JSON (no markdown, no explanations)
 2. Keep the @context and @type unchanged
-3. Don't remove any existing properties
+3. ⚠️ CRITICAL: PRESERVE ALL existing properties - do NOT remove anything from the original schema
 4. Only add properties that are valid for this schema type according to Schema.org
-5. Make descriptions natural and SEO-friendly (not spammy)
-6. When in doubt about factual data (author, dates, organization details), OMIT rather than guess
-7. Focus on enhancement, not invention
+5. PRIORITIZE description length optimization - this alone can add 10 content quality points!
+6. Focus on high-impact changes first, low-impact changes last
+7. When uncertain about NEW factual data you want to ADD, don't add it - but KEEP all existing properties
 
 Return the enhanced schema as a JSON object, followed by a summary of changes made.
 
@@ -1887,7 +2034,8 @@ FORMAT YOUR RESPONSE AS:
 - NEVER add factual information not verified in provided metadata
 - NEVER use placeholder values like "John Doe" or "example.com"
 - ONLY add new factual properties if explicitly provided in the original metadata
-- When uncertain about factual data, OMIT the property entirely
+- When uncertain about NEW factual data you want to add, don't add it
+- ⚠️ CRITICAL: NEVER remove existing properties - only enhance and add to the schema
 - Focus on enhancing structure and SEO, not inventing facts`
           },
           {
