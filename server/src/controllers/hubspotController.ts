@@ -28,6 +28,9 @@ export const handleOAuthCallback = asyncHandler(
       flow: userId ? 'superschema-first' : 'marketplace-first'
     })
 
+    // Track timing for debugging code expiration issues
+    const callbackStartTime = Date.now()
+
     if (!code) {
       console.error('❌ [HubSpot Controller] Missing authorization code', {
         userId: userId || 'UNAUTHENTICATED',
@@ -113,29 +116,39 @@ export const handleOAuthCallback = asyncHandler(
         // ========================================
         console.log('🎯 [HubSpot Controller] Flow 2: Marketplace-first (unauthenticated user)')
 
-        // Validate state parameter
-        if (!state) {
-          console.error('❌ [HubSpot Controller] Missing state parameter for unauthenticated flow')
-          throw createError('State parameter is required', 400)
-        }
-
-        if (!hubspotOAuthService.isValidStateFormat(state)) {
-          console.error('❌ [HubSpot Controller] Invalid state parameter format', { state: state.substring(0, 10) + '...' })
-          throw createError('Invalid state parameter format', 400)
+        // State parameter validation (optional for marketplace installations)
+        // When HubSpot initiates the OAuth flow (marketplace installation), there's no state parameter
+        // When SuperSchema initiates (user clicks "Connect"), state is present for CSRF protection
+        if (state) {
+          console.log('🔐 [HubSpot Controller] State parameter present - validating format')
+          if (!hubspotOAuthService.isValidStateFormat(state)) {
+            console.error('❌ [HubSpot Controller] Invalid state parameter format', { state: state.substring(0, 10) + '...' })
+            throw createError('Invalid state parameter format. Please try connecting again.', 400)
+          }
+          console.log('✅ [HubSpot Controller] State parameter validation passed')
+        } else {
+          console.log('ℹ️ [HubSpot Controller] No state parameter - likely marketplace-initiated installation')
         }
 
         // Step 1: Exchange code for tokens IMMEDIATELY (before user completes signup)
         // OAuth codes expire in ~60 seconds, so we must exchange them now
-        console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens (URGENT - code expires soon)', { region })
+        const exchangeStartTime = Date.now()
+        console.log('🔄 [HubSpot Controller] Step 1: Exchanging code for tokens (URGENT - code expires soon)', {
+          region,
+          elapsedSinceCallback: `${Date.now() - callbackStartTime}ms`
+        })
         const tokens = await hubspotOAuthService.exchangeCodeForTokens(
           code,
           redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`
         )
+        const exchangeDuration = Date.now() - exchangeStartTime
         console.log('✅ [HubSpot Controller] Step 1 complete: Tokens received', {
           region,
           hasAccessToken: !!tokens.access_token,
           hasRefreshToken: !!tokens.refresh_token,
-          expiresIn: tokens.expires_in
+          expiresIn: tokens.expires_in,
+          exchangeDuration: `${exchangeDuration}ms`,
+          totalElapsed: `${Date.now() - callbackStartTime}ms`
         })
 
         // Step 2: Get account information
@@ -227,8 +240,11 @@ export const handleOAuthCallback = asyncHandler(
         const errMsg = error.message.toLowerCase()
 
         // Client errors (4xx) - user can fix these
-        if (errMsg.includes('invalid authorization code') || errMsg.includes('expired')) {
-          userMessage = 'Authorization code is invalid or expired. Please try connecting again.'
+        if (errMsg.includes('expired')) {
+          userMessage = 'Authorization code has expired. HubSpot OAuth codes expire in 60 seconds. Please try the connection process again without delays or page refreshes.'
+          statusCode = 400
+        } else if (errMsg.includes('invalid authorization code')) {
+          userMessage = 'Authorization code is invalid. This can happen if you refreshed the page or used the back button. Please start the connection process again.'
           statusCode = 400
         } else if (errMsg.includes('invalid client credentials')) {
           userMessage = 'HubSpot app configuration error. Please contact support.'

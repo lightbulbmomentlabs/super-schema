@@ -839,7 +839,7 @@ export async function getUserTeams(userId: string): Promise<TeamMember[]> {
       user_id,
       invited_at,
       joined_at,
-      teams (
+      teams!team_members_team_id_fkey (
         id,
         owner_id,
         organization_name,
