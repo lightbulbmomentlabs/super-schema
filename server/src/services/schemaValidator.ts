@@ -15,7 +15,7 @@ const PROTECTED_PROPERTIES = [
   'editor',
   'contributor',
   'creator',
-] as const;
+];
 
 /**
  * Properties that are SAFE to enhance even without verification in metadata
@@ -37,7 +37,7 @@ const SAFE_TO_ENHANCE_PROPERTIES = [
   'wordCount',
   'articleSection',
   'articleBody',
-] as const;
+];
 
 /**
  * Organization sub-properties that should not be added without verification
@@ -54,7 +54,7 @@ const PROTECTED_ORG_PROPERTIES = [
   'telephone',
   'email',
   'faxNumber',
-] as const;
+];
 
 /**
  * Validates and sanitizes a refined schema by removing properties that were added

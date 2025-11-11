@@ -1789,7 +1789,11 @@ Return a JSON object with:
    * Analyzes a schema to identify missing scored properties and optimization opportunities
    * Returns a dynamic checklist for the AI refinement prompt
    */
-  private analyzeSchemaOpportunities(schema: JsonLdSchema): string {
+  private analyzeSchemaOpportunities(schema: JsonLdSchema, pageData?: any): string {
+    // Check what page data is available
+    const hasH2Sections = pageData?.metadata?.articleSections?.length > 0
+    const hasWordCount = pageData?.metadata?.wordCount > 0
+
     // Scored AEO properties (12 total, each worth ~2.1 overall points)
     const scoredAeoProperties = [
       { name: 'keywords', safe: true, description: 'Relevant topic keywords as array' },
@@ -1798,8 +1802,8 @@ Return a JSON object with:
       { name: 'sameAs', safe: false, description: 'Alternative URLs for same entity' },
       { name: 'speakable', safe: true, description: 'Voice search optimization' },
       { name: 'inLanguage', safe: true, description: 'Content language (e.g., "en")' },
-      { name: 'articleSection', safe: false, description: 'Article section/category' },
-      { name: 'wordCount', safe: true, description: 'Estimated word count' },
+      { name: 'articleSection', safe: hasH2Sections, description: 'Article section/category (SAFE if H2 data available)' },
+      { name: 'wordCount', safe: hasWordCount, description: 'Estimated word count (SAFE if scraped data available)' },
       { name: 'isPartOf', safe: true, description: 'Parent WebSite relationship' },
       { name: 'mainEntityOfPage', safe: true, description: 'Main page identifier' },
       { name: 'aggregateRating', safe: false, description: 'Overall ratings' },
@@ -1823,6 +1827,8 @@ Return a JSON object with:
     // Analyze AEO properties
     analysis += '🎯 AEO Properties (12 total, each worth ~2.1 overall points):\n'
     const missingAeo: string[] = []
+    const enhanceableAeo: Array<{name: string, reason: string, points: number}> = []
+
     scoredAeoProperties.forEach(prop => {
       const hasProperty = schema[prop.name]
       const status = hasProperty ? '✅' : '❌'
@@ -1832,6 +1838,64 @@ Return a JSON object with:
         missingAeo.push(prop.name)
       }
     })
+
+    // Phase 3: Detect enhancement opportunities for EXISTING properties
+    // wordCount - HIGH PRIORITY for 2nd refinement
+    if (!schema.wordCount && hasWordCount) {
+      enhanceableAeo.push({
+        name: 'wordCount',
+        reason: `MISSING but word count data IS available (${pageData?.metadata?.wordCount} words)`,
+        points: 2.1
+      })
+    }
+
+    // articleSection - Check if it can be improved
+    if (schema.articleSection && hasH2Sections) {
+      const currentSections = Array.isArray(schema.articleSection) ? schema.articleSection : [schema.articleSection]
+      const availableSections = pageData?.metadata?.articleSections || []
+      if (currentSections.length < availableSections.length) {
+        enhanceableAeo.push({
+          name: 'articleSection',
+          reason: `Can be enhanced (currently ${currentSections.length} sections, ${availableSections.length} available from H2 data)`,
+          points: 0 // No points for enhancing, but improves quality
+        })
+      }
+    }
+
+    // keywords - Check if array is too small
+    if (schema.keywords) {
+      const keywordCount = Array.isArray(schema.keywords) ? schema.keywords.length : 1
+      if (keywordCount < 5) {
+        enhanceableAeo.push({
+          name: 'keywords',
+          reason: `Can be expanded (currently ${keywordCount} keywords, suggest 5-8 for better coverage)`,
+          points: 0 // No points for expanding existing arrays
+        })
+      }
+    }
+
+    // about/mentions - Check if they're structured properly
+    if (schema.about && Array.isArray(schema.about)) {
+      const hasUnstructured = schema.about.some((item: any) => typeof item === 'string')
+      if (hasUnstructured) {
+        enhanceableAeo.push({
+          name: 'about',
+          reason: 'Contains string values - convert to structured Thing objects with @type',
+          points: 0
+        })
+      }
+    }
+
+    if (schema.mentions && Array.isArray(schema.mentions)) {
+      const hasUnstructured = schema.mentions.some((item: any) => typeof item === 'string')
+      if (hasUnstructured) {
+        enhanceableAeo.push({
+          name: 'mentions',
+          reason: 'Contains string values - convert to structured Thing objects with @type',
+          points: 0
+        })
+      }
+    }
 
     // Analyze Recommended properties
     analysis += '\n🎯 Recommended Properties (7 total, each worth ~3.6 overall points):\n'
@@ -1868,9 +1932,35 @@ Return a JSON object with:
       analysis += `✅ Publisher has logo (optimized)\n`
     }
 
+    // Check author structure and sameAs enhancement
+    if (schema.author && typeof schema.author === 'object') {
+      if (!schema.author.sameAs) {
+        analysis += `❌ Author without sameAs links (ADD social profiles for +1.5 points)\n`
+      } else {
+        analysis += `✅ Author with sameAs links (optimized)\n`
+      }
+    } else if (schema.author) {
+      analysis += `❌ Author is string (CONVERT to Person object with sameAs for +2.0 points)\n`
+    }
+
+    // Phase 3: Enhancement Opportunities Section
+    if (enhanceableAeo.length > 0) {
+      analysis += '\n🔧 ENHANCEMENT OPPORTUNITIES (Properties that exist but can be improved):\n'
+      enhanceableAeo.forEach(enhancement => {
+        const pointsInfo = enhancement.points > 0 ? ` [+${enhancement.points} points]` : ''
+        analysis += `⚠️  ${enhancement.name}: ${enhancement.reason}${pointsInfo}\n`
+      })
+    }
+
     // Priority recommendations
     analysis += '\n⚡ TOP PRIORITY ACTIONS FOR THIS REFINEMENT:\n'
     let priority = 1
+
+    // Phase 3: Prioritize wordCount if it's enhanceable (HIGH VALUE for 2nd refinement)
+    const wordCountEnhancement = enhanceableAeo.find(e => e.name === 'wordCount')
+    if (wordCountEnhancement) {
+      analysis += `${priority++}. 🎯 ADD wordCount property using page data (${pageData?.metadata?.wordCount} words) - Worth ${wordCountEnhancement.points} points [HIGH PRIORITY]\n`
+    }
 
     // Highest value missing properties first
     if (missingRecommended.length > 0) {
@@ -1890,7 +1980,39 @@ Return a JSON object with:
     }
 
     if (schema.publisher && !schema.publisher.logo) {
-      analysis += `${priority++}. Add publisher.logo - Worth ~1.5 points\n`
+      analysis += `${priority++}. Add publisher.logo ImageObject - Worth ~1.5 points\n`
+    }
+
+    if (schema.author && typeof schema.author === 'object' && !schema.author.sameAs) {
+      analysis += `${priority++}. Add author.sameAs social profile links - Worth ~1.5 points\n`
+    }
+
+    // Add specific guidance for high-value properties
+    analysis += '\n💡 IMPLEMENTATION GUIDANCE:\n'
+
+    if (!schema.isPartOf && missingAeo.includes('isPartOf')) {
+      analysis += `\n📍 isPartOf Structure (~2.1 points):\n`
+      analysis += `"isPartOf": {\n`
+      analysis += `  "@type": "WebSite",\n`
+      analysis += `  "name": "[Site name from page data]",\n`
+      analysis += `  "url": "[Base URL without path]"\n`
+      analysis += `}\n`
+    }
+
+    if (!schema.articleSection && hasH2Sections) {
+      analysis += `\n📑 articleSection: Use the FIRST H2 heading from ARTICLE SECTIONS data as the primary category (~2.1 points)\n`
+    }
+
+    if (!schema.wordCount && hasWordCount) {
+      analysis += `\n📊 wordCount (~2.1 points) - HIGH PRIORITY:\n`
+      analysis += `"wordCount": ${pageData?.metadata?.wordCount}\n`
+      analysis += `⚠️  This is a SAFE property with verified data - ADD IT!\n`
+    }
+
+    if (schema.author && typeof schema.author === 'object' && !schema.author.sameAs) {
+      analysis += `\n👤 author.sameAs Enhancement (~1.5 points):\n`
+      analysis += `ONLY add if you can infer from page data (social icons, author bio sections).\n`
+      analysis += `Never fabricate social URLs. If uncertain, skip this enhancement.\n`
     }
 
     return analysis
@@ -1912,25 +2034,82 @@ Return a JSON object with:
       const schemaType = schemas[0]['@type']
       const originalMetadata = options?.originalMetadata
 
-      // Build metadata context for verification
-      let metadataContext = ''
+      // Build rich page context from ContentAnalysis
+      let pageDataContext = ''
       if (originalMetadata) {
-        metadataContext = `
+        // Build available page data section with all the rich content
+        const availableData: string[] = []
 
-ORIGINAL SCRAPED METADATA (for verification only):
-${JSON.stringify({
-  author: originalMetadata.author || '[NOT FOUND]',
-  publishDate: originalMetadata.publishDate || '[NOT FOUND]',
-  modifiedDate: originalMetadata.modifiedDate || '[NOT FOUND]',
-  siteName: originalMetadata.siteName || '[NOT FOUND]',
-  publisher: originalMetadata.publisher || '[NOT FOUND]'
-}, null, 2)}
+        // Keywords from page content
+        if (originalMetadata.metadata?.keywords?.length) {
+          availableData.push(`📌 KEYWORDS from page content: ${JSON.stringify(originalMetadata.metadata.keywords)}`)
+        }
 
-⚠️ USE THIS METADATA TO VERIFY: Only add properties if they exist in the metadata above!`
+        // Article sections (H2 headings)
+        if (originalMetadata.metadata?.articleSections?.length) {
+          availableData.push(`📑 ARTICLE SECTIONS (H2 headings): ${JSON.stringify(originalMetadata.metadata.articleSections)}`)
+        }
+
+        // Word count
+        if (originalMetadata.metadata?.wordCount) {
+          availableData.push(`📊 WORD COUNT: ${originalMetadata.metadata.wordCount} words`)
+        }
+
+        // Language
+        if (originalMetadata.metadata?.language) {
+          availableData.push(`🌐 LANGUAGE: "${originalMetadata.metadata.language}"`)
+        }
+
+        // Featured image info
+        if (originalMetadata.metadata?.imageInfo?.featuredImage) {
+          availableData.push(`🖼️ FEATURED IMAGE: "${originalMetadata.metadata.imageInfo.featuredImage}"${originalMetadata.metadata.imageInfo.featuredImageAlt ? ` (alt: "${originalMetadata.metadata.imageInfo.featuredImageAlt}")` : ''}`)
+        }
+
+        // All images available
+        if (originalMetadata.metadata?.imageInfo?.allImages?.length) {
+          const imageList = originalMetadata.metadata.imageInfo.allImages.slice(0, 5).map((img: any) =>
+            `  - ${img.url}${img.alt ? ` (alt: "${img.alt}")` : ''}`
+          ).join('\n')
+          availableData.push(`📸 AVAILABLE IMAGES (${originalMetadata.metadata.imageInfo.imageCount} total, showing first 5):\n${imageList}`)
+        }
+
+        // Entities/topics mentioned
+        if (originalMetadata.metadata?.entities?.length) {
+          availableData.push(`🏷️ ENTITIES/TOPICS mentioned in content: ${JSON.stringify(originalMetadata.metadata.entities.slice(0, 10))}`)
+        }
+
+        // Reading time
+        if (originalMetadata.metadata?.readingTime) {
+          availableData.push(`⏱️ READING TIME: ${originalMetadata.metadata.readingTime} minutes`)
+        }
+
+        // Build verification metadata (small subset for protected properties)
+        const verificationData = {
+          author: originalMetadata.author || originalMetadata.metadata?.author || '[NOT FOUND - DO NOT ADD]',
+          publishDate: originalMetadata.publishDate || originalMetadata.metadata?.publishDate || '[NOT FOUND - DO NOT ADD]',
+          modifiedDate: originalMetadata.modifiedDate || originalMetadata.metadata?.modifiedDate || '[NOT FOUND - DO NOT ADD]'
+        }
+
+        pageDataContext = `
+
+📦 AVAILABLE PAGE DATA FOR SAFE ENHANCEMENTS:
+
+${availableData.join('\n\n')}
+
+${availableData.length > 0 ? `
+
+✅ SAFE TO USE: All data above was extracted from the actual page content. You can confidently use this data to enhance the schema.
+
+` : ''}
+🔒 VERIFICATION-REQUIRED METADATA (use only if present):
+${JSON.stringify(verificationData, null, 2)}
+
+⚠️ PROTECTED PROPERTIES RULE: Only add author/dates if they exist in verification metadata above (not "[NOT FOUND]")`
       }
 
       // Generate dynamic property analysis for this specific schema
-      const propertyAnalysis = this.analyzeSchemaOpportunities(schemas[0])
+      const propertyAnalysis = this.analyzeSchemaOpportunities(schemas[0], originalMetadata)
+      console.log(`\n📊 PROPERTY ANALYSIS FOR REFINEMENT #${refinementCount}:\n${propertyAnalysis}\n`)
 
       // Create a detailed prompt for AI refinement
       const refinementPrompt = `You are an expert in Schema.org structured data and SEO best practices. Your task is to enhance the following JSON-LD schema to achieve the highest possible quality score (aiming for grade A).
@@ -1938,7 +2117,7 @@ ${JSON.stringify({
 CURRENT SCHEMA:
 ${JSON.stringify(schemas[0], null, 2)}
 
-ORIGINAL URL: ${url}${metadataContext}
+ORIGINAL URL: ${url}${pageDataContext}
 
 ⚡ QUALITY SCORE OPTIMIZATION STRATEGY ⚡
 
