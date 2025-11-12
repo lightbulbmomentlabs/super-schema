@@ -274,6 +274,106 @@ class DatabaseService {
     return this.supabase !== null
   }
 
+  /**
+   * Retry configuration for Supabase operations
+   */
+  private readonly MAX_RETRIES = 3
+  private readonly INITIAL_RETRY_DELAY = 1000 // 1 second
+
+  /**
+   * Determine if an error is retryable (transient infrastructure issue)
+   */
+  private isRetryableError(error: any): boolean {
+    // Check for Supabase/Cloudflare infrastructure errors
+    if (error?.message) {
+      const message = error.message.toLowerCase()
+
+      // HTML 500 error pages from Cloudflare
+      if (message.includes('<!doctype html>') && message.includes('internal server error')) {
+        return true
+      }
+
+      // Cloudflare error codes
+      if (message.includes('cloudflare') && message.includes('500')) {
+        return true
+      }
+
+      // Common transient error messages
+      if (
+        message.includes('network error') ||
+        message.includes('connection') ||
+        message.includes('timeout') ||
+        message.includes('503') ||
+        message.includes('502') ||
+        message.includes('429') // Rate limiting
+      ) {
+        return true
+      }
+    }
+
+    // Check error status codes
+    if (error?.status) {
+      const status = parseInt(error.status)
+      // Retry on 500, 502, 503, 429
+      if (status === 500 || status === 502 || status === 503 || status === 429) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Calculate exponential backoff delay
+   */
+  private getRetryDelay(attempt: number): number {
+    return this.INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1) // 1s, 2s, 4s
+  }
+
+  /**
+   * Retry wrapper for Supabase operations with exponential backoff
+   * Only retries on transient infrastructure errors (500, 503, network issues)
+   */
+  private async retrySupabaseOperation<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    let lastError: any = null
+
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log(`🔄 Retry attempt ${attempt}/${this.MAX_RETRIES} for ${operationName}...`)
+        }
+
+        return await operation()
+      } catch (error: any) {
+        lastError = error
+
+        // Check if error is retryable
+        if (!this.isRetryableError(error)) {
+          console.error(`❌ Non-retryable error in ${operationName}:`, error.message || error)
+          throw error
+        }
+
+        // If this was the last attempt, throw the error
+        if (attempt === this.MAX_RETRIES) {
+          console.error(`❌ Max retries (${this.MAX_RETRIES}) exceeded for ${operationName}`)
+          throw error
+        }
+
+        // Wait before retrying
+        const delay = this.getRetryDelay(attempt)
+        console.warn(`⚠️  Transient error in ${operationName} (attempt ${attempt}/${this.MAX_RETRIES}): ${error.message?.substring(0, 200) || error}`)
+        console.log(`⏱️  Waiting ${delay}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError
+  }
+
   // User operations
   async upsertUserFromClerk(
     userId: string,
@@ -1940,33 +2040,35 @@ class DatabaseService {
     hasSchema: boolean
     schemaTypes?: string[]
   }> {
-    const { data, error} = await this.supabase
-      .from('discovered_urls')
-      .select('id, created_at, has_schema, is_hidden')
-      .eq('user_id', userId)
-      .eq('url', normalizedUrl)
-      .maybeSingle()
+    return this.retrySupabaseOperation(async () => {
+      const { data, error} = await this.supabase
+        .from('discovered_urls')
+        .select('id, created_at, has_schema, is_hidden')
+        .eq('user_id', userId)
+        .eq('url', normalizedUrl)
+        .maybeSingle()
 
-    if (error) throw error
+      if (error) throw error
 
-    if (!data || data.is_hidden) {
-      return { exists: false, hasSchema: false }
-    }
+      if (!data || data.is_hidden) {
+        return { exists: false, hasSchema: false }
+      }
 
-    // If URL has schemas, get all schema types
-    let schemaTypes: string[] = []
-    if (data.has_schema) {
-      const schemas = await this.getSchemasByDiscoveredUrlId(data.id)
-      schemaTypes = schemas.map(s => s.schemaType).filter(Boolean)
-    }
+      // If URL has schemas, get all schema types
+      let schemaTypes: string[] = []
+      if (data.has_schema) {
+        const schemas = await this.getSchemasByDiscoveredUrlId(data.id)
+        schemaTypes = schemas.map(s => s.schemaType).filter(Boolean)
+      }
 
-    return {
-      exists: true,
-      urlId: data.id,
-      createdAt: data.created_at,
-      hasSchema: data.has_schema,
-      schemaTypes
-    }
+      return {
+        exists: true,
+        urlId: data.id,
+        createdAt: data.created_at,
+        hasSchema: data.has_schema,
+        schemaTypes
+      }
+    }, 'checkUrlExists')
   }
 
   // ===================
