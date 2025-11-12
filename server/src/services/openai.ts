@@ -395,8 +395,46 @@ Organization URL: ${new URL(analysis.url).origin}
 Logo URL: ${analysis.metadata?.businessInfo?.logo || analysis.metadata?.imageInfo?.featuredImage || `${new URL(analysis.url).origin}/favicon.ico`}
 
 === KEYWORDS & TAXONOMY ===
-Keywords (MUST be array): ${analysis.metadata?.keywords?.length ? JSON.stringify(analysis.metadata.keywords.slice(0, 10)) : '[]'}
+Extracted Keywords (from meta tags): ${analysis.metadata?.keywords?.length ? JSON.stringify(analysis.metadata.keywords.slice(0, 10)) : '[]'}
 Tags: ${analysis.metadata?.tags?.length ? JSON.stringify(analysis.metadata.tags.slice(0, 10)) : '[]'}
+
+⚠️ **KEYWORDS GENERATION (CRITICAL FOR AEO)**:
+You MUST generate 5-10 high-quality, SEO-optimized keywords that represent the core topics and entities of this page.
+
+**KEYWORD QUALITY REQUIREMENTS**:
+1. ✅ **Use semantic, topic-focused phrases** - Identify the main concepts, not sentences
+2. ✅ **Mix broad and specific terms** - Include both general topics and niche details
+3. ✅ **Allow single-word keywords** - Terms like "SEO", "marketing", "analytics" are valid
+4. ✅ **Keep phrases concise** - Each keyword should be 1-5 words maximum
+5. ✅ **Focus on searcher intent** - What would users search for to find this page?
+6. ✅ **Extract entities and topics** - Products, services, concepts, methodologies
+
+**WHAT TO AVOID**:
+❌ Call-to-action phrases: "Ready to Get Started", "Contact Us Today", "Learn More Now"
+❌ Sentence fragments from titles: "How to get buy", "in when you need"
+❌ Questions: "How do I...", "What is the best..."
+❌ Generic company terms: "Our Services", "Our Team", "Richmond VA" (unless location-relevant)
+❌ Exclamation marks or punctuation: "Success!", "Get Started!"
+
+**EXAMPLES**:
+✅ GOOD KEYWORDS (for blog about website redesign buy-in):
+["website redesign", "stakeholder buy-in", "marketing strategy", "client communication", "creative brief", "digital transformation", "executive approval"]
+
+❌ BAD KEYWORDS (to avoid):
+["How to get buy", "in when you need a new website", "Ready to Get Started", "Contact Us Today"]
+
+**HANDLING EXTRACTED META KEYWORDS**:
+- If extracted keywords exist, VALIDATE their quality against the rules above
+- REPLACE any low-quality keywords (CTAs, fragments, questions) with better topic-based terms
+- KEEP high-quality keywords and ADD new ones from page content
+- If NO extracted keywords provided, generate ALL keywords from page content analysis
+
+**GENERATION PROCESS**:
+1. Read the page title, description, and content
+2. Identify 3-5 main topics/themes discussed
+3. Extract 2-4 specific entities (products, services, tools, methodologies)
+4. Combine into 5-10 concise, searchable keywords
+5. Verify each keyword passes quality requirements above
 
 === ARTICLE STRUCTURE ===
 Article Sections (from H2 headings): ${analysis.metadata?.articleSections?.length ? JSON.stringify(analysis.metadata.articleSections) : '[NO H2 HEADINGS FOUND]'}
@@ -1272,10 +1310,33 @@ RESPONSE FORMAT:
       } else if (Array.isArray(schema['keywords'])) {
         // Keywords exist - check quality and potentially replace low-quality ones
         const existingKeywords = schema['keywords']
-        const lowQualityIndicators = ['?', '!', 'ready', 'started', 'success', 'ensure']
-        const hasLowQuality = existingKeywords.some((kw: string) =>
-          lowQualityIndicators.some(ind => kw.toLowerCase().includes(ind))
-        )
+
+        // Expanded low-quality detection patterns
+        const ctaPhrases = ['ready', 'started', 'start', 'contact', 'learn more', 'get', 'find out', 'discover', 'join', 'sign up']
+        const questionWords = ['how', 'what', 'when', 'where', 'why', 'which', 'who']
+        const punctuation = ['?', '!', '...']
+        const genericTerms = ['our services', 'our team', 'about us', 'we work', 'ensure success']
+
+        const hasLowQuality = existingKeywords.some((kw: string) => {
+          const kwLower = kw.toLowerCase()
+
+          // Check for CTAs
+          if (ctaPhrases.some(cta => kwLower.includes(cta))) return true
+
+          // Check for questions (keywords starting with question words)
+          if (questionWords.some(q => kwLower.startsWith(q + ' '))) return true
+
+          // Check for punctuation
+          if (punctuation.some(p => kwLower.includes(p))) return true
+
+          // Check for generic terms
+          if (genericTerms.some(term => kwLower.includes(term))) return true
+
+          // Check for sentence fragments (too long, likely from split title)
+          if (kw.length > 50) return true
+
+          return false
+        })
 
         if (hasLowQuality) {
           // Replace with better keywords from metadata
