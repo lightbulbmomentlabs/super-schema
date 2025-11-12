@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { DollarSign, TrendingUp, TrendingDown, UserPlus, FileText, ShoppingCart, ChevronDown } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, UserPlus, FileText, ShoppingCart, ChevronDown, Download, FileCheck } from 'lucide-react'
 import { apiService } from '@/services/api'
+import { useState, useRef, useEffect } from 'react'
 
 interface ConversionMetrics {
   conversionRate: number
@@ -22,6 +23,9 @@ interface ConversionMetrics {
 }
 
 export default function AdminConversionMetrics() {
+  const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin-conversion-metrics'],
     queryFn: () => apiService.getConversionAnalytics(),
@@ -29,6 +33,99 @@ export default function AdminConversionMetrics() {
   })
 
   const metrics = data?.data as ConversionMetrics | undefined
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Export functions
+  const exportAsMarkdown = () => {
+    if (!metrics) return
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const signupToSchema = metrics.conversionFunnel.signups > 0
+      ? (metrics.conversionFunnel.firstSchema / metrics.conversionFunnel.signups) * 100
+      : 0
+    const schemaToPurchase = metrics.conversionFunnel.firstSchema > 0
+      ? (metrics.conversionFunnel.firstPurchase / metrics.conversionFunnel.firstSchema) * 100
+      : 0
+    const overallConversion = metrics.conversionFunnel.signups > 0
+      ? (metrics.conversionFunnel.firstPurchase / metrics.conversionFunnel.signups) * 100
+      : 0
+
+    const content = `# Revenue & Conversion Metrics
+Generated: ${new Date().toISOString()}
+
+## Summary Metrics
+- Overall Conversion Rate: ${metrics.conversionRate.toFixed(1)}%
+- Total Signups: ${metrics.totalSignups}
+- Total Conversions: ${metrics.totalConversions}
+- Average Time to Convert: ${metrics.averageTimeToConversion.toFixed(0)} days
+- Conversion Trend: ${metrics.recentTrend.trendDirection}
+
+## Recent Trends
+- Last 7 Days: ${metrics.recentTrend.last7Days.toFixed(1)}%
+- Last 30 Days: ${metrics.recentTrend.last30Days.toFixed(1)}%
+
+## Conversion Funnel
+### Stage 1: User Signups
+- Count: ${metrics.conversionFunnel.signups}
+- Percentage: 100%
+
+### Stage 2: First Schema Generated
+- Count: ${metrics.conversionFunnel.firstSchema}
+- Conversion from Signups: ${signupToSchema.toFixed(1)}%
+- Drop-off: ${metrics.conversionFunnel.dropoffAfterSignup} users (${((metrics.conversionFunnel.dropoffAfterSignup / metrics.conversionFunnel.signups) * 100).toFixed(1)}%)
+
+### Stage 3: First Purchase
+- Count: ${metrics.conversionFunnel.firstPurchase}
+- Conversion from First Schema: ${schemaToPurchase.toFixed(1)}%
+- Overall Conversion from Signup: ${overallConversion.toFixed(1)}%
+- Drop-off after First Schema: ${metrics.conversionFunnel.dropoffAfterFirstSchema} users (${((metrics.conversionFunnel.dropoffAfterFirstSchema / metrics.conversionFunnel.firstSchema) * 100).toFixed(1)}%)
+
+## Analysis Context
+This data represents the complete user conversion funnel for AI analysis.
+Key conversion points:
+1. Signup → First Schema: Activation metric (users trying the product)
+2. First Schema → First Purchase: Monetization metric (free to paid conversion)
+3. Overall: Complete funnel efficiency
+`
+
+    const blob = new Blob([content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `conversion-metrics-${timestamp}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowDropdown(false)
+  }
+
+  const exportAsJSON = () => {
+    if (!metrics) return
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      metrics
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `conversion-metrics-${timestamp}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowDropdown(false)
+  }
 
   // Get trend indicator
   const getTrendIndicator = (trend: 'up' | 'stable' | 'down') => {
@@ -97,9 +194,43 @@ export default function AdminConversionMetrics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <DollarSign className="h-6 w-6 text-green-500" />
-        <h2 className="text-2xl font-bold">Conversion Metrics</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <DollarSign className="h-6 w-6 text-green-500" />
+          <h2 className="text-2xl font-bold">Conversion Metrics</h2>
+        </div>
+
+        {/* Download Button with Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            disabled={!metrics}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-muted hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export</span>
+            <ChevronDown className="h-4 w-4" />
+          </button>
+
+          {showDropdown && metrics && (
+            <div className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-card shadow-lg z-10">
+              <button
+                onClick={exportAsMarkdown}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors rounded-t-lg flex items-center gap-2"
+              >
+                <FileCheck className="h-4 w-4" />
+                Download as Markdown
+              </button>
+              <button
+                onClick={exportAsJSON}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors rounded-b-lg flex items-center gap-2"
+              >
+                <FileCheck className="h-4 w-4" />
+                Download as JSON
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Key Metrics Grid */}
