@@ -93,8 +93,17 @@ async function handleUserCreated(data: any) {
     const firstName = data.first_name
     const lastName = data.last_name
 
+    console.log('📨 [Webhook] Received user.created event:', {
+      userId,
+      email,
+      firstName,
+      lastName,
+      hasEmail: !!email,
+      hasUserId: !!userId
+    })
+
     if (!userId || !email) {
-      console.error('Missing required user data:', { userId, email })
+      console.error('❌ [Webhook] Missing required user data:', { userId, email })
       return
     }
 
@@ -103,19 +112,39 @@ async function handleUserCreated(data: any) {
     // Credits are granted via the /user/init endpoint when the user first logs in
     await db.upsertUserFromClerk(userId, email, firstName, lastName)
 
-    console.log(`User created via webhook: ${userId} (${email})`)
+    console.log(`✅ [Webhook] User created in database: ${userId} (${email})`)
 
     // Add user to HubSpot CRM (non-blocking, best effort)
+    console.log('🔄 [Webhook] Attempting to add user to HubSpot CRM...')
+
     hubspotCRM.createOrUpdateContact({
       email,
       firstName,
       lastName
-    }).catch(error => {
+    })
+    .then(result => {
+      if (result.success) {
+        console.log('✅ [Webhook] User successfully added to HubSpot CRM:', {
+          email,
+          contactId: result.contactId
+        })
+      } else {
+        console.error('❌ [Webhook] Failed to add user to HubSpot CRM:', {
+          email,
+          error: result.error
+        })
+      }
+    })
+    .catch(error => {
       // Log error but don't fail user creation
-      console.error('Failed to add user to HubSpot CRM:', error)
+      console.error('❌ [Webhook] Exception while adding user to HubSpot CRM:', {
+        email,
+        error: error.message,
+        stack: error.stack
+      })
     })
   } catch (error) {
-    console.error('Error creating user:', error)
+    console.error('❌ [Webhook] Error in handleUserCreated:', error)
   }
 }
 

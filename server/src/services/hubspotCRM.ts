@@ -35,6 +35,17 @@ class HubSpotCRMService {
     this.apiKey = process.env.HUBSPOT_CRM_API_KEY
     this.listId = process.env.HUBSPOT_CRM_LIST_ID
 
+    // Enhanced diagnostic logging
+    const apiKeyStatus = this.apiKey
+      ? `configured (${this.apiKey.substring(0, 10)}...${this.apiKey.substring(this.apiKey.length - 4)})`
+      : 'NOT SET'
+
+    console.log('🔍 [HubSpot CRM] Initialization:', {
+      apiKeyStatus,
+      listIdConfigured: !!this.listId,
+      listId: this.listId || 'not set'
+    })
+
     if (this.apiKey) {
       this.client = new Client({ accessToken: this.apiKey })
       this.isEnabled = true
@@ -49,6 +60,7 @@ class HubSpotCRMService {
       })
     } else {
       console.log('⚠️  [HubSpot CRM] Service disabled - HUBSPOT_CRM_API_KEY not configured')
+      console.log('💡 [HubSpot CRM] Set HUBSPOT_CRM_API_KEY environment variable to enable')
     }
   }
 
@@ -127,7 +139,6 @@ class HubSpotCRMService {
       const response = await this.client.crm.contacts.basicApi.update(
         email,
         { properties },
-        undefined,
         'email' // idProperty - tells HubSpot to use email as the unique identifier
       )
 
@@ -212,6 +223,77 @@ class HubSpotCRMService {
    */
   isServiceEnabled(): boolean {
     return this.isEnabled
+  }
+
+  /**
+   * Get diagnostic information about the service configuration
+   * For admin/troubleshooting endpoints
+   */
+  async getDiagnostics(): Promise<{
+    isEnabled: boolean
+    apiKeyConfigured: boolean
+    apiKeyPreview?: string
+    listIdConfigured: boolean
+    listId?: string
+    connectionStatus: 'not_tested' | 'success' | 'failed'
+    connectionError?: string
+    propertyCheckStatus?: 'not_tested' | 'success' | 'failed'
+    propertyCheckError?: string
+  }> {
+    const diagnostics: any = {
+      isEnabled: this.isEnabled,
+      apiKeyConfigured: !!this.apiKey,
+      apiKeyPreview: this.apiKey
+        ? `${this.apiKey.substring(0, 10)}...${this.apiKey.substring(this.apiKey.length - 4)}`
+        : undefined,
+      listIdConfigured: !!this.listId,
+      listId: this.listId,
+      connectionStatus: 'not_tested' as const
+    }
+
+    // Test API connection
+    if (this.client) {
+      try {
+        await this.client.crm.contacts.searchApi.doSearch({
+          filterGroups: [],
+          properties: ['email'],
+          limit: 1
+        })
+        diagnostics.connectionStatus = 'success'
+      } catch (error: any) {
+        diagnostics.connectionStatus = 'failed'
+        diagnostics.connectionError = error.message
+      }
+
+      // Test super_schema property exists
+      try {
+        const properties = await this.client.crm.properties.coreApi.getAll('contacts')
+        const superSchemaProperty = properties.results.find(p => p.name === 'super_schema')
+
+        if (superSchemaProperty) {
+          diagnostics.propertyCheckStatus = 'success'
+        } else {
+          diagnostics.propertyCheckStatus = 'failed'
+          diagnostics.propertyCheckError = 'super_schema property not found in HubSpot contact properties'
+        }
+      } catch (error: any) {
+        diagnostics.propertyCheckStatus = 'failed'
+        diagnostics.propertyCheckError = error.message
+      }
+    }
+
+    return diagnostics
+  }
+
+  /**
+   * Test creating a contact (for admin testing)
+   */
+  async testContactCreation(testEmail: string): Promise<ContactResult> {
+    return this.createOrUpdateContact({
+      email: testEmail,
+      firstName: 'Test',
+      lastName: 'User'
+    })
   }
 }
 

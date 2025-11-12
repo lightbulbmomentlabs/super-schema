@@ -18,7 +18,10 @@ import {
   getHubSpotStats,
   getSchemaFailures,
   getSchemaFailureStats,
-  deleteSchemaFailure
+  deleteSchemaFailure,
+  getHubSpotCRMDiagnostics,
+  testHubSpotCRMContact,
+  backfillHubSpotCRM
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -74,6 +77,15 @@ router.get('/api-health', getApiHealthMetrics)
 
 // GET /api/admin/hubspot/stats - Get HubSpot connection statistics
 router.get('/hubspot/stats', getHubSpotStats)
+
+// GET /api/admin/hubspot-crm/diagnostics - Get HubSpot CRM integration diagnostics
+router.get('/hubspot-crm/diagnostics', getHubSpotCRMDiagnostics)
+
+// POST /api/admin/hubspot-crm/test - Test HubSpot CRM contact creation
+router.post('/hubspot-crm/test', testHubSpotCRMContact)
+
+// POST /api/admin/hubspot-crm/backfill - Backfill existing users to HubSpot CRM
+router.post('/hubspot-crm/backfill', backfillHubSpotCRM)
 
 // Schema Generation Failure Tracking (Phase 1: Enhanced Failure Tracking)
 

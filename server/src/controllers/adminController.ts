@@ -2,6 +2,7 @@ import { Response } from 'express'
 import { db } from '../services/database.js'
 import { createError, asyncHandler } from '../middleware/errorHandler.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
+import { hubspotCRM } from '../services/hubspotCRM.js'
 import { z } from 'zod'
 
 // Validation schemas
@@ -385,5 +386,123 @@ export const deleteSchemaFailure = asyncHandler(async (req: AuthenticatedRequest
   res.json({
     success: true,
     message: 'Schema failure deleted successfully'
+  })
+})
+
+/**
+ * Get HubSpot CRM integration diagnostics
+ * Tests API connection, property configuration, and list access
+ */
+export const getHubSpotCRMDiagnostics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('🔍 [AdminController] Running HubSpot CRM diagnostics...')
+
+  const diagnostics = await hubspotCRM.getDiagnostics()
+
+  console.log('📊 [AdminController] HubSpot CRM diagnostics complete:', diagnostics)
+
+  res.json({
+    success: true,
+    data: diagnostics,
+    message: diagnostics.isEnabled
+      ? 'HubSpot CRM integration is enabled'
+      : 'HubSpot CRM integration is disabled - check HUBSPOT_CRM_API_KEY environment variable'
+  })
+})
+
+/**
+ * Test HubSpot CRM contact creation
+ * Creates a test contact to verify the integration is working
+ */
+export const testHubSpotCRMContact = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { email } = req.body
+
+  if (!email) {
+    throw createError('Email is required', 400)
+  }
+
+  console.log('🧪 [AdminController] Testing HubSpot CRM contact creation:', email)
+
+  const result = await hubspotCRM.testContactCreation(email)
+
+  if (result.success) {
+    console.log('✅ [AdminController] Test contact created successfully:', {
+      email,
+      contactId: result.contactId
+    })
+  } else {
+    console.error('❌ [AdminController] Test contact creation failed:', {
+      email,
+      error: result.error
+    })
+  }
+
+  res.json({
+    success: result.success,
+    data: {
+      contactId: result.contactId,
+      error: result.error
+    },
+    message: result.success
+      ? `Test contact created successfully in HubSpot CRM`
+      : `Failed to create test contact: ${result.error}`
+  })
+})
+
+/**
+ * Backfill existing users to HubSpot CRM
+ * Useful for adding users who signed up before the integration was configured
+ */
+export const backfillHubSpotCRM = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('🔄 [AdminController] Starting HubSpot CRM backfill...')
+
+  // Get all users
+  const allUsers = await db.getAllUsers(10000, 0) // Get up to 10k users
+
+  let successCount = 0
+  let failureCount = 0
+  const errors: Array<{ email: string; error: string }> = []
+
+  // Process each user
+  for (const user of allUsers) {
+    try {
+      const result = await hubspotCRM.createOrUpdateContact({
+        email: user.email,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined
+      })
+
+      if (result.success) {
+        successCount++
+        console.log(`✅ [Backfill] Added ${user.email} to HubSpot CRM`)
+      } else {
+        failureCount++
+        errors.push({ email: user.email, error: result.error || 'Unknown error' })
+        console.error(`❌ [Backfill] Failed to add ${user.email}:`, result.error)
+      }
+
+      // Add a small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100))
+    } catch (error: any) {
+      failureCount++
+      errors.push({ email: user.email, error: error.message })
+      console.error(`❌ [Backfill] Exception for ${user.email}:`, error.message)
+    }
+  }
+
+  console.log(`✅ [AdminController] HubSpot CRM backfill complete:`, {
+    totalUsers: allUsers.length,
+    successCount,
+    failureCount
+  })
+
+  res.json({
+    success: true,
+    data: {
+      totalUsers: allUsers.length,
+      successCount,
+      failureCount,
+      errors: errors.slice(0, 50) // Return first 50 errors to avoid huge response
+    },
+    message: `Backfill complete: ${successCount} succeeded, ${failureCount} failed out of ${allUsers.length} total users`
   })
 })
