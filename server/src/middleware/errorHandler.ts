@@ -7,6 +7,21 @@ export interface AppError extends Error {
   isOperational?: boolean
 }
 
+/**
+ * Check if an IP address is localhost (developer testing)
+ */
+const isLocalhostIP = (ip: string | undefined): boolean => {
+  if (!ip) return false
+
+  const localhostIPs = [
+    '127.0.0.1',           // IPv4 localhost
+    '::1',                 // IPv6 localhost
+    '::ffff:127.0.0.1',    // IPv4-mapped IPv6 localhost
+  ]
+
+  return localhostIPs.includes(ip)
+}
+
 export const errorHandler = async (
   err: AppError,
   req: Request,
@@ -27,10 +42,11 @@ export const errorHandler = async (
     userAgent: req.get('User-Agent')
   })
 
-  // Skip logging errors from disabled features (feature flags) and authentication failures
+  // Skip logging errors from disabled features (feature flags), authentication failures, and localhost traffic
   const shouldSkipLogging =
     err.message === 'Feature not available' ||
-    (statusCode === 401 && err.message === 'Authentication required')
+    (statusCode === 401 && err.message === 'Authentication required') ||
+    isLocalhostIP(req.ip) // Skip developer testing from localhost
 
   // Log error to database for admin debugging (skip feature flag denials and auth failures)
   if (!shouldSkipLogging) {
