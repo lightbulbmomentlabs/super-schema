@@ -3430,7 +3430,7 @@ class DatabaseService {
     const scoresWithValues = schemas.filter(s => s.schema_score && typeof s.schema_score === 'object')
     const totalScore = scoresWithValues.reduce((sum, s) => {
       const score = s.schema_score as any
-      return sum + (score?.overall || score?.total || 0)
+      return sum + (score?.overallScore || 0)
     }, 0)
     const averageQualityScore = scoresWithValues.length > 0
       ? Math.round(totalScore / scoresWithValues.length)
@@ -3466,14 +3466,14 @@ class DatabaseService {
     const earlierAvg = earlierSchemas.length > 0
       ? earlierSchemas.reduce((sum, s) => {
           const score = s.schema_score as any
-          return sum + (score?.overall || score?.total || 0)
+          return sum + (score?.overallScore || 0)
         }, 0) / earlierSchemas.length
       : 0
 
     const recentAvg = recentSchemas.length > 0
       ? recentSchemas.reduce((sum, s) => {
           const score = s.schema_score as any
-          return sum + (score?.overall || score?.total || 0)
+          return sum + (score?.overallScore || 0)
         }, 0) / recentSchemas.length
       : 0
 
@@ -3490,7 +3490,7 @@ class DatabaseService {
       acc[type].count++
       if (s.schema_score) {
         const score = s.schema_score as any
-        acc[type].totalScore += (score?.overall || score?.total || 0)
+        acc[type].totalScore += (score?.overallScore || 0)
         acc[type].withScores++
       }
       return acc
