@@ -81,258 +81,357 @@ class ScraperService {
       throw new Error('Browser not initialized')
     }
 
-    const page = await this.browser.newPage()
+    // Retry configuration
+    const MAX_RETRIES = 3
+    const RETRY_DELAYS = [1000, 2000, 4000] // Exponential backoff in milliseconds
 
-    try {
-      // Set user agent
-      await page.setUserAgent(
-        options.userAgent ||
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      )
-
-      // Set viewport
-      await page.setViewport(options.viewport || { width: 1920, height: 1080 })
-
-      // Disable cache at page level to ensure fresh responses
-      await page.setCacheEnabled(false)
-
-      // Block unnecessary resources for faster loading
-      await page.setRequestInterception(true)
-      page.on('request', (req) => {
-        const resourceType = req.resourceType()
-        if (['font', 'stylesheet'].includes(resourceType)) {
-          req.abort()
-        } else {
-          req.continue()
-        }
-      })
-
-      // Track redirects
-      const redirectChain: string[] = []
-      page.on('response', (response) => {
-        const status = response.status()
-        if (status >= 300 && status < 400) {
-          redirectChain.push(`${response.url()} -> ${status} -> ${response.headers()['location'] || 'unknown'}`)
-        }
-      })
-
-      // Navigate to URL and capture response
-      const response = await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: options.timeout || 30000
-      })
-
-      // IMMEDIATELY capture initial URL and HTML before any JS redirects
-      const initialUrl = page.url()
-      const initialHtml = await page.content()
-
-      // Wait for page to stabilize and dismiss any overlays
-      await page.waitForSelector('body', { timeout: 10000 })
-      await this.delay(1500)
-      await this.dismissOverlays(page, 1)
-
-      // Get the final HTML content after waiting
-      const finalHtml = await page.content()
-      const finalUrl = page.url()
-
-      // Choose which HTML to use based on whether redirect happened
-      let html = finalHtml
-      let urlAfterJsCheck = finalUrl
-
-      // If URL changed after waiting, use initial HTML (before redirect)
-      if (initialUrl !== finalUrl) {
-        console.log('🔀 JavaScript redirect detected after page load!')
-        console.log(`   ${initialUrl} → ${finalUrl}`)
-        console.log('   Using initial HTML before redirect to get correct metadata')
-        html = initialHtml
-        urlAfterJsCheck = initialUrl
+    // Progressive timeout strategy for each attempt
+    const ATTEMPT_CONFIGS = [
+      {
+        timeout: options.timeout || 30000,
+        bodyTimeout: options.timeout || 30000,
+        waitUntil: 'domcontentloaded' as const,
+        description: 'Fast attempt (domcontentloaded)'
+      },
+      {
+        timeout: 45000,
+        bodyTimeout: 45000,
+        waitUntil: 'networkidle2' as const,
+        description: 'Medium attempt (networkidle2)'
+      },
+      {
+        timeout: 60000,
+        bodyTimeout: 60000,
+        waitUntil: 'networkidle0' as const,
+        description: 'Long attempt (networkidle0)'
       }
+    ]
 
-      // ============================================
-      // DIAGNOSTIC LOGGING FOR URL SCRAPING ISSUES
-      // ============================================
-      console.log('\n🔍 ========== SCRAPING DIAGNOSTICS ==========')
-      console.log('📍 Original URL requested:', url)
-      console.log('📍 Initial URL (after HTTP redirects):', initialUrl)
-      console.log('📍 Final URL (after JS execution):', finalUrl)
-      console.log('📊 HTTP Response Status:', response?.status() || 'N/A')
-      console.log('📊 HTTP Response Status Text:', response?.statusText() || 'N/A')
+    let lastError: any = null
 
-      // Log redirect chain
-      if (redirectChain.length > 0) {
-        console.log('🔀 HTTP Redirect Chain:')
-        redirectChain.forEach((redirect, index) => {
-          console.log(`   ${index + 1}. ${redirect}`)
-        })
-      }
-
-      // Check if URL changed during execution
-      if (initialUrl !== finalUrl) {
-        console.log('⚠️ WARNING: JavaScript redirect detected!')
-        console.log(`   ${initialUrl} → ${finalUrl}`)
-        console.log('   ✅ Using HTML from BEFORE redirect to preserve correct metadata')
-      }
-
-      // Check if initial URL differs from original (HTTP redirect)
-      if (initialUrl !== url) {
-        console.log('⚠️ WARNING: HTTP redirect detected!')
-        console.log('   This could be due to:')
-        console.log('   - HTTP redirect (301, 302, 307, 308)')
-        console.log('   - HubSpot redirect rule or domain setting')
-      }
-
-      // Parse HTML with Cheerio to extract raw metadata
-      const $diagnostic = cheerio.load(html)
-      const rawTitle = $diagnostic('title').text().trim()
-      const rawOgTitle = $diagnostic('meta[property="og:title"]').attr('content')
-      const rawTwitterTitle = $diagnostic('meta[name="twitter:title"]').attr('content')
-      const rawDescription = $diagnostic('meta[name="description"]').attr('content')
-      const rawOgDescription = $diagnostic('meta[property="og:description"]').attr('content')
-      const rawTwitterDescription = $diagnostic('meta[name="twitter:description"]').attr('content')
-
-      // Check for meta refresh redirects
-      const metaRefresh = $diagnostic('meta[http-equiv="refresh"]').attr('content')
-      if (metaRefresh) {
-        console.log('🔀 Meta Refresh Redirect Found:', metaRefresh)
-      }
-
-      // Check for JavaScript redirects in the HTML
-      const scriptContent = $diagnostic('script').text()
-      const jsRedirectPatterns = [
-        /window\.location\s*=\s*['"]([^'"]+)['"]/,
-        /window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
-        /window\.location\.replace\(['"]([^'"]+)['"]\)/,
-        /location\.href\s*=\s*['"]([^'"]+)['"]/
-      ]
-
-      for (const pattern of jsRedirectPatterns) {
-        const match = scriptContent.match(pattern)
-        if (match) {
-          console.log('🔀 JavaScript Redirect Found:', match[1])
-          break
-        }
-      }
-
-      console.log('\n📄 RAW HTML METADATA EXTRACTED BY PUPPETEER:')
-      console.log('  <title> tag:', rawTitle || '[EMPTY]')
-      console.log('  og:title:', rawOgTitle || '[EMPTY]')
-      console.log('  twitter:title:', rawTwitterTitle || '[EMPTY]')
-      console.log('  <meta name="description">:', rawDescription || '[EMPTY]')
-      console.log('  og:description:', rawOgDescription || '[EMPTY]')
-      console.log('  twitter:description:', rawTwitterDescription || '[EMPTY]')
-
-      console.log('\n📏 HTML Size:', html.length, 'characters')
-      console.log('📝 HTML Preview (first 200 chars):', html.substring(0, 200).replace(/\s+/g, ' '))
-      console.log('🔍 ========================================\n')
-
-      console.log('🔄 Processing HTML with advanced cleaning service...')
-
-      // Use the new HTML cleaning service for optimized processing
-      const structuredContent = await htmlCleaningService.processHtml(html, url)
-
-      // Convert structured content to ContentAnalysis format
-      const analysis: ContentAnalysis = {
-        url,
-        title: structuredContent.metadata.title,
-        description: structuredContent.metadata.description,
-        content: structuredContent.cleanText,
-        metadata: {
-          // Enhanced metadata from HTML cleaning service
-          ...structuredContent.metadata,
-
-          // Convert to legacy format for compatibility
-          author: structuredContent.metadata.author,  // Keep as object for proper extraction
-          publishDate: structuredContent.metadata.publishDate,
-          modifiedDate: structuredContent.metadata.modifiedDate,
-          images: structuredContent.metadata.images.all.map(img => img.url),
-          keywords: structuredContent.metadata.keywords,
-
-          // Extract wordCount and contentType from contentAnalysis
-          wordCount: structuredContent.metadata.contentAnalysis.wordCount,
-          contentType: structuredContent.metadata.contentAnalysis.type as any,
-
-          // Image info for schema generation
-          imageInfo: {
-            featuredImage: structuredContent.metadata.images.featured?.url
-          },
-
-          // Business info for publisher
-          businessInfo: structuredContent.metadata.business ? {
-            name: structuredContent.metadata.business.name,
-            logo: structuredContent.metadata.business.logo,
-            url: structuredContent.metadata.business.website
-          } : undefined,
-
-          // Article sections for schema
-          articleSections: structuredContent.metadata.articleSections,
-
-          // Ensure existingJsonLd is explicitly mapped for schema extraction
-          // (htmlCleaner uses existingJsonLd, but we want to ensure it's accessible)
-          existingJsonLd: structuredContent.metadata.existingJsonLd,
-          jsonLdData: structuredContent.metadata.existingJsonLd, // Also map to jsonLdData for compatibility
-
-          // Add processing metrics
-          originalLength: structuredContent.originalLength,
-          processedLength: structuredContent.processedLength,
-          tokenEstimate: structuredContent.tokenEstimate,
-          contentHierarchy: structuredContent.hierarchy
-        },
-        // Pass through content quality suggestions from htmlCleaner
-        contentQualitySuggestions: structuredContent.contentQualitySuggestions
-      }
-
-      console.log(`✅ Enhanced scraping completed for ${url}`)
-      console.log(`📊 Processing metrics: ${structuredContent.originalLength} → ${structuredContent.processedLength} chars (${Math.round((1 - structuredContent.processedLength/structuredContent.originalLength) * 100)}% reduction)`)
-
-      return analysis
-
-    } catch (error) {
-      console.error(`Scraping error for ${url}:`, error)
-
-      // Capture rich diagnostics for debugging
-      const diagnostics: any = {
-        requestedUrl: url,
-        errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
-      }
+    // Try up to MAX_RETRIES times with different strategies
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const config = ATTEMPT_CONFIGS[attempt - 1]
+      const page = await this.browser.newPage()
 
       try {
-        // Try to capture page state (may fail if page never loaded)
-        const currentUrl = await page.url().catch(() => null)
-        const pageTitle = await page.title().catch(() => null)
-        const htmlContent = await page.content().catch(() => null)
+        console.log(`\n🔄 Scraping attempt ${attempt}/${MAX_RETRIES} - ${config.description}`)
 
-        diagnostics.currentUrl = currentUrl
-        diagnostics.pageTitle = pageTitle
-        diagnostics.htmlSize = htmlContent ? htmlContent.length : 0
+        // Set user agent
+        await page.setUserAgent(
+          options.userAgent ||
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        )
 
-        // Extract timeout details from error message if present
-        if (diagnostics.errorMessage.includes('Waiting for selector')) {
-          const selectorMatch = diagnostics.errorMessage.match(/Waiting for selector `([^`]+)`/)
-          const timeoutMatch = diagnostics.errorMessage.match(/(\d+)ms exceeded/)
-          diagnostics.timeoutSelector = selectorMatch ? selectorMatch[1] : null
-          diagnostics.timeoutDuration = timeoutMatch ? parseInt(timeoutMatch[1]) : null
+        // Set viewport
+        await page.setViewport(options.viewport || { width: 1920, height: 1080 })
+
+        // Disable cache at page level to ensure fresh responses
+        await page.setCacheEnabled(false)
+
+        // Block unnecessary resources for faster loading
+        await page.setRequestInterception(true)
+        page.on('request', (req) => {
+          const resourceType = req.resourceType()
+          if (['font', 'stylesheet'].includes(resourceType)) {
+            req.abort()
+          } else {
+            req.continue()
+          }
+        })
+
+        // Track redirects
+        const redirectChain: string[] = []
+        page.on('response', (response) => {
+          const status = response.status()
+          if (status >= 300 && status < 400) {
+            redirectChain.push(`${response.url()} -> ${status} -> ${response.headers()['location'] || 'unknown'}`)
+          }
+        })
+
+        // Navigate to URL and capture response
+        const response = await page.goto(url, {
+          waitUntil: config.waitUntil,
+          timeout: config.timeout
+        })
+
+        // Check for non-retryable errors (404, 403, etc.)
+        const statusCode = response?.status() || 0
+        if (statusCode === 404 || statusCode === 403 || statusCode === 401) {
+          console.log(`❌ Non-retryable HTTP ${statusCode} error - failing immediately`)
+          const error: any = new Error(`HTTP ${statusCode} error`)
+          error.scraperDiagnostics = {
+            requestedUrl: url,
+            errorType: 'HTTPError',
+            errorMessage: `HTTP ${statusCode} error`,
+            statusCode,
+            isRetryable: false,
+            attempt
+          }
+          throw error
         }
 
-        // Check if this was a specific operation timeout
-        if (diagnostics.errorMessage.toLowerCase().includes('timeout') ||
-            diagnostics.errorMessage.toLowerCase().includes('timed out')) {
-          diagnostics.isTimeout = true
+        // IMMEDIATELY capture initial URL and HTML before any JS redirects
+        const initialUrl = page.url()
+        const initialHtml = await page.content()
+
+        // Wait for page to stabilize and dismiss any overlays
+        // Use configurable body timeout instead of hardcoded 10000ms
+        try {
+          await page.waitForSelector('body', { timeout: config.bodyTimeout })
+        } catch (bodyError) {
+          // Graceful degradation: If body selector times out, try to extract content anyway
+          console.log(`⚠️ Body selector timeout (${config.bodyTimeout}ms) - attempting graceful degradation`)
+          const htmlContent = await page.content().catch(() => null)
+
+          if (!htmlContent || htmlContent.length < 100) {
+            // Content is truly unavailable, throw error for retry
+            throw bodyError
+          }
+
+          // We have HTML content, continue with extraction
+          console.log(`✅ Graceful degradation successful - extracted ${htmlContent.length} chars of HTML despite timeout`)
         }
-      } catch (diagnosticsError) {
-        // If diagnostics collection fails, just note it
-        diagnostics.diagnosticsError = 'Failed to capture some diagnostics'
+
+        await this.delay(1500)
+        await this.dismissOverlays(page, 1)
+
+        // Get the final HTML content after waiting
+        const finalHtml = await page.content()
+        const finalUrl = page.url()
+
+        // Choose which HTML to use based on whether redirect happened
+        let html = finalHtml
+        let urlAfterJsCheck = finalUrl
+
+        // If URL changed after waiting, use initial HTML (before redirect)
+        if (initialUrl !== finalUrl) {
+          console.log('🔀 JavaScript redirect detected after page load!')
+          console.log(`   ${initialUrl} → ${finalUrl}`)
+          console.log('   Using initial HTML before redirect to get correct metadata')
+          html = initialHtml
+          urlAfterJsCheck = initialUrl
+        }
+
+        // ============================================
+        // DIAGNOSTIC LOGGING FOR URL SCRAPING ISSUES
+        // ============================================
+        console.log('\n🔍 ========== SCRAPING DIAGNOSTICS ==========')
+        console.log('🔢 Attempt:', `${attempt}/${MAX_RETRIES}`)
+        console.log('📍 Original URL requested:', url)
+        console.log('📍 Initial URL (after HTTP redirects):', initialUrl)
+        console.log('📍 Final URL (after JS execution):', finalUrl)
+        console.log('📊 HTTP Response Status:', response?.status() || 'N/A')
+        console.log('📊 HTTP Response Status Text:', response?.statusText() || 'N/A')
+
+        // Log redirect chain
+        if (redirectChain.length > 0) {
+          console.log('🔀 HTTP Redirect Chain:')
+          redirectChain.forEach((redirect, index) => {
+            console.log(`   ${index + 1}. ${redirect}`)
+          })
+        }
+
+        // Check if URL changed during execution
+        if (initialUrl !== finalUrl) {
+          console.log('⚠️ WARNING: JavaScript redirect detected!')
+          console.log(`   ${initialUrl} → ${finalUrl}`)
+          console.log('   ✅ Using HTML from BEFORE redirect to preserve correct metadata')
+        }
+
+        // Check if initial URL differs from original (HTTP redirect)
+        if (initialUrl !== url) {
+          console.log('⚠️ WARNING: HTTP redirect detected!')
+          console.log('   This could be due to:')
+          console.log('   - HTTP redirect (301, 302, 307, 308)')
+          console.log('   - HubSpot redirect rule or domain setting')
+        }
+
+        // Parse HTML with Cheerio to extract raw metadata
+        const $diagnostic = cheerio.load(html)
+        const rawTitle = $diagnostic('title').text().trim()
+        const rawOgTitle = $diagnostic('meta[property="og:title"]').attr('content')
+        const rawTwitterTitle = $diagnostic('meta[name="twitter:title"]').attr('content')
+        const rawDescription = $diagnostic('meta[name="description"]').attr('content')
+        const rawOgDescription = $diagnostic('meta[property="og:description"]').attr('content')
+        const rawTwitterDescription = $diagnostic('meta[name="twitter:description"]').attr('content')
+
+        // Check for meta refresh redirects
+        const metaRefresh = $diagnostic('meta[http-equiv="refresh"]').attr('content')
+        if (metaRefresh) {
+          console.log('🔀 Meta Refresh Redirect Found:', metaRefresh)
+        }
+
+        // Check for JavaScript redirects in the HTML
+        const scriptContent = $diagnostic('script').text()
+        const jsRedirectPatterns = [
+          /window\.location\s*=\s*['"]([^'"]+)['"]/,
+          /window\.location\.href\s*=\s*['"]([^'"]+)['"]/,
+          /window\.location\.replace\(['"]([^'"]+)['"]\)/,
+          /location\.href\s*=\s*['"]([^'"]+)['"]/
+        ]
+
+        for (const pattern of jsRedirectPatterns) {
+          const match = scriptContent.match(pattern)
+          if (match) {
+            console.log('🔀 JavaScript Redirect Found:', match[1])
+            break
+          }
+        }
+
+        console.log('\n📄 RAW HTML METADATA EXTRACTED BY PUPPETEER:')
+        console.log('  <title> tag:', rawTitle || '[EMPTY]')
+        console.log('  og:title:', rawOgTitle || '[EMPTY]')
+        console.log('  twitter:title:', rawTwitterTitle || '[EMPTY]')
+        console.log('  <meta name="description">:', rawDescription || '[EMPTY]')
+        console.log('  og:description:', rawOgDescription || '[EMPTY]')
+        console.log('  twitter:description:', rawTwitterDescription || '[EMPTY]')
+
+        console.log('\n📏 HTML Size:', html.length, 'characters')
+        console.log('📝 HTML Preview (first 200 chars):', html.substring(0, 200).replace(/\s+/g, ' '))
+        console.log('🔍 ========================================\n')
+
+        console.log('🔄 Processing HTML with advanced cleaning service...')
+
+        // Use the new HTML cleaning service for optimized processing
+        const structuredContent = await htmlCleaningService.processHtml(html, url)
+
+        // Convert structured content to ContentAnalysis format
+        const analysis: ContentAnalysis = {
+          url,
+          title: structuredContent.metadata.title,
+          description: structuredContent.metadata.description,
+          content: structuredContent.cleanText,
+          metadata: {
+            // Enhanced metadata from HTML cleaning service
+            ...structuredContent.metadata,
+
+            // Convert to legacy format for compatibility
+            author: structuredContent.metadata.author,  // Keep as object for proper extraction
+            publishDate: structuredContent.metadata.publishDate,
+            modifiedDate: structuredContent.metadata.modifiedDate,
+            images: structuredContent.metadata.images.all.map(img => img.url),
+            keywords: structuredContent.metadata.keywords,
+
+            // Extract wordCount and contentType from contentAnalysis
+            wordCount: structuredContent.metadata.contentAnalysis.wordCount,
+            contentType: structuredContent.metadata.contentAnalysis.type as any,
+
+            // Image info for schema generation
+            imageInfo: {
+              featuredImage: structuredContent.metadata.images.featured?.url
+            },
+
+            // Business info for publisher
+            businessInfo: structuredContent.metadata.business ? {
+              name: structuredContent.metadata.business.name,
+              logo: structuredContent.metadata.business.logo,
+              url: structuredContent.metadata.business.website
+            } : undefined,
+
+            // Article sections for schema
+            articleSections: structuredContent.metadata.articleSections,
+
+            // Ensure existingJsonLd is explicitly mapped for schema extraction
+            // (htmlCleaner uses existingJsonLd, but we want to ensure it's accessible)
+            existingJsonLd: structuredContent.metadata.existingJsonLd,
+            jsonLdData: structuredContent.metadata.existingJsonLd, // Also map to jsonLdData for compatibility
+
+            // Add processing metrics
+            originalLength: structuredContent.originalLength,
+            processedLength: structuredContent.processedLength,
+            tokenEstimate: structuredContent.tokenEstimate,
+            contentHierarchy: structuredContent.hierarchy
+          },
+          // Pass through content quality suggestions from htmlCleaner
+          contentQualitySuggestions: structuredContent.contentQualitySuggestions
+        }
+
+        console.log(`✅ Enhanced scraping completed for ${url} (attempt ${attempt}/${MAX_RETRIES})`)
+        console.log(`📊 Processing metrics: ${structuredContent.originalLength} → ${structuredContent.processedLength} chars (${Math.round((1 - structuredContent.processedLength/structuredContent.originalLength) * 100)}% reduction)`)
+
+        await page.close()
+        return analysis
+
+      } catch (error) {
+        console.error(`❌ Scraping attempt ${attempt}/${MAX_RETRIES} failed for ${url}:`, error instanceof Error ? error.message : error)
+
+        // Capture rich diagnostics for debugging
+        const diagnostics: any = {
+          requestedUrl: url,
+          errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          attempt,
+          maxAttempts: MAX_RETRIES,
+          attemptConfig: config.description
+        }
+
+        try {
+          // Try to capture page state (may fail if page never loaded)
+          const currentUrl = await page.url().catch(() => null)
+          const pageTitle = await page.title().catch(() => null)
+          const htmlContent = await page.content().catch(() => null)
+
+          diagnostics.currentUrl = currentUrl
+          diagnostics.pageTitle = pageTitle
+          diagnostics.htmlSize = htmlContent ? htmlContent.length : 0
+
+          // Extract timeout details from error message if present
+          if (diagnostics.errorMessage.includes('Waiting for selector')) {
+            const selectorMatch = diagnostics.errorMessage.match(/Waiting for selector `([^`]+)`/)
+            const timeoutMatch = diagnostics.errorMessage.match(/(\d+)ms exceeded/)
+            diagnostics.timeoutSelector = selectorMatch ? selectorMatch[1] : null
+            diagnostics.timeoutDuration = timeoutMatch ? parseInt(timeoutMatch[1]) : null
+          }
+
+          // Check if this was a specific operation timeout
+          if (diagnostics.errorMessage.toLowerCase().includes('timeout') ||
+              diagnostics.errorMessage.toLowerCase().includes('timed out')) {
+            diagnostics.isTimeout = true
+          }
+        } catch (diagnosticsError) {
+          // If diagnostics collection fails, just note it
+          diagnostics.diagnosticsError = 'Failed to capture some diagnostics'
+        }
+
+        // Check if error is retryable
+        const isRetryableError =
+          diagnostics.isTimeout ||
+          diagnostics.errorType === 'TimeoutError' ||
+          diagnostics.errorMessage.includes('Navigation timeout') ||
+          diagnostics.errorMessage.includes('Waiting for selector') ||
+          diagnostics.errorMessage.includes('net::ERR_')
+
+        diagnostics.isRetryable = isRetryableError
+
+        // Store error for potential retry
+        lastError = error
+        lastError.scraperDiagnostics = diagnostics
+
+        await page.close()
+
+        // If this is a non-retryable error or we're on the last attempt, throw immediately
+        if (!isRetryableError || attempt === MAX_RETRIES) {
+          console.log(`❌ ${!isRetryableError ? 'Non-retryable error' : 'Max retries reached'} - failing permanently`)
+
+          // Create enhanced error with diagnostics attached
+          const enhancedError: any = new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          enhancedError.scraperDiagnostics = diagnostics
+          enhancedError.originalError = error
+
+          throw enhancedError
+        }
+
+        // Wait before retrying with exponential backoff
+        const retryDelay = RETRY_DELAYS[attempt - 1]
+        console.log(`⏳ Retrying in ${retryDelay}ms...`)
+        await this.delay(retryDelay)
+
       }
-
-      // Create enhanced error with diagnostics attached
-      const enhancedError: any = new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      enhancedError.scraperDiagnostics = diagnostics
-      enhancedError.originalError = error
-
-      throw enhancedError
-    } finally {
-      await page.close()
     }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError || new Error('Scraping failed for unknown reason')
   }
 
   private async dynamicContentExtraction(page: Page, options: ScrapingOptions): Promise<ContentAnalysis> {
