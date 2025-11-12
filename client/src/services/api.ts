@@ -489,6 +489,16 @@ class ApiService {
     totalSchemas: number
     totalCreditsDistributed: number
     totalCreditsUsed: number
+    totalRevenue: number
+    revenueThisMonth: number
+    payingCustomers: number
+    conversionRate: number
+    newUsersThisWeek: number
+    newUsersThisMonth: number
+    schemasToday: number
+    schemasThisWeek: number
+    averageCreditsPerUser: number
+    creditPackBreakdown: Array<{ packId: string; packName: string; purchases: number; revenue: number }>
   }>> {
     const response = await api.get('/admin/stats')
     return response.data
@@ -801,6 +811,64 @@ class ApiService {
 
   async deleteReleaseNote(noteId: string): Promise<ApiResponse<{ message: string }>> {
     const response = await api.delete(`/release-notes/admin/${noteId}`)
+    return response.data
+  }
+
+  // Advanced Analytics endpoints
+  async getPowerUsersAnalytics(period: '7d' | '30d' = '30d'): Promise<ApiResponse<{
+    period: string
+    users: Array<{
+      userId: string
+      email: string
+      firstName: string | null
+      lastName: string | null
+      powerScore: number
+      activeDays: number
+      totalLogins: number
+      schemasGenerated: number
+      revenueInCents: number
+      lastActiveAt: string
+      trend: 'up' | 'stable' | 'down'
+    }>
+    totalCount: number
+  }>> {
+    const response = await api.get(`/admin/analytics/power-users?period=${period}`)
+    return response.data
+  }
+
+  async getSchemaQualityAnalytics(period: '7d' | '30d' = '30d'): Promise<ApiResponse<{
+    period: string
+    averageQualityScore: number
+    refinementRate: number
+    averageComplexity: number
+    successRate: number
+    totalSchemas: number
+    qualityTrend: 'improving' | 'stable' | 'declining'
+    schemasByType: Array<{ type: string; count: number; avgScore: number }>
+  }>> {
+    const response = await api.get(`/admin/analytics/schema-quality?period=${period}`)
+    return response.data
+  }
+
+  async getConversionAnalytics(): Promise<ApiResponse<{
+    conversionRate: number
+    totalSignups: number
+    totalConversions: number
+    averageTimeToConversion: number
+    conversionFunnel: {
+      signups: number
+      firstSchema: number
+      firstPurchase: number
+      dropoffAfterSignup: number
+      dropoffAfterFirstSchema: number
+    }
+    recentTrend: {
+      last7Days: number
+      last30Days: number
+      trendDirection: 'up' | 'stable' | 'down'
+    }
+  }>> {
+    const response = await api.get('/admin/analytics/conversions')
     return response.data
   }
 }

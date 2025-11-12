@@ -506,3 +506,80 @@ export const backfillHubSpotCRM = asyncHandler(async (req: AuthenticatedRequest,
     message: `Backfill complete: ${successCount} succeeded, ${failureCount} failed out of ${allUsers.length} total users`
   })
 })
+
+// Advanced Analytics Endpoints
+
+/**
+ * Get power users analytics
+ * Returns top engaged users based on login frequency, schema generation, and revenue
+ * Scoring: 40% login frequency + 40% schema volume + 20% revenue contribution
+ */
+export const getPowerUsersAnalytics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const period = (req.query.period as '7d' | '30d') || '30d'
+
+  console.log('📊 [AdminController] Fetching power users analytics:', { period })
+
+  const powerUsers = await db.getPowerUsers(period)
+
+  console.log(`✅ [AdminController] Found ${powerUsers.length} power users`)
+
+  res.json({
+    success: true,
+    data: {
+      period,
+      users: powerUsers,
+      totalCount: powerUsers.length
+    },
+    message: `Power users analytics for ${period === '7d' ? 'last 7 days' : 'last 30 days'}`
+  })
+})
+
+/**
+ * Get schema quality metrics
+ * Monitors average quality scores, refinement rates, and schema complexity trends
+ */
+export const getSchemaQualityAnalytics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const period = (req.query.period as '7d' | '30d') || '30d'
+
+  console.log('📊 [AdminController] Fetching schema quality metrics:', { period })
+
+  const qualityMetrics = await db.getSchemaQualityMetrics(period)
+
+  console.log('✅ [AdminController] Schema quality metrics retrieved:', {
+    averageScore: qualityMetrics.averageQualityScore,
+    refinementRate: qualityMetrics.refinementRate,
+    trend: qualityMetrics.qualityTrend
+  })
+
+  res.json({
+    success: true,
+    data: {
+      period,
+      ...qualityMetrics
+    },
+    message: `Schema quality metrics for ${period === '7d' ? 'last 7 days' : 'last 30 days'}`
+  })
+})
+
+/**
+ * Get conversion metrics
+ * Tracks signup → first schema → first purchase conversion funnel
+ * Includes drop-off analysis and trend comparison
+ */
+export const getConversionAnalytics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('📊 [AdminController] Fetching conversion metrics...')
+
+  const conversionMetrics = await db.getConversionMetrics()
+
+  console.log('✅ [AdminController] Conversion metrics retrieved:', {
+    conversionRate: conversionMetrics.conversionRate,
+    totalConversions: conversionMetrics.totalConversions,
+    trendDirection: conversionMetrics.recentTrend.trendDirection
+  })
+
+  res.json({
+    success: true,
+    data: conversionMetrics,
+    message: 'Conversion funnel metrics retrieved successfully'
+  })
+})

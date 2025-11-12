@@ -3250,6 +3250,425 @@ class DatabaseService {
       affectedUsers: affectedUserIds.size
     }
   }
+
+  /**
+   * Get power users - users with highest engagement scores
+   * Based on login frequency (40%), schema generation volume (40%), and revenue (20%)
+   */
+  async getPowerUsers(period: '7d' | '30d' = '30d'): Promise<Array<{
+    userId: string
+    email: string
+    firstName: string | null
+    lastName: string | null
+    powerScore: number
+    activeDays: number
+    totalLogins: number
+    schemasGenerated: number
+    revenueInCents: number
+    lastActiveAt: string
+    trend: 'up' | 'stable' | 'down'
+  }>> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getPowerUsers', period)
+      return []
+    }
+
+    const days = period === '7d' ? 7 : 30
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
+    // Get user activity data
+    const { data: users } = await this.supabase
+      .from('users')
+      .select('id, email, first_name, last_name, created_at')
+      .eq('is_active', true)
+
+    if (!users) return []
+
+    const powerUsers = await Promise.all(users.map(async (user) => {
+      // Get login activity
+      const { data: loginActivity } = await this.supabase
+        .from('usage_analytics')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .eq('action', 'login')
+        .gte('created_at', startDate.toISOString())
+
+      const totalLogins = loginActivity?.length || 0
+      const uniqueDays = new Set(loginActivity?.map(l =>
+        new Date(l.created_at).toDateString()
+      ) || []).size
+
+      // Get schema generation activity
+      const { data: schemas } = await this.supabase
+        .from('schema_generations')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', startDate.toISOString())
+
+      const schemasGenerated = schemas?.length || 0
+
+      // Get revenue data
+      const { data: payments } = await this.supabase
+        .from('payment_intents')
+        .select('amount_in_cents, created_at')
+        .eq('user_id', user.id)
+        .eq('status', 'succeeded')
+
+      const totalRevenue = payments?.reduce((sum, p) => sum + p.amount_in_cents, 0) || 0
+      const recentRevenue = payments?.filter(p =>
+        new Date(p.created_at) >= startDate
+      ).reduce((sum, p) => sum + p.amount_in_cents, 0) || 0
+
+      // Get last activity
+      const lastLogin = loginActivity?.[0]?.created_at || user.created_at
+      const lastSchema = schemas?.[0]?.created_at || null
+      const lastActiveAt = lastSchema && new Date(lastSchema) > new Date(lastLogin)
+        ? lastSchema
+        : lastLogin
+
+      // Calculate engagement scores (0-100 scale)
+      const loginScore = Math.min(100, (uniqueDays / days) * 100) // % of days active
+      const schemaScore = Math.min(100, (schemasGenerated / (days / 7)) * 50) // Normalized to ~2 per week
+      const revenueScore = Math.min(100, (totalRevenue / 10000) * 100) // $100 = max score
+
+      // Weighted power score: 40% login, 40% schema, 20% revenue
+      const powerScore = Math.round(
+        (loginScore * 0.4) + (schemaScore * 0.4) + (revenueScore * 0.2)
+      )
+
+      // Calculate trend (compare recent half vs earlier half)
+      const midpoint = new Date(startDate)
+      midpoint.setDate(midpoint.getDate() + Math.floor(days / 2))
+
+      const recentActivity = (loginActivity?.filter(l =>
+        new Date(l.created_at) >= midpoint
+      ).length || 0) + (schemas?.filter(s =>
+        new Date(s.created_at) >= midpoint
+      ).length || 0)
+
+      const earlierActivity = (loginActivity?.filter(l =>
+        new Date(l.created_at) < midpoint
+      ).length || 0) + (schemas?.filter(s =>
+        new Date(s.created_at) < midpoint
+      ).length || 0)
+
+      let trend: 'up' | 'stable' | 'down' = 'stable'
+      if (recentActivity > earlierActivity * 1.2) trend = 'up'
+      else if (recentActivity < earlierActivity * 0.8) trend = 'down'
+
+      return {
+        userId: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        powerScore,
+        activeDays: uniqueDays,
+        totalLogins,
+        schemasGenerated,
+        revenueInCents: totalRevenue,
+        lastActiveAt,
+        trend
+      }
+    }))
+
+    // Filter and sort power users (score > 20 to be considered "power user")
+    return powerUsers
+      .filter(u => u.powerScore > 20)
+      .sort((a, b) => b.powerScore - a.powerScore)
+      .slice(0, 50) // Top 50 power users
+  }
+
+  /**
+   * Get schema quality metrics for monitoring "how SUPER our generator is"
+   */
+  async getSchemaQualityMetrics(period: '7d' | '30d' = '30d'): Promise<{
+    averageQualityScore: number
+    refinementRate: number
+    averageComplexity: number
+    successRate: number
+    totalSchemas: number
+    qualityTrend: 'improving' | 'stable' | 'declining'
+    schemasByType: Array<{ type: string; count: number; avgScore: number }>
+  }> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getSchemaQualityMetrics', period)
+      return {
+        averageQualityScore: 0,
+        refinementRate: 0,
+        averageComplexity: 0,
+        successRate: 0,
+        totalSchemas: 0,
+        qualityTrend: 'stable',
+        schemasByType: []
+      }
+    }
+
+    const days = period === '7d' ? 7 : 30
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
+    // Get all schemas in period
+    const { data: schemas } = await this.supabase
+      .from('schema_generations')
+      .select('schema_score, refinement_count, schema_type, status, schemas, created_at')
+      .gte('created_at', startDate.toISOString())
+
+    if (!schemas || schemas.length === 0) {
+      return {
+        averageQualityScore: 0,
+        refinementRate: 0,
+        averageComplexity: 0,
+        successRate: 0,
+        totalSchemas: 0,
+        qualityTrend: 'stable',
+        schemasByType: []
+      }
+    }
+
+    // Calculate average quality score
+    const scoresWithValues = schemas.filter(s => s.schema_score && typeof s.schema_score === 'object')
+    const totalScore = scoresWithValues.reduce((sum, s) => {
+      const score = s.schema_score as any
+      return sum + (score?.overall || score?.total || 0)
+    }, 0)
+    const averageQualityScore = scoresWithValues.length > 0
+      ? Math.round(totalScore / scoresWithValues.length)
+      : 0
+
+    // Calculate refinement rate
+    const refined = schemas.filter(s => (s.refinement_count || 0) > 0).length
+    const refinementRate = Math.round((refined / schemas.length) * 100)
+
+    // Calculate average complexity (number of properties in schema)
+    const schemasWithContent = schemas.filter(s => s.schemas && Array.isArray(s.schemas))
+    const totalProperties = schemasWithContent.reduce((sum, s) => {
+      const schemaArray = s.schemas as any[]
+      return sum + schemaArray.reduce((propSum, schema) => {
+        return propSum + (Object.keys(schema?.properties || {}).length || 0)
+      }, 0)
+    }, 0)
+    const averageComplexity = schemasWithContent.length > 0
+      ? Math.round(totalProperties / schemasWithContent.length)
+      : 0
+
+    // Calculate success rate
+    const successful = schemas.filter(s => s.status === 'success').length
+    const successRate = Math.round((successful / schemas.length) * 100)
+
+    // Calculate quality trend (compare first half vs second half)
+    const midpoint = new Date(startDate)
+    midpoint.setDate(midpoint.getDate() + Math.floor(days / 2))
+
+    const earlierSchemas = scoresWithValues.filter(s => new Date(s.created_at) < midpoint)
+    const recentSchemas = scoresWithValues.filter(s => new Date(s.created_at) >= midpoint)
+
+    const earlierAvg = earlierSchemas.length > 0
+      ? earlierSchemas.reduce((sum, s) => {
+          const score = s.schema_score as any
+          return sum + (score?.overall || score?.total || 0)
+        }, 0) / earlierSchemas.length
+      : 0
+
+    const recentAvg = recentSchemas.length > 0
+      ? recentSchemas.reduce((sum, s) => {
+          const score = s.schema_score as any
+          return sum + (score?.overall || score?.total || 0)
+        }, 0) / recentSchemas.length
+      : 0
+
+    let qualityTrend: 'improving' | 'stable' | 'declining' = 'stable'
+    if (recentAvg > earlierAvg * 1.1) qualityTrend = 'improving'
+    else if (recentAvg < earlierAvg * 0.9) qualityTrend = 'declining'
+
+    // Group by schema type
+    const typeGroups = schemas.reduce((acc, s) => {
+      const type = s.schema_type || 'unknown'
+      if (!acc[type]) {
+        acc[type] = { count: 0, totalScore: 0, withScores: 0 }
+      }
+      acc[type].count++
+      if (s.schema_score) {
+        const score = s.schema_score as any
+        acc[type].totalScore += (score?.overall || score?.total || 0)
+        acc[type].withScores++
+      }
+      return acc
+    }, {} as Record<string, { count: number; totalScore: number; withScores: number }>)
+
+    const schemasByType = Object.entries(typeGroups)
+      .map(([type, data]) => ({
+        type,
+        count: data.count,
+        avgScore: data.withScores > 0 ? Math.round(data.totalScore / data.withScores) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    return {
+      averageQualityScore,
+      refinementRate,
+      averageComplexity,
+      successRate,
+      totalSchemas: schemas.length,
+      qualityTrend,
+      schemasByType
+    }
+  }
+
+  /**
+   * Get conversion metrics - track how users convert from signup to paying customers
+   */
+  async getConversionMetrics(): Promise<{
+    conversionRate: number
+    totalSignups: number
+    totalConversions: number
+    averageTimeToConversion: number // in days
+    conversionFunnel: {
+      signups: number
+      firstSchema: number
+      firstPurchase: number
+      dropoffAfterSignup: number
+      dropoffAfterFirstSchema: number
+    }
+    recentTrend: {
+      last7Days: number
+      last30Days: number
+      trendDirection: 'up' | 'stable' | 'down'
+    }
+  }> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getConversionMetrics')
+      return {
+        conversionRate: 0,
+        totalSignups: 0,
+        totalConversions: 0,
+        averageTimeToConversion: 0,
+        conversionFunnel: {
+          signups: 0,
+          firstSchema: 0,
+          firstPurchase: 0,
+          dropoffAfterSignup: 0,
+          dropoffAfterFirstSchema: 0
+        },
+        recentTrend: {
+          last7Days: 0,
+          last30Days: 0,
+          trendDirection: 'stable'
+        }
+      }
+    }
+
+    // Get all users
+    const { data: users } = await this.supabase
+      .from('users')
+      .select('id, created_at')
+      .order('created_at', { ascending: false })
+
+    if (!users) return this.getConversionMetrics() // Return mock data
+
+    const totalSignups = users.length
+
+    // Get users who have generated at least one schema
+    const { data: usersWithSchemas } = await this.supabase
+      .from('schema_generations')
+      .select('user_id')
+      .eq('status', 'success')
+
+    const uniqueUsersWithSchemas = new Set(usersWithSchemas?.map(s => s.user_id) || [])
+
+    // Get paying customers
+    const { data: payments } = await this.supabase
+      .from('payment_intents')
+      .select('user_id, created_at')
+      .eq('status', 'succeeded')
+
+    const payingUserIds = new Set(payments?.map(p => p.user_id) || [])
+    const totalConversions = payingUserIds.size
+
+    // Calculate conversion rate
+    const conversionRate = totalSignups > 0
+      ? Math.round((totalConversions / totalSignups) * 100)
+      : 0
+
+    // Calculate average time to conversion
+    const conversionTimes = await Promise.all(
+      Array.from(payingUserIds).map(async (userId) => {
+        const user = users.find(u => u.id === userId)
+        if (!user) return null
+
+        const userPayments = payments?.filter(p => p.user_id === userId) || []
+        if (userPayments.length === 0) return null
+
+        const firstPayment = userPayments.sort((a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )[0]
+
+        const signupDate = new Date(user.created_at)
+        const purchaseDate = new Date(firstPayment.created_at)
+        const daysDiff = Math.floor((purchaseDate.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        return daysDiff
+      })
+    )
+
+    const validConversionTimes = conversionTimes.filter((t): t is number => t !== null && t >= 0)
+    const averageTimeToConversion = validConversionTimes.length > 0
+      ? Math.round(validConversionTimes.reduce((sum, t) => sum + t, 0) / validConversionTimes.length)
+      : 0
+
+    // Build conversion funnel
+    const signups = totalSignups
+    const firstSchema = uniqueUsersWithSchemas.size
+    const firstPurchase = totalConversions
+    const dropoffAfterSignup = signups - firstSchema
+    const dropoffAfterFirstSchema = firstSchema - firstPurchase
+
+    // Calculate recent trends
+    const now = new Date()
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const thirtyDaysAgo = new Date(now)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const recentSignups7d = users.filter(u => new Date(u.created_at) >= sevenDaysAgo).length
+    const recentConversions7d = payments?.filter(p =>
+      new Date(p.created_at) >= sevenDaysAgo && payingUserIds.has(p.user_id)
+    ).length || 0
+    const conversionRate7d = recentSignups7d > 0
+      ? Math.round((new Set(payments?.filter(p => new Date(p.created_at) >= sevenDaysAgo).map(p => p.user_id)).size / recentSignups7d) * 100)
+      : 0
+
+    const recentSignups30d = users.filter(u => new Date(u.created_at) >= thirtyDaysAgo).length
+    const recentConversions30d = payments?.filter(p =>
+      new Date(p.created_at) >= thirtyDaysAgo && payingUserIds.has(p.user_id)
+    ).length || 0
+    const conversionRate30d = recentSignups30d > 0
+      ? Math.round((new Set(payments?.filter(p => new Date(p.created_at) >= thirtyDaysAgo).map(p => p.user_id)).size / recentSignups30d) * 100)
+      : 0
+
+    let trendDirection: 'up' | 'stable' | 'down' = 'stable'
+    if (conversionRate7d > conversionRate30d * 1.1) trendDirection = 'up'
+    else if (conversionRate7d < conversionRate30d * 0.9) trendDirection = 'down'
+
+    return {
+      conversionRate,
+      totalSignups,
+      totalConversions,
+      averageTimeToConversion,
+      conversionFunnel: {
+        signups,
+        firstSchema,
+        firstPurchase,
+        dropoffAfterSignup,
+        dropoffAfterFirstSchema
+      },
+      recentTrend: {
+        last7Days: conversionRate7d,
+        last30Days: conversionRate30d,
+        trendDirection
+      }
+    }
+  }
 }
 
 export const db = new DatabaseService()

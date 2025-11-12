@@ -21,7 +21,10 @@ import {
   deleteSchemaFailure,
   getHubSpotCRMDiagnostics,
   testHubSpotCRMContact,
-  backfillHubSpotCRM
+  backfillHubSpotCRM,
+  getPowerUsersAnalytics,
+  getSchemaQualityAnalytics,
+  getConversionAnalytics
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -97,5 +100,16 @@ router.get('/schema-failures/stats', getSchemaFailureStats)
 
 // DELETE /api/admin/schema-failures/:id - Delete a schema failure record
 router.delete('/schema-failures/:id', deleteSchemaFailure)
+
+// Advanced Analytics Routes
+
+// GET /api/admin/analytics/power-users - Get power users analytics
+router.get('/analytics/power-users', getPowerUsersAnalytics)
+
+// GET /api/admin/analytics/schema-quality - Get schema quality metrics
+router.get('/analytics/schema-quality', getSchemaQualityAnalytics)
+
+// GET /api/admin/analytics/conversions - Get conversion funnel metrics
+router.get('/analytics/conversions', getConversionAnalytics)
 
 export default router
