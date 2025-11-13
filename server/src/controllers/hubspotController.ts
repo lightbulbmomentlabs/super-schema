@@ -42,6 +42,10 @@ export const handleOAuthCallback = asyncHandler(
 
     // Extract region from authorization code for regional API routing
     const region = code.match(/^(na1|eu1|ap1)-/)?.[1] || 'na1'
+    console.log('🌍 [HubSpot Controller] Region extracted from code', {
+      region,
+      codePrefix: code.substring(0, 4)
+    })
 
     try {
       // FLOW DETECTION: Authenticated vs Unauthenticated

@@ -34,6 +34,19 @@ export default function HubSpotCallbackPage() {
       const error = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
 
+      // Detect OAuth flow type early for debugging
+      const oauthFlowType = !state ? 'MARKETPLACE_INITIATED' : isSignedIn ? 'SUPERSCHEMA_AUTHENTICATED' : 'SUPERSCHEMA_UNAUTHENTICATED'
+      console.log('🎯 [HubSpotCallback] OAuth Flow Type Detected', {
+        flowType: oauthFlowType,
+        hasState: !!state,
+        isSignedIn,
+        explanation: oauthFlowType === 'MARKETPLACE_INITIATED'
+          ? 'User installed from HubSpot Marketplace (state=null is expected)'
+          : isSignedIn
+          ? 'User connected from SuperSchema while authenticated'
+          : 'User connected from SuperSchema before signup'
+      })
+
       // Log full callback URL and timing
       const callbackTime = new Date().toISOString()
       const initiationTime = sessionStorage.getItem('hubspot_oauth_initiation_time')
@@ -243,6 +256,7 @@ export default function HubSpotCallbackPage() {
     }
 
     const handleCallbackError = (error: any) => {
+      const stateParam = searchParams.get('state')
       const errorContext = {
         error: error instanceof Error ? error.message : 'Unknown error',
         statusCode: error?.response?.status,
@@ -250,7 +264,10 @@ export default function HubSpotCallbackPage() {
         errorData: error?.response?.data,
         timestamp: new Date().toISOString(),
         userId: userId || 'unauthenticated',
-        url: window.location.href
+        url: window.location.href,
+        oauthFlowType: !stateParam ? 'MARKETPLACE_INITIATED' : isSignedIn ? 'SUPERSCHEMA_AUTHENTICATED' : 'SUPERSCHEMA_UNAUTHENTICATED',
+        hasState: !!stateParam,
+        stateValue: stateParam ? stateParam.substring(0, 10) + '...' : 'NULL (marketplace flow)'
       }
 
       console.error('❌ [HubSpotCallback] Callback error', errorContext)
