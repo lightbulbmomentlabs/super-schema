@@ -162,7 +162,7 @@ export const handleOAuthCallback = asyncHandler(
         })
 
         // Step 3: Store as PENDING connection (to be claimed after signup)
-        console.log('🔄 [HubSpot Controller] Step 3: Storing pending connection', { state: state.substring(0, 10) + '...' })
+        console.log('🔄 [HubSpot Controller] Step 3: Storing pending connection', { state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL' })
 
         // Encrypt tokens for storage
         const { encrypt } = await import('../services/encryption.js')
@@ -188,7 +188,7 @@ export const handleOAuthCallback = asyncHandler(
         })
 
         console.log('✅ [HubSpot Controller] Pending connection stored, user has 30 minutes to complete signup', {
-          state: state.substring(0, 10) + '...',
+          state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL',
           portalId: accountInfo.hub_id,
           duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
         })
@@ -325,7 +325,7 @@ export const claimPendingConnection = asyncHandler(
     const pendingConnection = await db.getPendingHubSpotConnection(state)
 
     if (!pendingConnection) {
-      console.warn('❌ [HubSpot Controller] Pending connection not found or expired', { state: state.substring(0, 10) + '...' })
+      console.warn('❌ [HubSpot Controller] Pending connection not found or expired', { state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL' })
       throw createError('Connection not found or expired. Please reconnect from HubSpot.', 404)
     }
 
@@ -382,7 +382,7 @@ export const claimPendingConnection = asyncHandler(
     } catch (error) {
       console.error('❌ [HubSpot Controller] Failed to claim pending connection', {
         userId,
-        state: state.substring(0, 10) + '...',
+        state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL',
         error: error instanceof Error ? error.message : 'Unknown error'
       })
 
