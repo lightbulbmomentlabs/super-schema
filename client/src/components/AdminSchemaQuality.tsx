@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { Star, TrendingUp, TrendingDown, Minus, FileCheck, RefreshCw, Layers } from 'lucide-react'
+import { Star, TrendingUp, TrendingDown, Minus, FileCheck, RefreshCw, Layers, Download, ChevronDown } from 'lucide-react'
 import { apiService } from '@/services/api'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import MetricBarChart from './charts/MetricBarChart'
 
 interface SchemaQualityMetrics {
@@ -16,6 +16,8 @@ interface SchemaQualityMetrics {
 
 export default function AdminSchemaQuality() {
   const [period, setPeriod] = useState<'7d' | '30d'>('30d')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-schema-quality', period],
@@ -24,6 +26,78 @@ export default function AdminSchemaQuality() {
   })
 
   const metrics = data?.data as SchemaQualityMetrics | undefined
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Export functions
+  const exportAsMarkdown = () => {
+    if (!metrics) return
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const content = `# Schema Quality Analytics
+Period: Last ${period === '7d' ? '7' : '30'} Days
+Generated: ${new Date().toISOString()}
+
+## Summary Metrics
+- Average Quality Score: ${metrics.averageQualityScore}/100
+- Refinement Rate: ${metrics.refinementRate.toFixed(1)}%
+- Average Complexity: ${metrics.averageComplexity.toFixed(1)} properties per schema
+- Success Rate: ${metrics.successRate.toFixed(1)}%
+- Total Schemas: ${metrics.totalSchemas}
+- Quality Trend: ${metrics.qualityTrend}
+
+## Schemas by Type
+${metrics.schemasByType.map(item =>
+  `- ${item.type}: ${item.count} schemas, Avg Score: ${item.avgScore.toFixed(1)}/100`
+).join('\n')}
+
+## Analysis Context
+This data represents schema generation quality metrics for AI analysis.
+Quality scores are calculated based on:
+- Required Properties (35% weight): @context, @type, name/headline
+- Recommended Properties (25% weight): description, url, image, author, publisher, dates
+- Advanced AEO Features (25% weight): keywords, about, mentions, speakable, etc.
+- Content Quality (15% weight): description length, structured data richness
+`
+
+    const blob = new Blob([content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `schema-quality-${timestamp}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowDropdown(false)
+  }
+
+  const exportAsJSON = () => {
+    if (!metrics) return
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      period,
+      metrics
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `schema-quality-${timestamp}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setShowDropdown(false)
+  }
 
   // Get trend indicator
   const getTrendIndicator = (trend: 'improving' | 'stable' | 'declining') => {
@@ -115,6 +189,38 @@ export default function AdminSchemaQuality() {
           >
             Last 30 Days
           </button>
+
+          {/* Download Button with Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              disabled={!metrics}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-muted hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export</span>
+              <ChevronDown className="h-4 w-4" />
+            </button>
+
+            {showDropdown && metrics && (
+              <div className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-card shadow-lg z-10">
+                <button
+                  onClick={exportAsMarkdown}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors rounded-t-lg flex items-center gap-2"
+                >
+                  <FileCheck className="h-4 w-4" />
+                  Download as Markdown
+                </button>
+                <button
+                  onClick={exportAsJSON}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors rounded-b-lg flex items-center gap-2"
+                >
+                  <FileCheck className="h-4 w-4" />
+                  Download as JSON
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

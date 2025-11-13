@@ -31,6 +31,7 @@ export interface Database {
           total_credits_used: number
           is_active: boolean
           is_admin: boolean
+          has_seen_success_preview: boolean
           created_at: string
           updated_at: string
         }
@@ -43,6 +44,7 @@ export interface Database {
           total_credits_used?: number
           is_active?: boolean
           is_admin?: boolean
+          has_seen_success_preview?: boolean
         }
         Update: {
           email?: string
@@ -52,6 +54,7 @@ export interface Database {
           total_credits_used?: number
           is_active?: boolean
           is_admin?: boolean
+          has_seen_success_preview?: boolean
         }
       }
       credit_transactions: {
@@ -551,6 +554,48 @@ class DatabaseService {
       createdAt: data.created_at,
       updatedAt: data.updated_at
     }
+  }
+
+  async getSuccessPreviewStatus(userId: string): Promise<{ hasSeenPreview: boolean }> {
+    console.log('🔍 [Database] Getting success preview status:', { userId })
+
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('has_seen_success_preview')
+      .eq('id', userId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('❌ [Database] Get success preview status error:', error)
+      throw error
+    }
+
+    const hasSeenPreview = data?.has_seen_success_preview || false
+
+    console.log('✅ [Database] Success preview status retrieved:', {
+      userId,
+      hasSeenPreview
+    })
+
+    return { hasSeenPreview }
+  }
+
+  async markSuccessPreviewSeen(userId: string): Promise<{ success: boolean }> {
+    console.log('🎉 [Database] Marking success preview as seen:', { userId })
+
+    const { error } = await this.supabase
+      .from('users')
+      .update({ has_seen_success_preview: true })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('❌ [Database] Mark success preview seen error:', error)
+      throw error
+    }
+
+    console.log('✅ [Database] Success preview marked as seen:', { userId })
+
+    return { success: true }
   }
 
   // Credit operations

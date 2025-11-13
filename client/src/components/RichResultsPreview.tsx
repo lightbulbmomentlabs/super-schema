@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, CheckCircle, Info } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { detectEligibleRichResults } from '@/utils/richResultsDetector'
 import type { JsonLdSchema } from '@shared/types'
 
 interface RichResultsPreviewProps {
@@ -85,26 +86,6 @@ export default function RichResultsPreview({ schemas, className }: RichResultsPr
       )}
     </div>
   )
-}
-
-// Helper function to detect eligible rich results
-function detectEligibleRichResults(schema: JsonLdSchema): string[] {
-  const types: string[] = []
-
-  // Check schema type
-  const schemaType = schema['@type']
-  if (schemaType === 'Article') types.push('Article Rich Result')
-  if (schemaType === 'FAQPage') types.push('FAQ Rich Result')
-  if (schemaType === 'Product') types.push('Product Rich Result')
-  if (schemaType === 'Organization') types.push('Knowledge Panel')
-  if (schemaType === 'BreadcrumbList') types.push('Breadcrumb Trail')
-  if (schemaType === 'Recipe') types.push('Recipe Rich Result')
-  if (schemaType === 'Event') types.push('Event Rich Result')
-
-  // Check for breadcrumbs in isPartOf
-  if (schema.isPartOf) types.push('Breadcrumb')
-
-  return types
 }
 
 // Article Preview Component

@@ -156,6 +156,16 @@ class ApiService {
     return response.data
   }
 
+  async getSuccessPreviewStatus(): Promise<ApiResponse<{ hasSeenPreview: boolean }>> {
+    const response = await api.get('/user/success-preview-status')
+    return response.data
+  }
+
+  async markSuccessPreviewSeen(): Promise<ApiResponse<{ success: boolean }>> {
+    const response = await api.post('/user/success-preview-seen')
+    return response.data
+  }
+
   // Schema generation endpoints
   async generateSchema(url: string, options?: any): Promise<ApiResponse<{
     schemas: JsonLdSchema[]

@@ -24,6 +24,9 @@ import TimeoutErrorModal from './TimeoutErrorModal'
 import SupportModal from './SupportModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
+import SuccessPreviewInterstitial from './SuccessPreviewInterstitial'
+import RefineCalloutModal from './RefineCalloutModal'
+import RefiningOverlay from './RefiningOverlay'
 import JokeDisplay from './JokeDisplay'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
@@ -113,6 +116,18 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [selectedHubSpotConnection, setSelectedHubSpotConnection] = useState<string | null>(null)
   const [showUnassociatedDomainModal, setShowUnassociatedDomainModal] = useState(false)
 
+  // Success Preview Interstitial state
+  const [showSuccessInterstitial, setShowSuccessInterstitial] = useState(false)
+  const [interstitialData, setInterstitialData] = useState<{
+    schemaScore: number
+    schemaType: string
+    schemas: any[]
+    creditsRemaining: number
+    url: string
+  } | null>(null)
+  const hasSeenSuccessPreviewRef = useRef<boolean>(false)
+  const [showRefineModal, setShowRefineModal] = useState(false)
+
   // Get HubSpot connections
   const { data: hubspotConnectionsResponse } = useQuery({
     queryKey: ['hubspot-connections'],
@@ -122,6 +137,20 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
   const hubspotConnections = hubspotConnectionsResponse?.data || []
   const hasActiveHubSpotConnection = hubspotConnections.some(conn => conn.isActive)
+
+  // Get success preview status
+  const { data: successPreviewStatusResponse } = useQuery({
+    queryKey: ['success-preview-status'],
+    queryFn: () => apiService.getSuccessPreviewStatus(),
+    enabled: !!user
+  })
+
+  // Update ref when status loads
+  useEffect(() => {
+    if (successPreviewStatusResponse?.data?.hasSeenPreview !== undefined) {
+      hasSeenSuccessPreviewRef.current = successPreviewStatusResponse.data.hasSeenPreview
+    }
+  }, [successPreviewStatusResponse])
 
   // Session storage key for persisting schema state
   const SESSION_STORAGE_KEY = 'schemaGenerator_state'
@@ -360,7 +389,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
         setSchemaScore(response.data.schemaScore || null)
         setRefinementCount(0) // Reset refinement count for new schema
-        refetchCredits() // Refresh credit balance
+
+        // Refresh credit balance
+        const creditsResponse = await refetchCredits()
+        const newCreditBalance = creditsResponse?.data?.data?.creditBalance || 0
 
         // Store URL ID and fetch all schemas for multi-schema support
         if (response.data.urlId) {
@@ -372,7 +404,24 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         queryClient.invalidateQueries({ queryKey: ['domains'] })
         queryClient.invalidateQueries({ queryKey: ['urls'] })
 
-        toast.success(`Successfully generated ${response.data.schemas.length} schema(s)!`)
+        // Check if this is first generation and user hasn't seen success preview
+        // If so, show callout to use "Refine with AI" instead of interstitial
+        const isFirstGeneration = !generatedSchemas.length && !currentUrlId
+        const hasNotSeenPreview = !hasSeenSuccessPreviewRef.current
+
+        console.log('✨ First Generation Check:', {
+          isFirstGeneration,
+          hasNotSeenPreview,
+          willShowRefineCallout: isFirstGeneration && hasNotSeenPreview,
+          hasSchemaScore: !!response.data.schemaScore
+        })
+
+        // Show refine modal for first-time users
+        if (isFirstGeneration && hasNotSeenPreview && response.data.schemaScore) {
+          setShowRefineModal(true)
+        } else {
+          toast.success(`Successfully generated ${response.data.schemas.length} schema(s)!`)
+        }
       }
     },
     onError: (error: any) => {
@@ -692,6 +741,23 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     }
   }
 
+  const handleCloseInterstitial = () => {
+    setShowSuccessInterstitial(false)
+    setInterstitialData(null)
+  }
+
+  const handleGenerateAnother = () => {
+    // Close the interstitial
+    setShowSuccessInterstitial(false)
+    setInterstitialData(null)
+
+    // Clear the URL input and focus it
+    setUrl('')
+    if (urlInputRef.current) {
+      urlInputRef.current.focus()
+    }
+  }
+
   const handleAddSchemaType = async (schemaType: string) => {
     if (!url) return
 
@@ -896,7 +962,51 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         }
 
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
-        toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
+
+        // Check if this was the first refinement and user hasn't seen success preview
+        const isFirstRefinement = refinementCount === 0
+        const hasNotSeenPreview = !hasSeenSuccessPreviewRef.current
+
+        console.log('🎉 Success Preview Check (After Refinement):', {
+          isFirstRefinement,
+          hasNotSeenPreview,
+          willShowInterstitial: isFirstRefinement && hasNotSeenPreview,
+          newScore: response.data.schemaScore?.overallScore,
+          previousScore
+        })
+
+        if (isFirstRefinement && hasNotSeenPreview && response.data.schemaScore) {
+          // Hide the refine modal
+          setShowRefineModal(false)
+
+          // Refresh credits for accurate display
+          const creditsResponse = await refetchCredits()
+          const newCreditBalance = creditsResponse?.data?.data?.creditBalance || 0
+
+          // Prepare interstitial data with improved score
+          const primarySchemaType = response.data.schemas[0]?.['@type'] || 'Schema'
+          setInterstitialData({
+            schemaScore: response.data.schemaScore.overallScore,
+            schemaType: primarySchemaType,
+            schemas: response.data.schemas,
+            creditsRemaining: newCreditBalance,
+            url: url
+          })
+
+          // Show Success Preview Interstitial celebrating the improvement!
+          setShowSuccessInterstitial(true)
+
+          // Mark as seen in database (non-blocking)
+          apiService.markSuccessPreviewSeen().catch(error => {
+            console.error('Failed to mark success preview as seen:', error)
+          })
+
+          // Update local ref to prevent showing again
+          hasSeenSuccessPreviewRef.current = true
+        } else {
+          // Normal refinement success toast
+          toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
+        }
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to refine schema')
@@ -1448,15 +1558,21 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             </div>
           )}
 
-          <SchemaEditor
-            key={`schema-editor-${selectedSchemaIndex}-${currentUrlId}`}
-            schemas={displaySchemas}
-            htmlScriptTags={htmlScriptTags}
-            onSchemaChange={handleSchemaChange}
-            onValidate={handleValidate}
-            height="500px"
-            highlightedChanges={highlightedChanges}
-          />
+          {/* Schema Editor with Refining Overlay */}
+          <div className="relative">
+            <SchemaEditor
+              key={`schema-editor-${selectedSchemaIndex}-${currentUrlId}`}
+              schemas={displaySchemas}
+              htmlScriptTags={htmlScriptTags}
+              onSchemaChange={handleSchemaChange}
+              onValidate={handleValidate}
+              height="500px"
+              highlightedChanges={highlightedChanges}
+            />
+
+            {/* Animated overlay during refinement */}
+            <RefiningOverlay isRefining={isRefining} />
+          </div>
 
           {/* Push to HubSpot Button - Show for all users with HubSpot connections */}
           {displaySchemas.length > 0 && hubspotConnections.length > 0 && (
@@ -1571,6 +1687,27 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           navigate('/hubspot')
         }}
       />
+
+      {/* Success Preview Interstitial */}
+      {interstitialData && (
+        <SuccessPreviewInterstitial
+          isOpen={showSuccessInterstitial}
+          onClose={handleCloseInterstitial}
+          onGenerateAnother={handleGenerateAnother}
+          data={interstitialData}
+        />
+      )}
+
+      {/* Refine Callout Modal */}
+      {schemaScore && (
+        <RefineCalloutModal
+          isOpen={showRefineModal}
+          onClose={() => setShowRefineModal(false)}
+          onRefine={handleRefineSchema}
+          currentScore={schemaScore.overallScore}
+          isRefining={isRefining}
+        />
+      )}
     </div>
   )
 }

@@ -297,3 +297,26 @@ export const addCreditsAdmin = asyncHandler(async (req: AuthenticatedRequest, re
     throw createError('Failed to add credits', 500)
   }
 })
+
+export const getSuccessPreviewStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+
+  const status = await db.getSuccessPreviewStatus(userId)
+
+  res.json({
+    success: true,
+    data: status
+  })
+})
+
+export const markSuccessPreviewSeen = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.auth!.userId
+
+  const result = await db.markSuccessPreviewSeen(userId)
+
+  res.json({
+    success: true,
+    data: result,
+    message: 'Success preview marked as seen'
+  })
+})

@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import { Sparkles, CheckCircle, Zap } from 'lucide-react'
 import SuperSchemaLogo from '@/components/SuperSchemaLogo'
+import { apiService } from '@/services/api'
 
 export default function WelcomePage() {
   const navigate = useNavigate()
@@ -12,6 +13,32 @@ export default function WelcomePage() {
   useEffect(() => {
     document.title = 'Welcome to SuperSchema!'
   }, [])
+
+  // Initialize user account and grant welcome credits
+  useEffect(() => {
+    const initializeAccount = async () => {
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        console.warn('⚠️ [Welcome] No email address available, skipping initialization')
+        return
+      }
+
+      try {
+        console.log('🎉 [Welcome] Initializing new user account...')
+        await apiService.initializeUser({
+          email: user.primaryEmailAddress.emailAddress,
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined
+        })
+        console.log('✅ [Welcome] User account initialized successfully with 2 free credits!')
+      } catch (error: any) {
+        console.error('❌ [Welcome] Failed to initialize user:', error)
+        // Don't block the user - they can still use the app
+        // The credits might have already been granted or the endpoint might be idempotent
+      }
+    }
+
+    initializeAccount()
+  }, [user])
 
   // Fire Google Ads conversion tracking on mount
   useEffect(() => {

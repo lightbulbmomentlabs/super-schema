@@ -58,7 +58,12 @@ export default function MetricBarChart({
             border: '1px solid hsl(var(--border))',
             borderRadius: '8px',
             fontSize: '12px',
+            color: 'hsl(var(--foreground))',
           }}
+          labelStyle={{
+            color: 'hsl(var(--foreground))',
+          }}
+          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
           formatter={(value: any) => [formatValue(Number(value)), dataKey]}
         />
         {showLegend && <Legend />}

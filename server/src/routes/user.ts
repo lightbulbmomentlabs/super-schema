@@ -7,7 +7,9 @@ import {
   getUserUsage,
   getUserStats,
   initializeUser,
-  addCreditsAdmin
+  addCreditsAdmin,
+  getSuccessPreviewStatus,
+  markSuccessPreviewSeen
 } from '../controllers/userController.js'
 
 const router = Router()
@@ -32,6 +34,12 @@ router.get('/usage', getUserUsage)
 
 // GET /api/user/stats
 router.get('/stats', getUserStats)
+
+// GET /api/user/success-preview-status - Check if user has seen success preview
+router.get('/success-preview-status', getSuccessPreviewStatus)
+
+// POST /api/user/success-preview-seen - Mark success preview as seen
+router.post('/success-preview-seen', markSuccessPreviewSeen)
 
 // POST /api/user/add-credits - Admin endpoint to add credits (for development/testing)
 router.post('/add-credits', addCreditsAdmin)
