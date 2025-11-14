@@ -126,6 +126,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     url: string
   } | null>(null)
   const hasSeenSuccessPreviewRef = useRef<boolean>(false)
+  const firstSchemaIdRef = useRef<string | null>(null) // Track the first schema ever created
   const [showRefineModal, setShowRefineModal] = useState(false)
 
   // Get HubSpot connections
@@ -145,15 +146,25 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     enabled: !!user
   })
 
-  // Update ref when status loads
+  // Storage keys
+  const SESSION_STORAGE_KEY = 'schemaGenerator_state'
+  const SUCCESS_PREVIEW_STORAGE_KEY = 'hasSeenSuccessPreview'
+
+  // Update ref when status loads from API
   useEffect(() => {
     if (successPreviewStatusResponse?.data?.hasSeenPreview !== undefined) {
       hasSeenSuccessPreviewRef.current = successPreviewStatusResponse.data.hasSeenPreview
     }
   }, [successPreviewStatusResponse])
 
-  // Session storage key for persisting schema state
-  const SESSION_STORAGE_KEY = 'schemaGenerator_state'
+  // Check localStorage on mount for immediate availability (backup to API)
+  useEffect(() => {
+    const hasSeenInStorage = localStorage.getItem(SUCCESS_PREVIEW_STORAGE_KEY)
+    if (hasSeenInStorage === 'true') {
+      hasSeenSuccessPreviewRef.current = true
+      console.log('✅ Success preview flag loaded from localStorage (already seen)')
+    }
+  }, [])
 
   // Restore state from sessionStorage on mount
   useEffect(() => {
@@ -415,6 +426,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           willShowRefineCallout: isFirstGeneration && hasNotSeenPreview,
           hasSchemaScore: !!response.data.schemaScore
         })
+
+        // Track the first schema ID for first-refinement detection
+        if (isFirstGeneration && response.data.urlId && !firstSchemaIdRef.current) {
+          firstSchemaIdRef.current = response.data.urlId
+          console.log('🎯 First schema ID tracked:', response.data.urlId)
+        }
 
         // Show refine modal for first-time users
         if (isFirstGeneration && hasNotSeenPreview && response.data.schemaScore) {
@@ -963,19 +980,29 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
 
         const remaining = response.data.remainingRefinements ?? (MAX_REFINEMENTS - newRefinementCount)
 
-        // Check if this was the first refinement and user hasn't seen success preview
+        // Check if this was the first refinement OF THE FIRST SCHEMA and user hasn't seen success preview
         const isFirstRefinement = refinementCount === 0
+        const isRefiningFirstSchema = currentUrlId === firstSchemaIdRef.current
         const hasNotSeenPreview = !hasSeenSuccessPreviewRef.current
 
         console.log('🎉 Success Preview Check (After Refinement):', {
           isFirstRefinement,
+          isRefiningFirstSchema,
           hasNotSeenPreview,
-          willShowInterstitial: isFirstRefinement && hasNotSeenPreview,
+          currentUrlId,
+          firstSchemaId: firstSchemaIdRef.current,
+          willShowInterstitial: isFirstRefinement && isRefiningFirstSchema && hasNotSeenPreview,
           newScore: response.data.schemaScore?.overallScore,
           previousScore
         })
 
-        if (isFirstRefinement && hasNotSeenPreview && response.data.schemaScore) {
+        // Only show modal for first refinement of the first schema ever created
+        if (isFirstRefinement && isRefiningFirstSchema && hasNotSeenPreview && response.data.schemaScore) {
+          // Set flags IMMEDIATELY to prevent race conditions
+          hasSeenSuccessPreviewRef.current = true
+          localStorage.setItem(SUCCESS_PREVIEW_STORAGE_KEY, 'true')
+          console.log('✅ Success preview flag set in localStorage and ref')
+
           // Hide the refine modal
           setShowRefineModal(false)
 
@@ -996,13 +1023,10 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           // Show Success Preview Interstitial celebrating the improvement!
           setShowSuccessInterstitial(true)
 
-          // Mark as seen in database (non-blocking)
+          // Mark as seen in database (non-blocking, fire-and-forget)
           apiService.markSuccessPreviewSeen().catch(error => {
             console.error('Failed to mark success preview as seen:', error)
           })
-
-          // Update local ref to prevent showing again
-          hasSeenSuccessPreviewRef.current = true
         } else {
           // Normal refinement success toast
           toast.success(`Schema refined! ${remaining} refinement${remaining !== 1 ? 's' : ''} remaining.`)
