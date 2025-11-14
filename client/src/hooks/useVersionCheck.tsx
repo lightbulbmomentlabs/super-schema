@@ -59,21 +59,21 @@ export function useVersionCheck() {
         <div
           className={`${
             t.visible ? 'animate-enter' : 'animate-leave'
-          } max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black ring-opacity-5`}
+          } max-w-md w-full bg-card text-card-foreground shadow-lg rounded-lg pointer-events-auto flex items-center border border-border`}
         >
           <div className="flex-1 p-4">
             <div className="flex items-start">
               <div className="flex-shrink-0 pt-0.5">
                 <Sparkles
-                  className="h-6 w-6 text-blue-500 animate-pulse"
+                  className="h-6 w-6 text-primary animate-pulse"
                   strokeWidth={2}
                 />
               </div>
               <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-foreground">
                   New updates available!
                 </p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Click refresh to get the latest features and improvements.
                 </p>
               </div>
@@ -85,7 +85,7 @@ export function useVersionCheck() {
                     // Force hard reload to bypass cache
                     window.location.reload()
                   }}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors"
                 >
                   Refresh
                 </button>
@@ -95,7 +95,7 @@ export function useVersionCheck() {
                     toast.dismiss(toastId)
                     toastIdRef.current = null
                   }}
-                  className="inline-flex rounded-md p-1.5 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex rounded-md p-1.5 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring transition-colors"
                 >
                   <span className="sr-only">Dismiss</span>
                   <X className="h-5 w-5" />
