@@ -68,6 +68,7 @@ import { ApiProvider } from './providers/ApiProvider'
 
 // Hooks
 import { usePendingHubSpotConnection } from './hooks/usePendingHubSpotConnection'
+import { useVersionCheck } from './hooks/useVersionCheck'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,6 +92,9 @@ const queryClient = new QueryClient({
 function AppContent() {
   // Auto-claim pending HubSpot connections after signup (marketplace-first flow)
   usePendingHubSpotConnection()
+
+  // Check for new app versions every 30 minutes
+  useVersionCheck()
 
   // Check if Clerk auth is loaded
   const { isLoaded } = useAuth()

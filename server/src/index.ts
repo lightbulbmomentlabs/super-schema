@@ -8,9 +8,17 @@ import morgan from 'morgan'
 import { rateLimit } from 'express-rate-limit'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { readFileSync } from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// Load package.json for version info
+const packageJson = JSON.parse(
+  readFileSync(path.join(__dirname, '../../package.json'), 'utf-8')
+)
+const APP_VERSION = packageJson.version
+const BUILD_TIME = new Date().toISOString()
 
 import { errorHandler } from './middleware/errorHandler.js'
 import { authMiddleware } from './middleware/auth.js'
@@ -87,7 +95,9 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    version: APP_VERSION,
+    buildTime: BUILD_TIME
   })
 })
 

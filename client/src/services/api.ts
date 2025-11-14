@@ -881,6 +881,15 @@ class ApiService {
     const response = await api.get('/admin/analytics/conversions')
     return response.data
   }
+
+  // Version detection - fetches app version from health endpoint
+  async getVersion(): Promise<{ version: string; buildTime: string }> {
+    const response = await axios.get(`${API_URL}/health`)
+    return {
+      version: response.data.version,
+      buildTime: response.data.buildTime
+    }
+  }
 }
 
 export const apiService = new ApiService()
