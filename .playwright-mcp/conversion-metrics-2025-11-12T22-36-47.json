@@ -1,0 +1,21 @@
+{
+  "exportedAt": "2025-11-12T22:36:47.777Z",
+  "metrics": {
+    "conversionRate": 17,
+    "totalSignups": 90,
+    "totalConversions": 15,
+    "averageTimeToConversion": 3,
+    "conversionFunnel": {
+      "signups": 90,
+      "firstSchema": 70,
+      "firstPurchase": 15,
+      "dropoffAfterSignup": 20,
+      "dropoffAfterFirstSchema": 55
+    },
+    "recentTrend": {
+      "last7Days": 27,
+      "last30Days": 17,
+      "trendDirection": "up"
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "exportedAt": "2025-11-12T22:37:45.284Z",
+  "period": "30d",
+  "metrics": {
+    "period": "30d",
+    "averageQualityScore": 79,
+    "refinementRate": 48,
+    "averageComplexity": 0,
+    "successRate": 96,
+    "totalSchemas": 685,
+    "qualityTrend": "stable",
+    "schemasByType": [
+      {
+        "type": "Web Page",
+        "count": 364,
+        "avgScore": 79
+      },
+      {
+        "type": "Article",
+        "count": 198,
+        "avgScore": 84
+      },
+      {
+        "type": "Auto",
+        "count": 30,
+        "avgScore": 64
+      },
+      {
+        "type": "BlogPosting",
+        "count": 28,
+        "avgScore": 85
+      },
+      {
+        "type": "Service",
+        "count": 15,
+        "avgScore": 47
+      },
+      {
+        "type": "WebPage",
+        "count": 12,
+        "avgScore": 81
+      },
+      {
+        "type": "FAQPage",
+        "count": 9,
+        "avgScore": 72
+      },
+      {
+        "type": "Organization",
+        "count": 8,
+        "avgScore": 56
+      },
+      {
+        "type": "BreadcrumbList",
+        "count": 7,
+        "avgScore": 40
+      },
+      {
+        "type": "HowTo",
+        "count": 4,
+        "avgScore": 84
+      },
+      {
+        "type": "Product",
+        "count": 4,
+        "avgScore": 66
+      },
+      {
+        "type": "LocalBusiness",
+        "count": 3,
+        "avgScore": 56
+      },
+      {
+        "type": "Review",
+        "count": 1,
+        "avgScore": 71
+      },
+      {
+        "type": "VideoObject",
+        "count": 1,
+        "avgScore": 84
+      },
+      {
+        "type": "NewsArticle",
+        "count": 1,
+        "avgScore": 90
+      }
+    ]
+  }
+}

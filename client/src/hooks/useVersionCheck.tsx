@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { Sparkles, X } from 'lucide-react'
 import { apiService } from '@/services/api'
 import { APP_VERSION } from '@/version'
 
@@ -52,43 +53,62 @@ export function useVersionCheck() {
       toast.dismiss(toastIdRef.current)
     }
 
-    // Create persistent toast notification
-    const toastId = toast(
-      `🎉 New version ${newVersion} is available! Refresh your browser to get the latest features and fixes.`,
+    // Create persistent toast notification with custom UI
+    const toastId = toast.custom(
+      (t) => (
+        <div
+          className={`${
+            t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black ring-opacity-5`}
+        >
+          <div className="flex-1 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <Sparkles
+                  className="h-6 w-6 text-blue-500 animate-pulse"
+                  strokeWidth={2}
+                />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  New updates available!
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Click refresh to get the latest features and improvements.
+                </p>
+              </div>
+              <div className="ml-4 flex flex-shrink-0 gap-2">
+                <button
+                  onClick={() => {
+                    window.location.reload()
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem(STORAGE_KEY_DISMISSED, newVersion)
+                    toast.dismiss(toastId)
+                    toastIdRef.current = null
+                  }}
+                  className="inline-flex rounded-md p-1.5 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
       {
         duration: Infinity, // Persistent until user dismisses
         position: 'bottom-left',
-        icon: '🎉',
-        style: {
-          maxWidth: '500px',
-          cursor: 'default',
-        },
       }
     )
 
     toastIdRef.current = toastId
-
-    // Store dismissed version when toast is dismissed
-    const handleDismiss = () => {
-      localStorage.setItem(STORAGE_KEY_DISMISSED, newVersion)
-      toastIdRef.current = null
-    }
-
-    // Add event listener for when toast is dismissed
-    setTimeout(() => {
-      const toastElement = document.querySelector(`[data-toast-id="${toastId}"]`)
-      if (toastElement) {
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.type === 'childList' && !document.querySelector(`[data-toast-id="${toastId}"]`)) {
-              handleDismiss()
-              observer.disconnect()
-            }
-          })
-        })
-        observer.observe(toastElement.parentElement || document.body, { childList: true })
-      }
-    }, 100)
   }, [])
 
   /**
