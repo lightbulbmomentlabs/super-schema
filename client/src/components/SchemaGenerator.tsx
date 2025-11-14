@@ -21,6 +21,7 @@ import RichResultsPreview from './RichResultsPreview'
 import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
 import TimeoutErrorModal from './TimeoutErrorModal'
+import CrawlerBlockedModal from './CrawlerBlockedModal'
 import SupportModal from './SupportModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
@@ -107,6 +108,13 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     errorMessage: string
   } | null>(null)
   const [isCheckingComplete, setIsCheckingComplete] = useState(false)
+
+  // Crawler blocked modal state
+  const [showCrawlerBlockedModal, setShowCrawlerBlockedModal] = useState(false)
+  const [crawlerBlockedData, setCrawlerBlockedData] = useState<{
+    url: string
+    blockingReasons: string[]
+  } | null>(null)
 
   // Support modal state
   const [showSupportModal, setShowSupportModal] = useState(false)
@@ -443,6 +451,26 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to generate schema'
+
+      // Handle crawler blocked errors with modal
+      if (error.response?.status === 403 && errorMessage === 'CRAWLER_BLOCKED') {
+        const blockingReasons = error.response?.data?.data?.blockingReasons || []
+
+        // Track crawler blocked analytics
+        console.log('🚫 URL blocked by crawler restrictions:', {
+          url,
+          blockingReasons,
+          timestamp: new Date().toISOString()
+        })
+
+        // Show crawler blocked modal
+        setCrawlerBlockedData({
+          url,
+          blockingReasons
+        })
+        setShowCrawlerBlockedModal(true)
+        return
+      }
 
       // Handle timeout errors with modal
       if (errorMessage.toLowerCase().includes('timeout') ||
@@ -1682,6 +1710,14 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         }}
         onCheckComplete={handleCheckComplete}
         isChecking={isCheckingComplete}
+      />
+
+      {/* Crawler Blocked Modal */}
+      <CrawlerBlockedModal
+        isOpen={showCrawlerBlockedModal}
+        onClose={() => setShowCrawlerBlockedModal(false)}
+        url={crawlerBlockedData?.url || ''}
+        blockingReasons={crawlerBlockedData?.blockingReasons || []}
       />
 
       {/* Support Modal */}

@@ -12,6 +12,7 @@ import { extractPath, calculatePathDepth, extractBaseDomain } from '../utils/url
 import { db } from '../services/database.js'
 import { MAX_REFINEMENTS } from 'aeo-schema-generator-shared/config'
 import { scraperService } from '../services/scraper.js'
+import { urlValidator } from '../services/urlValidator.js'
 
 export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.auth!.userId
@@ -63,6 +64,25 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
     }
 
     const isFirstSchemaForUrl = existingSchemas.length === 0
+
+    // Pre-flight validation: Check for crawler blocking rules before scraping
+    console.log('🔍 Validating URL accessibility for:', validatedData.url)
+    const validationResult = await urlValidator.validateUrlAccessibility(validatedData.url)
+
+    if (validationResult.blocked) {
+      console.log('🚫 URL blocked by crawler restrictions:', validationResult.reasons)
+
+      // Return 403 with custom error code that frontend can detect
+      return res.status(403).json({
+        success: false,
+        error: 'CRAWLER_BLOCKED',
+        message: 'This page has crawler-blocking rules that prevent us from accessing it',
+        data: {
+          blockingReasons: validationResult.reasons,
+          url: validatedData.url
+        }
+      })
+    }
 
     const result = await schemaGeneratorService.generateSchemas({
       url: validatedData.url,
