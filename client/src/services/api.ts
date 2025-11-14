@@ -882,6 +882,50 @@ class ApiService {
     return response.data
   }
 
+  async getPurchaseAnalytics(): Promise<ApiResponse<{
+    purchaseTransactions: Array<{
+      purchaseId: string
+      userEmail: string
+      userName: string
+      creditPackName: string
+      credits: number
+      amountPaid: number
+      purchaseDate: string
+      userLTV: number
+      daysToFirstPurchase: number
+    }>
+    recentPurchasers: Array<{
+      purchaseId: string
+      userEmail: string
+      userName: string
+      creditPackName: string
+      credits: number
+      amountPaid: number
+      purchaseDate: string
+      userLTV: number
+      daysToFirstPurchase: number
+    }>
+    metrics: {
+      totalPayingCustomers: number
+      totalPurchases: number
+      totalRevenue: number
+      arppu: number
+      repeatPurchaseRate: number
+      repeatCustomers: number
+      avgTimeToFirstPurchase: number
+      avgCreditUtilization: number
+    }
+    creditUtilization: Array<{
+      userId: string
+      creditsPurchased: number
+      creditsUsed: number
+      utilizationRate: number
+    }>
+  }>> {
+    const response = await api.get('/admin/analytics/purchases')
+    return response.data
+  }
+
   // Version detection - fetches app version from health endpoint
   async getVersion(): Promise<{ version: string; buildTime: string }> {
     const response = await axios.get(`${API_URL}/health`)

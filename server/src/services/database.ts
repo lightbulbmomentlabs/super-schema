@@ -3714,6 +3714,166 @@ class DatabaseService {
       }
     }
   }
+
+  /**
+   * Get comprehensive purchase analytics including individual transactions,
+   * LTV, time to first purchase, repeat purchase rate, credit utilization, and ARPPU
+   */
+  async getPurchaseAnalytics() {
+    try {
+      // Get all successful purchases with user and credit pack details
+      const { data: purchases, error: purchasesError } = await this.supabase
+        .from('payment_intents')
+        .select(`
+          id,
+          user_id,
+          credit_pack_id,
+          amount_in_cents,
+          credits,
+          created_at,
+          users!inner(email, first_name, last_name, created_at),
+          credit_packs!inner(name, credits, price_in_cents)
+        `)
+        .eq('status', 'succeeded')
+        .order('created_at', { ascending: false })
+
+      if (purchasesError) throw purchasesError
+
+      // Get all users who have made purchases
+      const uniqueUserIds = [...new Set(purchases?.map(p => p.user_id) || [])]
+
+      // Get credit transactions for all purchasing users to calculate utilization
+      const { data: creditTransactions, error: transactionsError } = await this.supabase
+        .from('credit_transactions')
+        .select('user_id, type, amount, created_at')
+        .in('user_id', uniqueUserIds)
+        .order('created_at', { ascending: true })
+
+      if (transactionsError) throw transactionsError
+
+      // Calculate metrics for each user
+      const userPurchases = new Map<string, any[]>()
+      purchases?.forEach(purchase => {
+        const userPurchaseList = userPurchases.get(purchase.user_id) || []
+        userPurchaseList.push(purchase)
+        userPurchases.set(purchase.user_id, userPurchaseList)
+      })
+
+      // Calculate individual purchase data with LTV
+      const purchaseTransactions = purchases?.map(purchase => {
+        const userPurchaseList = userPurchases.get(purchase.user_id) || []
+        const userLTV = userPurchaseList.reduce((sum, p) => sum + p.amount_in_cents, 0) / 100
+
+        const userSignupDate = new Date(purchase.users.created_at)
+        const purchaseDate = new Date(purchase.created_at)
+        const daysToFirstPurchase = Math.floor((purchaseDate.getTime() - userSignupDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        return {
+          purchaseId: purchase.id,
+          userEmail: purchase.users.email,
+          userName: `${purchase.users.first_name || ''} ${purchase.users.last_name || ''}`.trim() || 'Unknown',
+          creditPackName: purchase.credit_packs.name,
+          credits: purchase.credits,
+          amountPaid: purchase.amount_in_cents / 100,
+          purchaseDate: purchase.created_at,
+          userLTV,
+          daysToFirstPurchase
+        }
+      }) || []
+
+      // Calculate time to first purchase metrics
+      const firstPurchasesByUser = new Map<string, any>()
+      purchases?.forEach(purchase => {
+        if (!firstPurchasesByUser.has(purchase.user_id)) {
+          firstPurchasesByUser.set(purchase.user_id, purchase)
+        } else {
+          const existing = firstPurchasesByUser.get(purchase.user_id)
+          if (new Date(purchase.created_at) < new Date(existing.created_at)) {
+            firstPurchasesByUser.set(purchase.user_id, purchase)
+          }
+        }
+      })
+
+      const timeToFirstPurchaseData = Array.from(firstPurchasesByUser.values()).map(purchase => {
+        const userSignupDate = new Date(purchase.users.created_at)
+        const firstPurchaseDate = new Date(purchase.created_at)
+        const days = Math.floor((firstPurchaseDate.getTime() - userSignupDate.getTime()) / (1000 * 60 * 60 * 24))
+        return days
+      })
+
+      const avgTimeToFirstPurchase = timeToFirstPurchaseData.length > 0
+        ? timeToFirstPurchaseData.reduce((sum, days) => sum + days, 0) / timeToFirstPurchaseData.length
+        : 0
+
+      // Calculate repeat purchase rate
+      const totalPayingCustomers = userPurchases.size
+      const repeatCustomers = Array.from(userPurchases.values()).filter(purchases => purchases.length > 1).length
+      const repeatPurchaseRate = totalPayingCustomers > 0 ? (repeatCustomers / totalPayingCustomers) * 100 : 0
+
+      // Calculate ARPPU (Average Revenue Per Paying User)
+      const totalRevenue = purchases?.reduce((sum, p) => sum + p.amount_in_cents, 0) || 0
+      const arppu = totalPayingCustomers > 0 ? (totalRevenue / 100) / totalPayingCustomers : 0
+
+      // Calculate credit utilization rate
+      const userUtilization = uniqueUserIds.map(userId => {
+        const userTransactions = creditTransactions?.filter(t => t.user_id === userId) || []
+
+        // Calculate total credits purchased
+        const creditsPurchased = userTransactions
+          .filter(t => t.type === 'purchase')
+          .reduce((sum, t) => sum + t.amount, 0)
+
+        // Calculate total credits used (usage transactions are negative)
+        const creditsUsed = Math.abs(
+          userTransactions
+            .filter(t => t.type === 'usage')
+            .reduce((sum, t) => sum + t.amount, 0)
+        )
+
+        const utilizationRate = creditsPurchased > 0 ? (creditsUsed / creditsPurchased) * 100 : 0
+
+        return {
+          userId,
+          creditsPurchased,
+          creditsUsed,
+          utilizationRate
+        }
+      })
+
+      const avgCreditUtilization = userUtilization.length > 0
+        ? userUtilization.reduce((sum, u) => sum + u.utilizationRate, 0) / userUtilization.length
+        : 0
+
+      // Get recent purchasers (last 20)
+      const recentPurchasers = purchaseTransactions.slice(0, 20)
+
+      return {
+        // Individual purchase transactions with LTV
+        purchaseTransactions,
+
+        // Recent purchasers (last 20)
+        recentPurchasers,
+
+        // Aggregate metrics
+        metrics: {
+          totalPayingCustomers,
+          totalPurchases: purchases?.length || 0,
+          totalRevenue: totalRevenue / 100,
+          arppu,
+          repeatPurchaseRate,
+          repeatCustomers,
+          avgTimeToFirstPurchase: Math.round(avgTimeToFirstPurchase * 10) / 10,
+          avgCreditUtilization: Math.round(avgCreditUtilization * 10) / 10
+        },
+
+        // Credit utilization by user
+        creditUtilization: userUtilization
+      }
+    } catch (error) {
+      console.error('Error fetching purchase analytics:', error)
+      throw error
+    }
+  }
 }
 
 export const db = new DatabaseService()

@@ -20,8 +20,9 @@ import AdminApiHealthWidget from '@/components/AdminApiHealthWidget'
 import AdminPowerUsers from '@/components/AdminPowerUsers'
 import AdminSchemaQuality from '@/components/AdminSchemaQuality'
 import AdminConversionMetrics from '@/components/AdminConversionMetrics'
+import AdminPurchaseAnalytics from '@/components/AdminPurchaseAnalytics'
 
-type Tab = 'overview' | 'power-users' | 'quality' | 'revenue'
+type Tab = 'overview' | 'power-users' | 'quality' | 'revenue' | 'purchases'
 
 export default function AdminAnalytics() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
@@ -131,6 +132,19 @@ export default function AdminAnalytics() {
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               <span>Revenue & Conversions</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('purchases')}
+            className={`px-4 py-2 border-b-2 font-medium transition-colors ${
+              activeTab === 'purchases'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              <span>Purchases</span>
             </div>
           </button>
         </nav>
@@ -379,6 +393,7 @@ export default function AdminAnalytics() {
       {activeTab === 'power-users' && <AdminPowerUsers />}
       {activeTab === 'quality' && <AdminSchemaQuality />}
       {activeTab === 'revenue' && <AdminConversionMetrics />}
+      {activeTab === 'purchases' && <AdminPurchaseAnalytics />}
     </div>
   )
 }

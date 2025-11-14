@@ -24,7 +24,8 @@ import {
   backfillHubSpotCRM,
   getPowerUsersAnalytics,
   getSchemaQualityAnalytics,
-  getConversionAnalytics
+  getConversionAnalytics,
+  getPurchaseAnalytics
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -111,5 +112,8 @@ router.get('/analytics/schema-quality', getSchemaQualityAnalytics)
 
 // GET /api/admin/analytics/conversions - Get conversion funnel metrics
 router.get('/analytics/conversions', getConversionAnalytics)
+
+// GET /api/admin/analytics/purchases - Get purchase analytics
+router.get('/analytics/purchases', getPurchaseAnalytics)
 
 export default router

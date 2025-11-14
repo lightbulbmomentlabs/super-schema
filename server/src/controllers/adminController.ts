@@ -583,3 +583,27 @@ export const getConversionAnalytics = asyncHandler(async (req: AuthenticatedRequ
     message: 'Conversion funnel metrics retrieved successfully'
   })
 })
+
+/**
+ * Get purchase analytics
+ * Tracks individual purchases, LTV, time to first purchase, repeat purchase rate,
+ * credit utilization rate, and ARPPU metrics
+ */
+export const getPurchaseAnalytics = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('📊 [AdminController] Fetching purchase analytics...')
+
+  const purchaseAnalytics = await db.getPurchaseAnalytics()
+
+  console.log('✅ [AdminController] Purchase analytics retrieved:', {
+    totalPayingCustomers: purchaseAnalytics.metrics.totalPayingCustomers,
+    totalPurchases: purchaseAnalytics.metrics.totalPurchases,
+    arppu: purchaseAnalytics.metrics.arppu,
+    repeatPurchaseRate: purchaseAnalytics.metrics.repeatPurchaseRate
+  })
+
+  res.json({
+    success: true,
+    data: purchaseAnalytics,
+    message: 'Purchase analytics retrieved successfully'
+  })
+})
