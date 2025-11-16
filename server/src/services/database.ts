@@ -2758,6 +2758,8 @@ class DatabaseService {
     redirectUri: string
     scopes?: string[]
     expiresInMinutes?: number
+    oauthFlowType?: 'superschema_first' | 'marketplace_first'
+    serverGeneratedState?: boolean
   }): Promise<string> {
     if (!this.isDatabaseAvailable()) {
       console.log('Mock: createPendingHubSpotConnection', params)
@@ -2776,7 +2778,9 @@ class DatabaseService {
         portal_name: params.portalName,
         redirect_uri: params.redirectUri,
         scopes: params.scopes,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
+        oauth_flow_type: params.oauthFlowType || 'marketplace_first',
+        server_generated_state: params.serverGeneratedState || false
       })
       .select('id')
       .single()
@@ -2786,7 +2790,7 @@ class DatabaseService {
       throw error
     }
 
-    console.log(`[Pending Connection] Created for state ${params.stateToken}, expires ${expiresAt.toISOString()}`)
+    console.log(`[Pending Connection] Created for state ${params.stateToken}, flow: ${params.oauthFlowType}, server-generated: ${params.serverGeneratedState}, expires ${expiresAt.toISOString()}`)
     return data.id
   }
 

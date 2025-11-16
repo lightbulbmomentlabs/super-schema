@@ -82,6 +82,29 @@ export class HubSpotOAuthService {
   }
 
   /**
+   * Generate server-side state for marketplace-initiated OAuth flows
+   * Used when client doesn't provide state (HubSpot Marketplace installs)
+   * Maintains CSRF protection while supporting both OAuth flow types
+   */
+  generateServerSideState(): string {
+    // Generate UUID-based state for marketplace installs
+    const randomBytes = crypto.randomBytes(16)
+    const uuid = [
+      randomBytes.subarray(0, 4).toString('hex'),
+      randomBytes.subarray(4, 6).toString('hex'),
+      randomBytes.subarray(6, 8).toString('hex'),
+      randomBytes.subarray(8, 10).toString('hex'),
+      randomBytes.subarray(10, 16).toString('hex')
+    ].join('-')
+
+    // Add prefix to identify server-generated states
+    const stateToken = `server-${uuid}`
+
+    console.log('🔐 [HubSpot OAuth] Generated SERVER-SIDE state for marketplace install:', stateToken.substring(0, 20) + '...')
+    return stateToken
+  }
+
+  /**
    * Validate state parameter (basic format check)
    * Actual validation happens by checking if it exists in pending_hubspot_connections
    */

@@ -40,5 +40,9 @@
     "structured-data"
   ],
   "author": "AEO Schema Generator",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@types/node-cron": "^3.0.11",
+    "node-cron": "^4.2.1"
+  }
 }

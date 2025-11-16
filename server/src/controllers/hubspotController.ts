@@ -166,7 +166,25 @@ export const handleOAuthCallback = asyncHandler(
         })
 
         // Step 3: Store as PENDING connection (to be claimed after signup)
-        console.log('🔄 [HubSpot Controller] Step 3: Storing pending connection', { state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL' })
+        // Detect OAuth flow type and generate state if needed
+        const oauthFlowType = state ? 'superschema_first' : 'marketplace_first'
+        const serverGeneratedState = !state
+        let effectiveState = state
+
+        if (!state) {
+          // Generate server-side state for marketplace-initiated installations
+          // This maintains CSRF protection while supporting both OAuth flows
+          effectiveState = hubspotOAuthService.generateServerSideState()
+          console.log('🔄 [HubSpot Controller] Step 3: Generated server-side state for marketplace install', {
+            statePreview: effectiveState.substring(0, 20) + '...',
+            flowType: oauthFlowType
+          })
+        } else {
+          console.log('🔄 [HubSpot Controller] Step 3: Using client-provided state', {
+            statePreview: state.substring(0, 10) + '...',
+            flowType: oauthFlowType
+          })
+        }
 
         // Encrypt tokens for storage
         const { encrypt } = await import('../services/encryption.js')
@@ -182,17 +200,21 @@ export const handleOAuthCallback = asyncHandler(
         })
 
         await db.createPendingHubSpotConnection({
-          stateToken: state,
+          stateToken: effectiveState, // Always has a value now (client or server-generated)
           oauthCode: tokenData, // Actually storing encrypted tokens
           hubspotPortalId: accountInfo.hub_id.toString(),
           portalName: accountInfo.hub_domain,
           redirectUri: redirectUri || `${process.env.CLIENT_URL}/hubspot/callback`,
           scopes: accountInfo.scopes,
-          expiresInMinutes: 30 // Give user 30 minutes to complete signup
+          expiresInMinutes: 30, // Give user 30 minutes to complete signup
+          oauthFlowType, // Track which flow was used for analytics
+          serverGeneratedState // Track if state was server-generated
         })
 
         console.log('✅ [HubSpot Controller] Pending connection stored, user has 30 minutes to complete signup', {
-          state: state ? state.substring(0, 10) + '...' : 'MARKETPLACE_INSTALL',
+          state: effectiveState.substring(0, 20) + '...',
+          flowType: oauthFlowType,
+          serverGenerated: serverGeneratedState,
           portalId: accountInfo.hub_id,
           duration: `${Date.now() - new Date(requestTimestamp).getTime()}ms`
         })
@@ -200,12 +222,14 @@ export const handleOAuthCallback = asyncHandler(
         res.json({
           success: true,
           data: {
-            state,
+            state: effectiveState, // Return the effective state (client or server-generated)
             portalId: accountInfo.hub_id,
             portalName: accountInfo.hub_domain,
             requiresSignup: true,
             expiresInMinutes: 30,
-            flow: 'pending'
+            flow: 'pending',
+            flowType: oauthFlowType, // Analytics: track which flow type
+            serverGeneratedState // Analytics: track if state was server-generated
           },
           message: 'Please complete signup to finish connecting your HubSpot account'
         })

@@ -9,6 +9,7 @@ import { rateLimit } from 'express-rate-limit'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { readFileSync } from 'fs'
+import cron from 'node-cron'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -23,6 +24,7 @@ const BUILD_TIME = new Date().toISOString()
 import { errorHandler } from './middleware/errorHandler.js'
 import { authMiddleware } from './middleware/auth.js'
 import { logFeatureFlags } from './config/featureFlags.js'
+import { cleanupService } from './services/cleanupService.js'
 import schemaRoutes from './routes/schema.js'
 import userRoutes from './routes/user.js'
 import paymentRoutes from './routes/payment.js'
@@ -137,4 +139,33 @@ app.listen(PORT, () => {
 
   // Log feature flags status
   logFeatureFlags()
+
+  // Schedule cleanup job - runs every 15 minutes
+  // Cron format: minute hour day month weekday
+  // */15 * * * * = every 15 minutes
+  const cleanupJob = cron.schedule('*/15 * * * *', async () => {
+    console.log('⏰ [Cron] Running scheduled cleanup of expired pending HubSpot connections...')
+    try {
+      const stats = await cleanupService.cleanupExpiredPendingHubSpotConnections()
+      if (stats.deletedCount > 0) {
+        console.log('✅ [Cron] Cleanup completed:', stats)
+      }
+    } catch (error) {
+      console.error('❌ [Cron] Cleanup failed:', error)
+    }
+  })
+
+  // Run cleanup immediately on startup
+  console.log('🧹 [Startup] Running initial cleanup of expired pending HubSpot connections...')
+  cleanupService.cleanupExpiredPendingHubSpotConnections()
+    .then((stats) => {
+      if (stats.deletedCount > 0) {
+        console.log('✅ [Startup] Initial cleanup completed:', stats)
+      }
+    })
+    .catch((error) => {
+      console.error('❌ [Startup] Initial cleanup failed:', error)
+    })
+
+  console.log('⏰ [Cron] Cleanup job scheduled to run every 15 minutes')
 })
