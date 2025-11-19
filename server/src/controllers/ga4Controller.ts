@@ -409,3 +409,51 @@ export const refreshMetrics = asyncHandler(
     })
   }
 )
+
+/**
+ * Get AI Visibility Score trend over time
+ */
+export const getTrend = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { propertyId, startDate, endDate } = req.query
+
+    console.log('📈 [GA4 Controller] Getting AI Visibility trend', {
+      userId,
+      propertyId,
+      startDate,
+      endDate
+    })
+
+    if (!propertyId || !startDate || !endDate) {
+      throw createError('Property ID, start date, and end date are required', 400)
+    }
+
+    // Parse dates
+    const dateRangeStart = new Date(startDate as string)
+    const dateRangeEnd = new Date(endDate as string)
+
+    if (isNaN(dateRangeStart.getTime()) || isNaN(dateRangeEnd.getTime())) {
+      throw createError('Invalid date format', 400)
+    }
+
+    // Get trend data
+    const trendData = await ga4Data.getAIVisibilityTrend(
+      userId,
+      propertyId as string,
+      dateRangeStart,
+      dateRangeEnd
+    )
+
+    console.log('✅ [GA4 Controller] Trend data retrieved', {
+      userId,
+      propertyId,
+      dataPoints: trendData.length
+    })
+
+    res.json({
+      success: true,
+      trend: trendData
+    })
+  }
+)

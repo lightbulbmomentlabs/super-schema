@@ -41,6 +41,7 @@ export interface PageCrawlerInfo {
   crawlerCount: number
   crawlers: string[]
   sessions: number
+  lastCrawled: string // ISO date string of most recent crawl
 }
 
 export interface GA4MetricsResult {
@@ -124,7 +125,7 @@ export class GA4DataService {
       })
 
       // Run report to get AI crawler traffic
-      // Query for sessionSource and pageReferrer to identify AI crawlers
+      // Query for sessionSource, pagePath, pageReferrer, and date to identify AI crawlers and track last crawled
       const [response] = await analyticsClient.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [
@@ -134,6 +135,7 @@ export class GA4DataService {
           }
         ],
         dimensions: [
+          { name: 'date' },
           { name: 'sessionSource' },
           { name: 'pagePath' },
           { name: 'pageReferrer' }
@@ -149,11 +151,11 @@ export class GA4DataService {
         rowCount: response.rows?.length || 0
       })
 
-      // Process response to identify AI crawlers
-      const crawlerData = this.processGA4Response(response)
+      // Process response to identify AI crawlers and page-level data
+      const { crawlerStats, pageStats } = this.processGA4Response(response)
 
       // Calculate metrics
-      const metrics = this.calculateMetrics(crawlerData, dateRangeStart, dateRangeEnd)
+      const metrics = this.calculateMetrics(crawlerStats, pageStats, dateRangeStart, dateRangeEnd)
 
       console.log('📈 [GA4 Data] Calculated metrics', {
         aiVisibilityScore: metrics.aiVisibilityScore,
@@ -172,22 +174,34 @@ export class GA4DataService {
   /**
    * Process GA4 API response to identify AI crawler traffic
    */
-  private processGA4Response(response: any): Map<string, CrawlerStats> {
+  private processGA4Response(response: any): {
+    crawlerStats: Map<string, CrawlerStats>
+    pageStats: Map<string, PageCrawlerInfo>
+  } {
     const crawlerStatsMap = new Map<string, CrawlerStats>()
+    const pageStatsMap = new Map<string, PageCrawlerInfo>()
     const pagesVisitedByCrawler = new Map<string, Set<string>>()
+    const crawlersByPage = new Map<string, Set<string>>()
+    const pageLastCrawled = new Map<string, string>() // Track most recent crawl date per page
 
     if (!response.rows || response.rows.length === 0) {
       console.log('⚠️ [GA4 Data] No data returned from GA4 API')
-      return crawlerStatsMap
+      return { crawlerStats: crawlerStatsMap, pageStats: pageStatsMap }
     }
 
     // Process each row to identify AI crawlers
     for (const row of response.rows) {
-      const sessionSource = row.dimensionValues?.[0]?.value || ''
-      const pagePath = row.dimensionValues?.[1]?.value || ''
-      const pageReferrer = row.dimensionValues?.[2]?.value || ''
+      const dateStr = row.dimensionValues?.[0]?.value || ''
+      const sessionSource = row.dimensionValues?.[1]?.value || ''
+      const pagePath = row.dimensionValues?.[2]?.value || ''
+      const pageReferrer = row.dimensionValues?.[3]?.value || ''
       const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10)
       const pageViews = parseInt(row.metricValues?.[1]?.value || '0', 10)
+
+      // Convert GA4 date format (YYYYMMDD) to ISO format (YYYY-MM-DD)
+      const formattedDate = dateStr.length === 8
+        ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+        : dateStr
 
       // Check if this traffic is from an AI crawler
       const crawlerName = this.identifyAICrawler(sessionSource, pageReferrer)
@@ -204,30 +218,63 @@ export class GA4DataService {
           pagesVisitedByCrawler.set(crawlerName, new Set())
         }
 
-        // Update stats
+        // Update crawler stats
         const stats = crawlerStatsMap.get(crawlerName)!
         stats.sessions += sessions
         stats.pageViews += pageViews
 
-        // Track unique pages
+        // Track unique pages for each crawler
         if (pagePath) {
           pagesVisitedByCrawler.get(crawlerName)!.add(pagePath)
+
+          // Initialize page stats if not exists
+          if (!pageStatsMap.has(pagePath)) {
+            pageStatsMap.set(pagePath, {
+              path: pagePath,
+              crawlerCount: 0,
+              crawlers: [],
+              sessions: 0,
+              lastCrawled: formattedDate
+            })
+            crawlersByPage.set(pagePath, new Set())
+            pageLastCrawled.set(pagePath, formattedDate)
+          }
+
+          // Update page stats
+          const pageStats = pageStatsMap.get(pagePath)!
+          pageStats.sessions += sessions
+          crawlersByPage.get(pagePath)!.add(crawlerName)
+
+          // Track most recent crawl date
+          const currentLastCrawled = pageLastCrawled.get(pagePath)!
+          if (formattedDate > currentLastCrawled) {
+            pageLastCrawled.set(pagePath, formattedDate)
+            pageStats.lastCrawled = formattedDate
+          }
         }
       }
     }
 
-    // Update unique page counts
+    // Update unique page counts for crawlers
     for (const [crawlerName, pages] of pagesVisitedByCrawler.entries()) {
       const stats = crawlerStatsMap.get(crawlerName)!
       stats.uniquePages = pages.size
     }
 
+    // Update crawler counts and lists for pages
+    for (const [pagePath, crawlers] of crawlersByPage.entries()) {
+      const pageStats = pageStatsMap.get(pagePath)!
+      pageStats.crawlerCount = crawlers.size
+      pageStats.crawlers = Array.from(crawlers).sort() // Sort alphabetically for consistency
+    }
+
     console.log('🤖 [GA4 Data] Identified AI crawlers:', {
       crawlerCount: crawlerStatsMap.size,
-      crawlers: Array.from(crawlerStatsMap.keys())
+      crawlers: Array.from(crawlerStatsMap.keys()),
+      pagesWithAITraffic: pageStatsMap.size
     })
 
-    return crawlerStatsMap
+    return { crawlerStats: crawlerStatsMap, pageStats: pageStatsMap }
   }
 
   /**
@@ -252,6 +299,7 @@ export class GA4DataService {
    */
   private calculateMetrics(
     crawlerData: Map<string, CrawlerStats>,
+    pageData: Map<string, PageCrawlerInfo>,
     dateRangeStart: Date,
     dateRangeEnd: Date
   ): GA4MetricsResult {
@@ -286,8 +334,23 @@ export class GA4DataService {
     const coverageScore = Math.min(50, (coveragePercentage / 100) * 50)
     const aiVisibilityScore = Math.round(aiDiversityScore + coverageScore)
 
-    // Build top pages list
-    const topPages: PageCrawlerInfo[] = [] // Will be enhanced in future versions
+    // Build top pages list sorted by crawler diversity (most crawlers first)
+    const topPages: PageCrawlerInfo[] = Array.from(pageData.values())
+      .sort((a, b) => {
+        // Primary sort: crawler count (descending)
+        if (b.crawlerCount !== a.crawlerCount) {
+          return b.crawlerCount - a.crawlerCount
+        }
+        // Secondary sort: sessions (descending)
+        return b.sessions - a.sessions
+      })
+
+    console.log('📊 [GA4 Data] Calculated metrics:', {
+      aiVisibilityScore,
+      aiDiversityScore: crawlerList.length,
+      totalPages: pageData.size,
+      topPagesCount: topPages.length
+    })
 
     return {
       aiVisibilityScore,
@@ -458,6 +521,133 @@ export class GA4DataService {
       console.error('❌ [GA4 Data] Failed to cache metrics:', error)
       // Don't throw - caching failure shouldn't fail the request
     }
+  }
+
+  /**
+   * Get AI Visibility Score trend over time
+   * Returns daily AI Visibility Scores for the specified date range
+   */
+  async getAIVisibilityTrend(
+    userId: string,
+    propertyId: string,
+    dateRangeStart: Date,
+    dateRangeEnd: Date
+  ): Promise<Array<{ date: string; score: number; crawlerCount: number }>> {
+    try {
+      console.log('📈 [GA4 Data] Getting AI Visibility trend', {
+        userId,
+        propertyId,
+        dateRangeStart: dateRangeStart.toISOString().split('T')[0],
+        dateRangeEnd: dateRangeEnd.toISOString().split('T')[0]
+      })
+
+      // Get authenticated client
+      const analyticsClient = await this.getAuthenticatedClient(userId)
+
+      // Format dates for GA4 API (YYYY-MM-DD)
+      const startDate = dateRangeStart.toISOString().split('T')[0]
+      const endDate = dateRangeEnd.toISOString().split('T')[0]
+
+      console.log('🔍 [GA4 Data] Querying GA4 API for daily AI crawler traffic')
+
+      // Run report with date dimension to get daily data
+      const [response] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [
+          {
+            startDate,
+            endDate
+          }
+        ],
+        dimensions: [
+          { name: 'date' }, // Daily granularity
+          { name: 'sessionSource' },
+          { name: 'pageReferrer' }
+        ],
+        metrics: [
+          { name: 'sessions' }
+        ],
+        limit: 50000 // Larger limit for daily data
+      })
+
+      console.log('✅ [GA4 Data] Received GA4 API response for trend', {
+        rowCount: response.rows?.length || 0
+      })
+
+      // Group data by date and calculate daily scores
+      const dailyData = this.processDailyTrendData(response)
+
+      console.log('📊 [GA4 Data] Processed trend data', {
+        days: dailyData.length
+      })
+
+      return dailyData
+    } catch (error) {
+      console.error('❌ [GA4 Data] Failed to get AI Visibility trend:', error)
+      throw new Error('Failed to fetch trend data from Google Analytics')
+    }
+  }
+
+  /**
+   * Process daily trend data from GA4 response
+   */
+  private processDailyTrendData(response: any): Array<{ date: string; score: number; crawlerCount: number }> {
+    if (!response.rows || response.rows.length === 0) {
+      return []
+    }
+
+    // Group data by date
+    const dailyStats = new Map<string, Set<string>>() // date -> set of unique crawlers
+
+    for (const row of response.rows) {
+      const dateStr = row.dimensionValues?.[0]?.value || ''
+      const sessionSource = row.dimensionValues?.[1]?.value || ''
+      const pageReferrer = row.dimensionValues?.[2]?.value || ''
+
+      // Convert GA4 date format (YYYYMMDD) to YYYY-MM-DD
+      const formattedDate = dateStr.length === 8
+        ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+        : dateStr
+
+      // Check if this traffic is from an AI crawler
+      const crawlerName = this.identifyAICrawler(sessionSource, pageReferrer)
+
+      if (crawlerName) {
+        if (!dailyStats.has(formattedDate)) {
+          dailyStats.set(formattedDate, new Set())
+        }
+        dailyStats.get(formattedDate)!.add(crawlerName)
+      }
+    }
+
+    // Calculate AI Visibility Score for each day
+    const trendData: Array<{ date: string; score: number; crawlerCount: number }> = []
+
+    for (const [date, crawlers] of dailyStats.entries()) {
+      const crawlerCount = crawlers.size
+
+      // AI Diversity Score: Number of unique AI crawlers (normalized to 0-50)
+      // Assume 10+ unique crawlers = max score of 50
+      const maxCrawlers = 10
+      const aiDiversityScore = Math.min(50, (crawlerCount / maxCrawlers) * 50)
+
+      // For trend view, we'll use a simplified score based primarily on diversity
+      // Coverage component would require tracking all pages per day which is more complex
+      // So we'll use: Diversity (80%) + a baseline coverage bonus (20%) if any crawlers detected
+      const coverageBonus = crawlerCount > 0 ? 20 : 0
+      const score = Math.round((aiDiversityScore * 0.8) + coverageBonus)
+
+      trendData.push({
+        date,
+        score,
+        crawlerCount
+      })
+    }
+
+    // Sort by date
+    trendData.sort((a, b) => a.date.localeCompare(b.date))
+
+    return trendData
   }
 
   /**

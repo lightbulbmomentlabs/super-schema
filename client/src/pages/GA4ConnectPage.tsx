@@ -194,7 +194,7 @@ export default function GA4ConnectPage() {
                 {/* Property Selector */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-foreground mb-3">
-                    Select GA4 Property
+                    Step 1: Select GA4 Property
                   </label>
                   {isLoadingProperties ? (
                     <div className="flex items-center justify-center py-8">
@@ -248,7 +248,7 @@ export default function GA4ConnectPage() {
                 {/* Domain Input */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-foreground mb-3">
-                    Domain
+                    Step 2: Enter Domain
                   </label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

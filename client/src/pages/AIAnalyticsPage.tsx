@@ -4,9 +4,12 @@ import { Calendar, RefreshCw, AlertCircle } from 'lucide-react'
 import { useGA4Connection } from '@/hooks/useGA4Connection'
 import { useGA4DomainMappings } from '@/hooks/useGA4DomainMappings'
 import { useGA4Metrics } from '@/hooks/useGA4Metrics'
+import { useGA4Trend } from '@/hooks/useGA4Trend'
+import type { GA4DomainMapping } from '@/services/ga4'
 import AIVisibilityScoreCard from '@/components/AIVisibilityScoreCard'
+import AIVisibilityTrendChart from '@/components/AIVisibilityTrendChart'
 import TopCrawlersTable from '@/components/TopCrawlersTable'
-import CrawlerListWidget from '@/components/CrawlerListWidget'
+import PageCrawlerMetricsTable from '@/components/PageCrawlerMetricsTable'
 import GA4ConnectionStatus from '@/components/GA4ConnectionStatus'
 import DomainMappingSelector from '@/components/DomainMappingSelector'
 import { useNavigate } from 'react-router-dom'
@@ -47,7 +50,7 @@ export default function AIAnalyticsPage() {
     }
   }, [mappings, selectedMappingId])
 
-  const selectedMapping = mappings.find(m => m.id === selectedMappingId)
+  const selectedMapping = mappings.find((m: GA4DomainMapping) => m.id === selectedMappingId)
 
   // Fetch metrics for selected domain
   const {
@@ -56,6 +59,17 @@ export default function AIAnalyticsPage() {
     refresh,
     isRefreshing
   } = useGA4Metrics(
+    selectedMapping?.propertyId || null,
+    dateRange.start,
+    dateRange.end,
+    !!selectedMapping
+  )
+
+  // Fetch trend data for selected domain
+  const {
+    trend,
+    isLoading: isTrendLoading
+  } = useGA4Trend(
     selectedMapping?.propertyId || null,
     dateRange.start,
     dateRange.end,
@@ -106,15 +120,6 @@ export default function AIAnalyticsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Connection Status */}
-        <GA4ConnectionStatus
-          connected={connected}
-          connection={connection}
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
-          isDisconnecting={isDisconnecting}
-          className="mb-8"
-        />
 
         {/* If not connected, show empty state */}
         {!connected && (
@@ -184,9 +189,18 @@ export default function AIAnalyticsPage() {
 
         {/* Analytics Dashboard */}
         {connected && mappings.length > 0 && (
-          <div className="space-y-8">
-            {/* Domain Selector and Date Range */}
+          <div className="space-y-6">
+            {/* Row 1: GA4 Connection Status + Domain Selector */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <GA4ConnectionStatus
+                connected={connected}
+                connection={connection}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                isDisconnecting={isDisconnecting}
+                compact={true}
+              />
+
               <DomainMappingSelector
                 mappings={mappings}
                 selectedMappingId={selectedMappingId}
@@ -196,80 +210,86 @@ export default function AIAnalyticsPage() {
                 isLoading={isMappingsLoading}
                 isDeleting={isDeleting}
               />
+            </div>
 
-              <div className="bg-card border border-border rounded-xl p-4">
+            {/* Row 2: Date Range Controls */}
+            <div className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
                   <div className="inline-flex items-center justify-center rounded-lg bg-primary/10 p-2">
                     <Calendar className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground mb-2">Date Range</p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleDatePreset(7)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                          dateRange.start === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                        )}
-                      >
-                        7 days
-                      </button>
-                      <button
-                        onClick={() => handleDatePreset(30)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                          'bg-primary text-primary-foreground'
-                        )}
-                      >
-                        30 days
-                      </button>
-                      <button
-                        onClick={() => handleDatePreset(90)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                          'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                        )}
-                      >
-                        90 days
-                      </button>
-                      <button
-                        onClick={() => refresh()}
-                        disabled={isRefreshing}
-                        className={cn(
-                          'ml-auto p-2 rounded-lg transition-all',
-                          'bg-muted/30 text-muted-foreground hover:bg-muted/50',
-                          'disabled:opacity-50 disabled:cursor-not-allowed',
-                          isRefreshing && 'animate-spin'
-                        )}
-                        title="Refresh metrics"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-sm font-semibold text-foreground">Date Range</p>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDatePreset(7)}
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                      dateRange.start === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    7 days
+                  </button>
+                  <button
+                    onClick={() => handleDatePreset(30)}
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                      'bg-primary text-primary-foreground'
+                    )}
+                  >
+                    30 days
+                  </button>
+                  <button
+                    onClick={() => handleDatePreset(90)}
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                      'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    90 days
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => refresh()}
+                  disabled={isRefreshing}
+                  className={cn(
+                    'px-4 py-2 rounded-lg font-medium text-sm transition-all',
+                    'bg-primary/10 text-primary hover:bg-primary/20',
+                    'border border-primary/30 hover:border-primary/50',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'inline-flex items-center gap-2'
+                  )}
+                >
+                  <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                </button>
               </div>
             </div>
 
             {/* Main Metrics Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
               {/* AI Visibility Score */}
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 flex">
                 <AIVisibilityScoreCard
                   score={metrics?.aiVisibilityScore || 0}
                   diversityScore={metrics?.aiDiversityScore || 0}
                   coveragePercentage={metrics?.coveragePercentage || 0}
                   isLoading={isMetricsLoading}
+                  className="w-full"
                 />
               </div>
 
-              {/* Crawler List */}
-              <div className="lg:col-span-2">
-                <CrawlerListWidget
-                  crawlers={metrics?.crawlerList || []}
-                  isLoading={isMetricsLoading}
+              {/* AI Visibility Trend Chart */}
+              <div className="lg:col-span-2 flex">
+                <AIVisibilityTrendChart
+                  trend={trend}
+                  isLoading={isTrendLoading}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -277,6 +297,12 @@ export default function AIAnalyticsPage() {
             {/* Top Crawlers Table */}
             <TopCrawlersTable
               crawlers={metrics?.topCrawlers || []}
+              isLoading={isMetricsLoading}
+            />
+
+            {/* Page-Level Crawler Metrics Table */}
+            <PageCrawlerMetricsTable
+              pages={metrics?.topPages || []}
               isLoading={isMetricsLoading}
             />
 

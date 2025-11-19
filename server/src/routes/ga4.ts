@@ -26,5 +26,6 @@ router.delete('/domain-mapping/:mappingId', ga4Controller.deleteDomainMapping)
 // AI Crawler metrics
 router.get('/metrics', ga4Controller.getMetrics)
 router.post('/metrics/refresh', ga4Controller.refreshMetrics)
+router.get('/metrics/trend', ga4Controller.getTrend)
 
 export default router

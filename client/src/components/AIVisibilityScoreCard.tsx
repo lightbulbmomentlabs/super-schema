@@ -36,7 +36,7 @@ export default function AIVisibilityScoreCard({
     return (
       <div className={cn(
         'bg-card border border-border rounded-2xl p-8',
-        'animate-pulse',
+        'animate-pulse h-full',
         className
       )}>
         <div className="flex items-center justify-between mb-6">
@@ -58,6 +58,7 @@ export default function AIVisibilityScoreCard({
       className={cn(
         'relative group bg-card border border-border rounded-2xl p-8',
         'hover:shadow-2xl hover:border-primary/50 transition-all duration-300',
+        'h-full',
         className
       )}
     >

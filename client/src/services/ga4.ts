@@ -43,6 +43,7 @@ export interface PageCrawlerInfo {
   crawlerCount: number
   crawlers: string[]
   sessions: number
+  lastCrawled: string // ISO date string of most recent crawl
 }
 
 export interface GA4Metrics {
@@ -56,6 +57,12 @@ export interface GA4Metrics {
   topPages: PageCrawlerInfo[]
   dateRangeStart: string
   dateRangeEnd: string
+}
+
+export interface TrendDataPoint {
+  date: string
+  score: number
+  crawlerCount: number
 }
 
 export const ga4Api = {
@@ -179,6 +186,24 @@ export const ga4Api = {
       propertyId,
       startDate,
       endDate
+    })
+    return response.data
+  },
+
+  /**
+   * Get AI Visibility Score trend over time
+   */
+  getTrend: async (
+    propertyId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<ApiResponse<{ trend: TrendDataPoint[] }>> => {
+    const response = await api.get('/ga4/metrics/trend', {
+      params: {
+        propertyId,
+        startDate,
+        endDate
+      }
     })
     return response.data
   }

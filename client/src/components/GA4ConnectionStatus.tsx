@@ -11,6 +11,7 @@ interface GA4ConnectionStatusProps {
   onDisconnect?: () => void
   isDisconnecting?: boolean
   className?: string
+  compact?: boolean
 }
 
 export default function GA4ConnectionStatus({
@@ -20,29 +21,110 @@ export default function GA4ConnectionStatus({
   onConnect,
   onDisconnect,
   isDisconnecting = false,
-  className = ''
+  className = '',
+  compact = false
 }: GA4ConnectionStatusProps) {
   if (isLoading) {
     return (
       <div className={cn(
-        'bg-card border border-border rounded-2xl p-6',
+        'bg-card border border-border rounded-xl',
+        compact ? 'p-4' : 'p-6',
         'animate-pulse',
         className
       )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 bg-muted/20 rounded-full" />
+            <div className={cn('bg-muted/20 rounded-full', compact ? 'h-8 w-8' : 'h-12 w-12')} />
             <div>
-              <div className="h-6 w-48 bg-muted/20 rounded mb-2" />
-              <div className="h-4 w-32 bg-muted/20 rounded" />
+              <div className={cn('bg-muted/20 rounded mb-2', compact ? 'h-4 w-32' : 'h-6 w-48')} />
+              {!compact && <div className="h-4 w-32 bg-muted/20 rounded" />}
             </div>
           </div>
-          <div className="h-10 w-24 bg-muted/20 rounded-lg" />
+          <div className={cn('bg-muted/20 rounded-lg', compact ? 'h-8 w-20' : 'h-10 w-24')} />
         </div>
       </div>
     )
   }
 
+  // Compact mode - minimal design for inline usage
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className={cn(
+          'bg-card border border-border rounded-xl p-4',
+          'hover:shadow-lg hover:border-primary/30 transition-all duration-300',
+          className
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          {/* Status Icon and Info */}
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'inline-flex items-center justify-center rounded-lg p-2',
+              connected ? 'bg-green-500/10' : 'bg-muted/20'
+            )}>
+              {connected ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <XCircle className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <Link className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-sm font-semibold text-foreground">
+                  Google Analytics 4
+                </p>
+              </div>
+              {connected && (
+                <p className="text-xs text-muted-foreground">
+                  Connected
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          {connected ? (
+            <button
+              onClick={onDisconnect}
+              disabled={isDisconnecting}
+              className={cn(
+                'px-3 py-1.5 rounded-lg font-medium text-xs',
+                'border border-border',
+                'hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50',
+                'transition-all duration-200',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+            </button>
+          ) : (
+            <button
+              onClick={onConnect}
+              className={cn(
+                'px-4 py-2 rounded-lg font-semibold text-xs',
+                'bg-gradient-to-r from-primary to-primary/80',
+                'text-primary-foreground',
+                'hover:shadow-lg hover:scale-105',
+                'transition-all duration-200',
+                'inline-flex items-center gap-1.5'
+              )}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Connect
+            </button>
+          )}
+        </div>
+      </motion.div>
+    )
+  }
+
+  // Full mode - detailed design
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
