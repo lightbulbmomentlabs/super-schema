@@ -39,6 +39,15 @@ export const FEATURE_FLAGS = {
    * Use case: Test with specific users before full rollout
    */
   TEAMS_BETA_USERS: process.env.TEAMS_BETA_USERS?.split(',').map(id => id.trim()) || [],
+
+  /**
+   * Master toggle for GA4 AI Crawler Analytics feature
+   * When false: AI Analytics sections hidden, GA4 API endpoints return 404
+   * When true: AI Analytics dashboard and GA4 integration enabled
+   *
+   * Use case: Gradual rollout of GA4 integration for tracking AI crawler traffic
+   */
+  GA4_AI_ANALYTICS_ENABLED: process.env.GA4_AI_ANALYTICS_ENABLED === 'true',
 }
 
 /**
@@ -69,11 +78,12 @@ export function isTeamInvitesEnabledForUser(userId: string): boolean {
  * Log current feature flag status (for debugging)
  */
 export function logFeatureFlags(): void {
-  console.log('🚩 Team Feature Flags:')
+  console.log('🚩 Feature Flags:')
   console.log('  TEAMS_ENABLED:', FEATURE_FLAGS.TEAMS_ENABLED)
   console.log('  TEAMS_INVITES_ENABLED:', FEATURE_FLAGS.TEAMS_INVITES_ENABLED)
   console.log('  TEAMS_MIGRATION_COMPLETE:', FEATURE_FLAGS.TEAMS_MIGRATION_COMPLETE)
   console.log('  TEAMS_BETA_USERS:', FEATURE_FLAGS.TEAMS_BETA_USERS.length > 0
     ? `${FEATURE_FLAGS.TEAMS_BETA_USERS.length} users`
     : 'All users')
+  console.log('  GA4_AI_ANALYTICS_ENABLED:', FEATURE_FLAGS.GA4_AI_ANALYTICS_ENABLED)
 }

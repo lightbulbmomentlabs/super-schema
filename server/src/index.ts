@@ -25,6 +25,7 @@ import { errorHandler } from './middleware/errorHandler.js'
 import { authMiddleware } from './middleware/auth.js'
 import { logFeatureFlags } from './config/featureFlags.js'
 import { cleanupService } from './services/cleanupService.js'
+import { ga4MetricsRefreshService } from './services/ga4/metricsRefreshService.js'
 import schemaRoutes from './routes/schema.js'
 import userRoutes from './routes/user.js'
 import paymentRoutes from './routes/payment.js'
@@ -35,6 +36,7 @@ import urlLibraryRoutes from './routes/urlLibrary.js'
 import adminRoutes from './routes/admin.js'
 import supportRoutes from './routes/support.js'
 import hubspotRoutes from './routes/hubspot.js'
+import ga4Routes from './routes/ga4.js'
 import releaseNotesRoutes from './routes/releaseNotes.js'
 import teamRoutes from './routes/team.js'
 
@@ -113,6 +115,7 @@ app.use('/api/crawler', authMiddleware, crawlerRoutes)
 app.use('/api/library', authMiddleware, urlLibraryRoutes)
 app.use('/api/support', supportRoutes) // Support routes include their own auth middleware
 app.use('/api/hubspot', hubspotRoutes) // HubSpot routes include their own auth middleware
+app.use('/api/ga4', ga4Routes) // GA4 routes include their own auth middleware
 app.use('/api/release-notes', releaseNotesRoutes) // Release notes routes include their own auth middleware
 app.use('/api/team', teamRoutes) // Team routes include their own auth middleware
 
@@ -168,4 +171,22 @@ app.listen(PORT, () => {
     })
 
   console.log('⏰ [Cron] Cleanup job scheduled to run every 15 minutes')
+
+  // Schedule GA4 metrics refresh - runs daily at 2 AM
+  // Cron format: minute hour day month weekday
+  // 0 2 * * * = every day at 2:00 AM
+  const ga4MetricsJob = cron.schedule('0 2 * * *', async () => {
+    console.log('⏰ [Cron] Running scheduled GA4 metrics refresh...')
+    try {
+      const stats = await ga4MetricsRefreshService.refreshAllMetrics()
+      console.log('✅ [Cron] GA4 metrics refresh completed:', stats)
+      if (stats.errors.length > 0) {
+        console.warn('⚠️ [Cron] Some metrics refresh failed:', stats.errors)
+      }
+    } catch (error) {
+      console.error('❌ [Cron] GA4 metrics refresh failed:', error)
+    }
+  })
+
+  console.log('⏰ [Cron] GA4 metrics refresh job scheduled to run daily at 2:00 AM')
 })

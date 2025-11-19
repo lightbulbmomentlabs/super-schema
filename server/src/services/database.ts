@@ -2743,6 +2743,330 @@ class DatabaseService {
   }
 
   // ============================================
+  // Google Analytics 4 (GA4) Integration Methods
+  // ============================================
+
+  async storeGA4Connection(params: {
+    userId: string
+    teamId: string | null
+    accessToken: string
+    refreshToken: string
+    tokenExpiresAt: Date
+    scopes: string[]
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: storeGA4Connection', params)
+      return 'mock-ga4-connection-id'
+    }
+
+    // Use upsert to handle reconnections - updates existing connection if it exists
+    const { data, error } = await this.supabase
+      .from('ga4_connections')
+      .upsert({
+        user_id: params.userId,
+        team_id: params.teamId,
+        access_token: params.accessToken,
+        refresh_token: params.refreshToken,
+        token_expires_at: params.tokenExpiresAt.toISOString(),
+        scopes: params.scopes,
+        is_active: true,
+        connected_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  async getGA4Connection(userId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4Connection', { userId })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_connections')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // No rows returned
+      throw error
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      teamId: data.team_id,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenExpiresAt: new Date(data.token_expires_at),
+      scopes: data.scopes,
+      isActive: data.is_active,
+      lastValidatedAt: data.last_validated_at ? new Date(data.last_validated_at) : null,
+      connectedAt: new Date(data.connected_at),
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    }
+  }
+
+  async updateGA4Tokens(
+    userId: string,
+    tokens: {
+      accessToken: string
+      refreshToken?: string
+      tokenExpiresAt?: Date
+    }
+  ): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateGA4Tokens', { userId })
+      return
+    }
+
+    const updateData: any = {
+      access_token: tokens.accessToken,
+      updated_at: new Date().toISOString()
+    }
+
+    if (tokens.refreshToken) {
+      updateData.refresh_token = tokens.refreshToken
+    }
+
+    if (tokens.tokenExpiresAt) {
+      updateData.token_expires_at = tokens.tokenExpiresAt.toISOString()
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_connections')
+      .update(updateData)
+      .eq('user_id', userId)
+
+    if (error) throw error
+  }
+
+  async deleteGA4Connection(userId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteGA4Connection', { userId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_connections')
+      .delete()
+      .eq('user_id', userId)
+
+    if (error) throw error
+  }
+
+  async createGA4DomainMapping(params: {
+    userId: string
+    teamId: string | null
+    connectionId: string
+    propertyId: string
+    propertyName: string
+    domain: string
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createGA4DomainMapping', params)
+      return 'mock-ga4-mapping-id'
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_domain_mappings')
+      .upsert({
+        user_id: params.userId,
+        team_id: params.teamId,
+        connection_id: params.connectionId,
+        property_id: params.propertyId,
+        property_name: params.propertyName,
+        domain: params.domain,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,domain'
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  async getGA4DomainMappings(userId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4DomainMappings', { userId })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_domain_mappings')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return data.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      teamId: row.team_id,
+      connectionId: row.connection_id,
+      propertyId: row.property_id,
+      propertyName: row.property_name,
+      domain: row.domain,
+      isActive: row.is_active,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }))
+  }
+
+  async getGA4DomainMappingByProperty(userId: string, propertyId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4DomainMappingByProperty', { userId, propertyId })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_domain_mappings')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('property_id', propertyId)
+      .eq('is_active', true)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // No rows returned
+      throw error
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      teamId: data.team_id,
+      connectionId: data.connection_id,
+      propertyId: data.property_id,
+      propertyName: data.property_name,
+      domain: data.domain,
+      isActive: data.is_active,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    }
+  }
+
+  async deleteGA4DomainMapping(mappingId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteGA4DomainMapping', { mappingId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_domain_mappings')
+      .delete()
+      .eq('id', mappingId)
+
+    if (error) throw error
+  }
+
+  async storeGA4Metrics(params: {
+    userId: string
+    teamId: string | null
+    mappingId: string
+    domain: string
+    dateRangeStart: Date
+    dateRangeEnd: Date
+    aiVisibilityScore: number
+    aiDiversityScore: number
+    aiCrawlerList: string[]
+    coveragePercentage: number
+    totalPages: number
+    aiCrawledPages: number
+    topCrawlers: any[]
+    topPages: any[]
+  }): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: storeGA4Metrics', params)
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_crawler_metrics')
+      .upsert({
+        user_id: params.userId,
+        team_id: params.teamId,
+        mapping_id: params.mappingId,
+        domain: params.domain,
+        date_range_start: params.dateRangeStart.toISOString().split('T')[0],
+        date_range_end: params.dateRangeEnd.toISOString().split('T')[0],
+        ai_visibility_score: params.aiVisibilityScore,
+        ai_diversity_score: params.aiDiversityScore,
+        ai_crawler_list: params.aiCrawlerList,
+        coverage_percentage: params.coveragePercentage,
+        total_pages: params.totalPages,
+        ai_crawled_pages: params.aiCrawledPages,
+        top_crawlers: params.topCrawlers,
+        top_pages: params.topPages,
+        refreshed_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      }, {
+        onConflict: 'mapping_id,date_range_start,date_range_end'
+      })
+
+    if (error) throw error
+  }
+
+  async getGA4CachedMetrics(
+    mappingId: string,
+    dateRangeStart: Date,
+    dateRangeEnd: Date
+  ) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4CachedMetrics', { mappingId, dateRangeStart, dateRangeEnd })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_crawler_metrics')
+      .select('*')
+      .eq('mapping_id', mappingId)
+      .eq('date_range_start', dateRangeStart.toISOString().split('T')[0])
+      .eq('date_range_end', dateRangeEnd.toISOString().split('T')[0])
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // No rows returned
+      throw error
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      teamId: data.team_id,
+      mappingId: data.mapping_id,
+      domain: data.domain,
+      dateRangeStart: new Date(data.date_range_start),
+      dateRangeEnd: new Date(data.date_range_end),
+      aiVisibilityScore: data.ai_visibility_score,
+      aiDiversityScore: data.ai_diversity_score,
+      aiCrawlerList: data.ai_crawler_list,
+      coveragePercentage: data.coverage_percentage,
+      totalPages: data.total_pages,
+      aiCrawledPages: data.ai_crawled_pages,
+      topCrawlers: data.top_crawlers,
+      topPages: data.top_pages,
+      refreshedAt: new Date(data.refreshed_at),
+      createdAt: new Date(data.created_at)
+    }
+  }
+
+  // ============================================
   // Pending HubSpot Connections Methods
   // ============================================
 

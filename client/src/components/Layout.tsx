@@ -9,7 +9,8 @@ import {
   Shield,
   Menu,
   X,
-  Bell
+  Bell,
+  Eye
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
@@ -24,6 +25,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
 import { apiService } from '@/services/api'
 import { HeaderSkeleton } from './skeletons/HeaderSkeleton'
+import { FEATURE_FLAGS } from '@/config/featureFlags'
 
 interface LayoutProps {
   children: ReactNode
@@ -156,6 +158,23 @@ export default function Layout({ children }: LayoutProps) {
                 HubSpot
               </Link>
 
+              {/* AI Analytics Link */}
+              {FEATURE_FLAGS.GA4_AI_ANALYTICS_ENABLED && (
+                <Link
+                  to="/ai-analytics"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                    location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                >
+                  <Eye className="mr-3 h-5 w-5" />
+                  AI Analytics
+                </Link>
+              )}
+
               {/* What's New Link */}
               <Link
                 to="/whats-new"
@@ -284,6 +303,27 @@ export default function Layout({ children }: LayoutProps) {
                     />
                     HubSpot
                   </Link>
+
+                  {/* AI Analytics - Available to all users */}
+                  {FEATURE_FLAGS.GA4_AI_ANALYTICS_ENABLED && (
+                    <Link
+                      to="/ai-analytics"
+                      className={cn(
+                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                        location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      <Eye
+                        className={cn(
+                          'mr-3 flex-shrink-0 h-5 w-5',
+                          (location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')) ? 'text-primary-foreground' : 'text-muted-foreground'
+                        )}
+                      />
+                      AI Analytics
+                    </Link>
+                  )}
 
                   {/* What's New - Available to all users */}
                   <Link
