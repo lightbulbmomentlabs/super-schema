@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
 **Last Updated:** 2025-11-19
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -1143,9 +1143,10 @@ const AI_CRAWLERS = {
 
 **Metrics Calculation:**
 ```typescript
-// AI Visibility Score = (AI Diversity × 0.5) + (Coverage × 0.5)
-// - AI Diversity: Number of unique AI crawlers (0-100)
-// - Coverage: % of pages crawled by AI (0-100)
+// AI Visibility Score = (AI Diversity × 0.8) + Coverage Bonus (20%)
+// - AI Diversity: (crawlerCount / 10) × 50 (max 50 points)
+// - Coverage Bonus: 20 points if any AI crawlers detected, 0 otherwise
+// - Final Score: 0-100 (rounded)
 
 interface GA4Metrics {
   aiVisibilityScore: number        // 0-100
@@ -1155,28 +1156,58 @@ interface GA4Metrics {
   aiCrawledPages: number            // Pages with AI traffic
   crawlerList: string[]             // List of detected crawlers
   topCrawlers: CrawlerStats[]       // Top crawlers by activity
-  topPages: PageCrawlerInfo[]       // Pages with most crawler diversity
+  topPages: PageCrawlerInfo[]       // Pages with most crawler diversity (includes lastCrawled)
   dateRangeStart: string
   dateRangeEnd: string
+}
+
+interface TrendDataPoint {
+  date: string                      // ISO format (YYYY-MM-DD)
+  score: number                     // AI Visibility Score for that day
+  crawlerCount: number              // Unique crawlers detected
+}
+
+interface PageCrawlerInfo {
+  path: string                      // Page path
+  crawlerCount: number              // Number of unique crawlers
+  crawlers: string[]                // List of crawler names
+  sessions: number                  // Session count
+  lastCrawled: string               // ISO date string of most recent crawl
 }
 ```
 
 **API Query Structure:**
 ```typescript
-// Query GA4 Data API
-const request = {
+// Query GA4 Data API for Metrics
+const metricsRequest = {
   property: `properties/${propertyId}`,
   dateRanges: [{ startDate, endDate }],
   dimensions: [
+    { name: 'date' },           // For last crawled tracking
     { name: 'sessionSource' },
-    { name: 'pageReferrer' },
-    { name: 'pagePath' }
+    { name: 'pagePath' },
+    { name: 'pageReferrer' }
   ],
   metrics: [
     { name: 'sessions' },
     { name: 'screenPageViews' }
   ],
-  limit: 100000  // Max results
+  limit: 10000  // Per query limit
+}
+
+// Query GA4 Data API for Trend (Daily Scores)
+const trendRequest = {
+  property: `properties/${propertyId}`,
+  dateRanges: [{ startDate, endDate }],
+  dimensions: [
+    { name: 'date' },
+    { name: 'sessionSource' },
+    { name: 'pageReferrer' }
+  ],
+  metrics: [
+    { name: 'sessions' }
+  ],
+  limit: 50000  // Larger for trend data
 }
 ```
 
@@ -1210,8 +1241,16 @@ await db.storeGA4Metrics(userId, propertyId, metrics, startDate, endDate)
 // Connection status
 const { connected, connection, disconnect } = useGA4Connection()
 
-// Metrics fetching
+// Metrics fetching (10-minute cache)
 const { metrics, refresh, isRefreshing } = useGA4Metrics(
+  propertyId,
+  startDate,
+  endDate,
+  enabled
+)
+
+// Trend data (30-minute cache)
+const { trend, isLoading: isTrendLoading } = useGA4Trend(
   propertyId,
   startDate,
   endDate,
@@ -1223,11 +1262,12 @@ const { mappings, createMapping, deleteMapping } = useGA4DomainMappings(connecte
 ```
 
 **Components:**
-- `AIVisibilityScoreCard` - Circular progress score display
-- `TopCrawlersTable` - Table of top AI crawlers
-- `CrawlerListWidget` - Badge list of detected crawlers
-- `GA4ConnectionStatus` - Connection status indicator
-- `DomainMappingSelector` - Dropdown for domain selection
+- `AIVisibilityScoreCard` - Circular progress score display with diversity and coverage breakdown
+- `AIVisibilityTrendChart` - Line chart showing AI Visibility Score over time with Recharts
+- `TopCrawlersTable` - Table of top AI crawlers with sessions and page views
+- `PageCrawlerMetricsTable` - Page-level metrics with last crawled date and crawler diversity
+- `GA4ConnectionStatus` - Connection status indicator (supports compact mode for inline usage)
+- `DomainMappingSelector` - Dropdown for domain selection with delete functionality
 
 **Automated Refresh:**
 ```typescript
@@ -1803,6 +1843,15 @@ npm run test:coverage --workspace=server # Coverage
   - Added resource blocking strategy and analytics domain blocking
   - Documented content-based early termination feature
   - Added performance metrics before/after optimizations
+- v1.2.0 (2025-11-19): Enhanced GA4 AI Analytics with Phase 2 improvements
+  - Added AI Visibility Trend chart component with daily score visualization
+  - Implemented page-level "Last Crawled" date tracking and display
+  - Created compact mode for GA4ConnectionStatus component for space-efficient dashboard layout
+  - Reorganized AIAnalyticsPage with two-row layout (connection status + domain selector on row 1, date range controls on row 2)
+  - Enhanced refresh button with label and prominent styling
+  - Added useGA4Trend hook with 30-minute cache time for trend data
+  - Updated TrendDataPoint and PageCrawlerInfo interfaces with complete documentation
+  - Documented trend API query structure and daily metrics aggregation
 
 ---
 
