@@ -1,4 +1,4 @@
-import { X, Loader2 } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface TimeoutErrorModalProps {
   isOpen: boolean
@@ -92,7 +92,7 @@ export default function TimeoutErrorModal({
             </ul>
 
             <p className="text-sm text-muted-foreground mt-4 font-medium">
-              <span className="text-foreground">Good news:</span> Your schema is likely still being generated in the background! Check your <span className="text-foreground">URL Library</span> in a few minutes and it should be there.
+              <span className="text-foreground">Don't worry:</span> Your credit has been automatically refunded. You can try again in a moment, or try a different page from this site that might load faster.
             </p>
 
             <p className="text-sm text-muted-foreground mt-3">
