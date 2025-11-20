@@ -8,7 +8,9 @@ import type { ApiResponse } from 'aeo-schema-generator-shared/types'
 
 export interface GA4Connection {
   id: string
+  googleAccountEmail: string | null
   scopes: string[]
+  isActive: boolean
   connectedAt: string
   lastValidatedAt: string | null
 }
@@ -93,20 +95,33 @@ export const ga4Api = {
 
   /**
    * Get current GA4 connection status
+   * Returns all connections and the currently active one
    */
   getConnectionStatus: async (): Promise<ApiResponse<{
     connected: boolean
-    connection: GA4Connection | null
+    connections: GA4Connection[]
+    activeConnection: GA4Connection | null
   }>> => {
     const response = await api.get('/ga4/connection')
     return response.data
   },
 
   /**
-   * Disconnect GA4 and revoke access
+   * Disconnect a specific GA4 connection
    */
-  disconnect: async (): Promise<ApiResponse<{ message: string }>> => {
-    const response = await api.delete('/ga4/connection')
+  disconnect: async (connectionId: string): Promise<ApiResponse<{ message: string }>> => {
+    const response = await api.delete(`/ga4/connection/${connectionId}`)
+    return response.data
+  },
+
+  /**
+   * Set a connection as the active one
+   */
+  setActiveConnection: async (connectionId: string): Promise<ApiResponse<{
+    message: string
+    connectionId: string
+  }>> => {
+    const response = await api.post(`/ga4/connection/${connectionId}/activate`)
     return response.data
   },
 

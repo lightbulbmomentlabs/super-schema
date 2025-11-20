@@ -233,6 +233,41 @@ export class GA4OAuthService {
   }
 
   /**
+   * Fetch Google account email from userinfo endpoint
+   * Called during OAuth flow to identify which Google account is being connected
+   */
+  async fetchGoogleAccountEmail(accessToken: string): Promise<string | null> {
+    try {
+      console.log('📧 [GA4 OAuth] Fetching Google account email')
+
+      const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      if (!response.ok) {
+        console.error('❌ [GA4 OAuth] Failed to fetch userinfo:', response.statusText)
+        return null
+      }
+
+      const userInfo = await response.json()
+      const email = userInfo.email
+
+      if (email) {
+        console.log('✅ [GA4 OAuth] Successfully fetched Google account email:', email)
+      } else {
+        console.warn('⚠️ [GA4 OAuth] No email found in userinfo response')
+      }
+
+      return email || null
+    } catch (error) {
+      console.error('❌ [GA4 OAuth] Error fetching Google account email:', error)
+      return null
+    }
+  }
+
+  /**
    * Get an authenticated OAuth2 client for API calls
    * Automatically refreshes tokens if needed
    */
@@ -270,10 +305,13 @@ export class GA4OAuthService {
     userId: string,
     teamId: string | null,
     tokens: GA4TokenResponse,
-    scopes: string[]
+    scopes: string[],
+    googleAccountEmail?: string
   ): Promise<string> {
     try {
-      console.log('💾 [GA4 OAuth] Storing GA4 connection for user:', userId)
+      console.log('💾 [GA4 OAuth] Storing GA4 connection for user:', userId, {
+        googleAccountEmail: googleAccountEmail || 'Not provided'
+      })
 
       // Encrypt tokens before storage
       const encryptedAccessToken = encrypt(tokens.access_token)
@@ -295,7 +333,8 @@ export class GA4OAuthService {
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt,
-        scopes
+        scopes,
+        googleAccountEmail
       })
 
       console.log('✅ [GA4 OAuth] Successfully stored GA4 connection:', connectionId)

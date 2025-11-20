@@ -2,28 +2,41 @@ import { motion } from 'framer-motion'
 import { Link, CheckCircle2, XCircle, AlertCircle, ExternalLink } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { GA4Connection } from '@/services/ga4'
+import GA4AccountSelector from './GA4AccountSelector'
 
 interface GA4ConnectionStatusProps {
   connected: boolean
-  connection: GA4Connection | null
+  connections?: GA4Connection[]
+  activeConnection?: GA4Connection | null
+  // Deprecated: use activeConnection instead
+  connection?: GA4Connection | null
   isLoading?: boolean
   onConnect?: () => void
-  onDisconnect?: () => void
+  onDisconnect?: (connectionId?: string) => void
+  onSwitchAccount?: (connectionId: string) => void
   isDisconnecting?: boolean
+  isSwitching?: boolean
   className?: string
   compact?: boolean
 }
 
 export default function GA4ConnectionStatus({
   connected,
-  connection,
+  connections = [],
+  activeConnection: propsActiveConnection,
+  connection: deprecatedConnection,
   isLoading = false,
   onConnect,
   onDisconnect,
+  onSwitchAccount,
   isDisconnecting = false,
+  isSwitching = false,
   className = '',
   compact = false
 }: GA4ConnectionStatusProps) {
+  // Support backwards compatibility
+  const activeConnection = propsActiveConnection || deprecatedConnection
+  const allConnections = connections.length > 0 ? connections : (activeConnection ? [activeConnection] : [])
   if (isLoading) {
     return (
       <div className={cn(
@@ -91,7 +104,7 @@ export default function GA4ConnectionStatus({
           {/* Action Button */}
           {connected ? (
             <button
-              onClick={onDisconnect}
+              onClick={() => onDisconnect?.(activeConnection?.id)}
               disabled={isDisconnecting}
               className={cn(
                 'px-3 py-1.5 rounded-lg font-medium text-xs',
@@ -120,6 +133,19 @@ export default function GA4ConnectionStatus({
             </button>
           )}
         </div>
+
+        {/* Account Selector (shown when multiple accounts) */}
+        {connected && onSwitchAccount && allConnections.length > 1 && activeConnection && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <GA4AccountSelector
+              connections={allConnections}
+              activeConnection={activeConnection}
+              onSwitch={onSwitchAccount}
+              onAddAccount={onConnect}
+              isSwitching={isSwitching}
+            />
+          </div>
+        )}
       </motion.div>
     )
   }
@@ -163,11 +189,11 @@ export default function GA4ConnectionStatus({
             {connected ? (
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">
-                  Connected on {new Date(connection!.connectedAt).toLocaleDateString()}
+                  Connected on {new Date(activeConnection!.connectedAt).toLocaleDateString()}
                 </p>
-                {connection?.lastValidatedAt && (
+                {activeConnection?.lastValidatedAt && (
                   <p className="text-xs text-muted-foreground/70">
-                    Last validated: {new Date(connection.lastValidatedAt).toLocaleString()}
+                    Last validated: {new Date(activeConnection.lastValidatedAt).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -183,7 +209,7 @@ export default function GA4ConnectionStatus({
         <div className="flex items-center gap-2">
           {connected ? (
             <button
-              onClick={onDisconnect}
+              onClick={() => onDisconnect?.(activeConnection?.id)}
               disabled={isDisconnecting}
               className={cn(
                 'px-4 py-2 rounded-lg font-medium text-sm',
@@ -214,8 +240,21 @@ export default function GA4ConnectionStatus({
         </div>
       </div>
 
+      {/* Account Selector (shown when multiple accounts) */}
+      {connected && onSwitchAccount && allConnections.length > 1 && activeConnection && (
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <GA4AccountSelector
+            connections={allConnections}
+            activeConnection={activeConnection}
+            onSwitch={onSwitchAccount}
+            onAddAccount={onConnect}
+            isSwitching={isSwitching}
+          />
+        </div>
+      )}
+
       {/* Scopes Information */}
-      {connected && connection?.scopes && connection.scopes.length > 0 && (
+      {connected && activeConnection?.scopes && activeConnection.scopes.length > 0 && (
         <div className="mt-4 pt-4 border-t border-border/50">
           <div className="flex items-start gap-2">
             <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -224,7 +263,7 @@ export default function GA4ConnectionStatus({
                 Granted Permissions:
               </p>
               <div className="flex flex-wrap gap-2">
-                {connection.scopes.map((scope) => (
+                {activeConnection.scopes.map((scope) => (
                   <span
                     key={scope}
                     className="inline-block px-2 py-1 rounded-md bg-muted/30 text-xs text-muted-foreground font-mono"

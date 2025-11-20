@@ -26,7 +26,7 @@ export function useGA4Metrics(
         throw new Error('Property ID is required')
       }
       const response = await ga4Api.getMetrics(propertyId, startDate, endDate)
-      return response.metrics
+      return response.data?.metrics
     },
     enabled: enabled && !!propertyId,
     staleTime: 10 * 60 * 1000, // 10 minutes (metrics don't change frequently)
@@ -44,7 +44,7 @@ export function useGA4Metrics(
       // Update cache with new metrics
       queryClient.setQueryData(
         ['ga4', 'metrics', propertyId, startDate, endDate],
-        response.metrics
+        response.data?.metrics
       )
       toast.success('Metrics refreshed successfully')
     },

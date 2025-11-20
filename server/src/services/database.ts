@@ -2753,27 +2753,33 @@ class DatabaseService {
     refreshToken: string
     tokenExpiresAt: Date
     scopes: string[]
+    googleAccountEmail?: string
   }): Promise<string> {
     if (!this.isDatabaseAvailable()) {
       console.log('Mock: storeGA4Connection', params)
       return 'mock-ga4-connection-id'
     }
 
-    // Use upsert to handle reconnections - updates existing connection if it exists
+    // First, deactivate all existing connections for this user
+    await this.supabase
+      .from('ga4_connections')
+      .update({ is_active: false })
+      .eq('user_id', params.userId)
+
+    // Insert new connection as active
     const { data, error } = await this.supabase
       .from('ga4_connections')
-      .upsert({
+      .insert({
         user_id: params.userId,
         team_id: params.teamId,
         access_token: params.accessToken,
         refresh_token: params.refreshToken,
         token_expires_at: params.tokenExpiresAt.toISOString(),
         scopes: params.scopes,
+        google_account_email: params.googleAccountEmail || null,
         is_active: true,
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id'
       })
       .select('id')
       .single()
@@ -2808,6 +2814,7 @@ class DatabaseService {
       refreshToken: data.refresh_token,
       tokenExpiresAt: new Date(data.token_expires_at),
       scopes: data.scopes,
+      googleAccountEmail: data.google_account_email,
       isActive: data.is_active,
       lastValidatedAt: data.last_validated_at ? new Date(data.last_validated_at) : null,
       connectedAt: new Date(data.connected_at),
@@ -2817,7 +2824,7 @@ class DatabaseService {
   }
 
   async updateGA4Tokens(
-    userId: string,
+    connectionId: string,
     tokens: {
       accessToken: string
       refreshToken?: string
@@ -2825,7 +2832,7 @@ class DatabaseService {
     }
   ): Promise<void> {
     if (!this.isDatabaseAvailable()) {
-      console.log('Mock: updateGA4Tokens', { userId })
+      console.log('Mock: updateGA4Tokens', { connectionId })
       return
     }
 
@@ -2845,21 +2852,108 @@ class DatabaseService {
     const { error } = await this.supabase
       .from('ga4_connections')
       .update(updateData)
-      .eq('user_id', userId)
+      .eq('id', connectionId)
 
     if (error) throw error
   }
 
-  async deleteGA4Connection(userId: string): Promise<void> {
+  async deleteGA4Connection(connectionId: string): Promise<void> {
     if (!this.isDatabaseAvailable()) {
-      console.log('Mock: deleteGA4Connection', { userId })
+      console.log('Mock: deleteGA4Connection', { connectionId })
       return
     }
 
     const { error } = await this.supabase
       .from('ga4_connections')
       .delete()
+      .eq('id', connectionId)
+
+    if (error) throw error
+  }
+
+  async listGA4Connections(userId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: listGA4Connections', { userId })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_connections')
+      .select('*')
       .eq('user_id', userId)
+      .order('connected_at', { ascending: false })
+
+    if (error) throw error
+
+    return data.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      teamId: row.team_id,
+      accessToken: row.access_token,
+      refreshToken: row.refresh_token,
+      tokenExpiresAt: new Date(row.token_expires_at),
+      scopes: row.scopes,
+      googleAccountEmail: row.google_account_email,
+      isActive: row.is_active,
+      lastValidatedAt: row.last_validated_at ? new Date(row.last_validated_at) : null,
+      connectedAt: new Date(row.connected_at),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    }))
+  }
+
+  async getGA4ConnectionById(connectionId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4ConnectionById', { connectionId })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // No rows returned
+      throw error
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      teamId: data.team_id,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      tokenExpiresAt: new Date(data.token_expires_at),
+      scopes: data.scopes,
+      googleAccountEmail: data.google_account_email,
+      isActive: data.is_active,
+      lastValidatedAt: data.last_validated_at ? new Date(data.last_validated_at) : null,
+      connectedAt: new Date(data.connected_at),
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    }
+  }
+
+  async setActiveGA4Connection(userId: string, connectionId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: setActiveGA4Connection', { userId, connectionId })
+      return
+    }
+
+    // First, deactivate all connections for this user
+    await this.supabase
+      .from('ga4_connections')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+
+    // Then, activate the specified connection
+    const { error } = await this.supabase
+      .from('ga4_connections')
+      .update({ is_active: true })
+      .eq('id', connectionId)
+      .eq('user_id', userId) // Extra safety: ensure connection belongs to user
 
     if (error) throw error
   }

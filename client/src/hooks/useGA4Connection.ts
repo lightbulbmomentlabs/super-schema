@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 
 /**
  * Hook to manage GA4 connection status
+ * Supports multiple Google Analytics account connections
  */
 export function useGA4Connection() {
   const queryClient = useQueryClient()
@@ -20,9 +21,9 @@ export function useGA4Connection() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
-  // Mutation to disconnect GA4
+  // Mutation to disconnect a specific GA4 connection
   const disconnectMutation = useMutation({
-    mutationFn: () => ga4Api.disconnect(),
+    mutationFn: (connectionId: string) => ga4Api.disconnect(connectionId),
     onSuccess: () => {
       // Invalidate connection query
       queryClient.invalidateQueries({ queryKey: ['ga4', 'connection'] })
@@ -36,13 +37,34 @@ export function useGA4Connection() {
     }
   })
 
+  // Mutation to switch active connection
+  const switchConnectionMutation = useMutation({
+    mutationFn: (connectionId: string) => ga4Api.setActiveConnection(connectionId),
+    onSuccess: () => {
+      // Invalidate queries to refresh data with new connection
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'connection'] })
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'mappings'] })
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'properties'] })
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'trend'] })
+      toast.success('Switched Google Analytics account successfully')
+    },
+    onError: (error: any) => {
+      console.error('Failed to switch GA4 connection:', error)
+      toast.error(error?.response?.data?.error || 'Failed to switch Google Analytics account')
+    }
+  })
+
   return {
-    connected: connectionData?.connected || false,
-    connection: connectionData?.connection || null,
+    connected: connectionData?.data?.connected || false,
+    connections: connectionData?.data?.connections || [],
+    activeConnection: connectionData?.data?.activeConnection || null,
     isLoading,
     error,
     refetch,
     disconnect: disconnectMutation.mutate,
-    isDisconnecting: disconnectMutation.isPending
+    isDisconnecting: disconnectMutation.isPending,
+    switchConnection: switchConnectionMutation.mutate,
+    isSwitching: switchConnectionMutation.isPending
   }
 }

@@ -21,7 +21,7 @@ export function useGA4Trend(
         throw new Error('Property ID is required')
       }
       const response = await ga4Api.getTrend(propertyId, startDate, endDate)
-      return response.trend
+      return response.data?.trend
     },
     enabled: enabled && !!propertyId,
     staleTime: 30 * 60 * 1000, // 30 minutes (trend data doesn't change frequently)

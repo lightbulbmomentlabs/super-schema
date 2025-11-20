@@ -30,7 +30,15 @@ export default function AIAnalyticsPage() {
   })
 
   // Fetch connection status
-  const { connected, connection, disconnect, isDisconnecting } = useGA4Connection()
+  const {
+    connected,
+    connections,
+    activeConnection,
+    disconnect,
+    isDisconnecting,
+    switchConnection,
+    isSwitching
+  } = useGA4Connection()
 
   // Fetch domain mappings
   const {
@@ -84,9 +92,11 @@ export default function AIAnalyticsPage() {
     navigate('/ga4/connect')
   }
 
-  const handleDisconnect = () => {
-    if (window.confirm('Are you sure you want to disconnect Google Analytics? This will remove all domain mappings.')) {
-      disconnect()
+  const handleDisconnect = (connectionId?: string) => {
+    if (window.confirm('Are you sure you want to disconnect this Google Analytics account? This will remove all domain mappings for this account.')) {
+      if (connectionId) {
+        disconnect(connectionId)
+      }
     }
   }
 
@@ -194,10 +204,13 @@ export default function AIAnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <GA4ConnectionStatus
                 connected={connected}
-                connection={connection}
+                connections={connections}
+                activeConnection={activeConnection}
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
+                onSwitchAccount={switchConnection}
                 isDisconnecting={isDisconnecting}
+                isSwitching={isSwitching}
                 compact={true}
               />
 
@@ -238,7 +251,9 @@ export default function AIAnalyticsPage() {
                     onClick={() => handleDatePreset(30)}
                     className={cn(
                       'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                      'bg-primary text-primary-foreground'
+                      dateRange.start === new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                     )}
                   >
                     30 days
@@ -247,7 +262,9 @@ export default function AIAnalyticsPage() {
                     onClick={() => handleDatePreset(90)}
                     className={cn(
                       'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                      'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                      dateRange.start === new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                     )}
                   >
                     90 days
@@ -300,12 +317,6 @@ export default function AIAnalyticsPage() {
               isLoading={isMetricsLoading}
             />
 
-            {/* Page-Level Crawler Metrics Table */}
-            <PageCrawlerMetricsTable
-              pages={metrics?.topPages || []}
-              isLoading={isMetricsLoading}
-            />
-
             {/* Summary Stats */}
             {metrics && (
               <motion.div
@@ -340,6 +351,12 @@ export default function AIAnalyticsPage() {
                 </div>
               </motion.div>
             )}
+
+            {/* Page-Level Crawler Metrics Table */}
+            <PageCrawlerMetricsTable
+              pages={metrics?.topPages || []}
+              isLoading={isMetricsLoading}
+            />
           </div>
         )}
       </div>

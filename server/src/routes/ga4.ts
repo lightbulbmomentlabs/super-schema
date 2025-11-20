@@ -13,7 +13,8 @@ router.post('/callback', ga4Controller.handleOAuthCallback)
 
 // Connection management
 router.get('/connection', ga4Controller.getConnectionStatus)
-router.delete('/connection', ga4Controller.disconnectGA4)
+router.delete('/connection/:connectionId', ga4Controller.disconnectGA4)
+router.post('/connection/:connectionId/activate', ga4Controller.setActiveConnection)
 
 // GA4 properties
 router.get('/properties', ga4Controller.listProperties)
