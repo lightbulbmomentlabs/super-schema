@@ -385,7 +385,7 @@ export class GA4DataService {
 
         // Update stored tokens
         await ga4OAuth.updateStoredTokens(
-          userId,
+          tokens.connectionId,
           newTokens.access_token,
           newTokens.refresh_token,
           newTokens.expiry_date
@@ -669,7 +669,7 @@ export class GA4DataService {
         const newTokens = await ga4OAuth.refreshAccessToken(tokens.refreshToken)
 
         await ga4OAuth.updateStoredTokens(
-          userId,
+          tokens.connectionId,
           newTokens.access_token,
           newTokens.refresh_token,
           newTokens.expiry_date

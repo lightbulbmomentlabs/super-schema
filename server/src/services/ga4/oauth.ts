@@ -350,6 +350,7 @@ export class GA4OAuthService {
    * Get and decrypt stored tokens for a user
    */
   async getStoredTokens(userId: string): Promise<{
+    connectionId: string
     accessToken: string
     refreshToken: string
     expiryDate?: number
@@ -366,6 +367,7 @@ export class GA4OAuthService {
       const refreshToken = decrypt(connection.refreshToken)
 
       return {
+        connectionId: connection.id,
         accessToken,
         refreshToken,
         expiryDate: connection.tokenExpiresAt ? connection.tokenExpiresAt.getTime() : undefined
@@ -380,7 +382,7 @@ export class GA4OAuthService {
    * Update stored tokens after refresh
    */
   async updateStoredTokens(
-    userId: string,
+    connectionId: string,
     accessToken: string,
     refreshToken?: string,
     expiryDate?: number
@@ -389,13 +391,13 @@ export class GA4OAuthService {
       const encryptedAccessToken = encrypt(accessToken)
       const encryptedRefreshToken = refreshToken ? encrypt(refreshToken) : undefined
 
-      await db.updateGA4Tokens(userId, {
+      await db.updateGA4Tokens(connectionId, {
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt: expiryDate ? new Date(expiryDate) : undefined
       })
 
-      console.log('✅ [GA4 OAuth] Updated stored tokens for user:', userId)
+      console.log('✅ [GA4 OAuth] Updated stored tokens for connection:', connectionId)
     } catch (error) {
       console.error('❌ [GA4 OAuth] Failed to update tokens:', error)
       throw new Error('Failed to update tokens')
