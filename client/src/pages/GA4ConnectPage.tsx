@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 
 export default function GA4ConnectPage() {
   const navigate = useNavigate()
-  const { connected } = useGA4Connection()
+  const { connected, activeConnection, disconnect, isDisconnecting } = useGA4Connection()
   const { createMapping, isCreating } = useGA4DomainMappings(connected)
 
   const [isLoadingAuthUrl, setIsLoadingAuthUrl] = useState(false)
@@ -99,12 +99,34 @@ export default function GA4ConnectPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to AI Analytics
           </button>
-          <h1 className="text-3xl font-black bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Connect Google Analytics
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Link your GA4 property to track AI crawler activity
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-black bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Connect Google Analytics
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Link your GA4 property to track AI crawler activity
+              </p>
+            </div>
+            {connected && activeConnection && (
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Connected: <span className="font-semibold text-foreground">{activeConnection.googleAccountEmail || 'Unknown'}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to disconnect this Google Analytics account?')) {
+                      disconnect(activeConnection.id)
+                    }
+                  }}
+                  disabled={isDisconnecting}
+                  className="text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+                >
+                  {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
