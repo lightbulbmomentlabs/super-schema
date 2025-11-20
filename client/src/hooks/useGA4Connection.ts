@@ -56,9 +56,9 @@ export function useGA4Connection() {
   })
 
   return {
-    connected: connectionData?.data?.connected || false,
-    connections: connectionData?.data?.connections || [],
-    activeConnection: connectionData?.data?.activeConnection || null,
+    connected: connectionData?.connected || false,
+    connections: connectionData?.connections || [],
+    activeConnection: connectionData?.activeConnection || null,
     isLoading,
     error,
     refetch,
