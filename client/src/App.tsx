@@ -19,6 +19,7 @@ import AdminTickets from './pages/admin/AdminTickets'
 import AdminContent from './pages/admin/AdminContent'
 import HubSpotPage from './pages/HubSpotPage'
 import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
+import HubSpotInstallPage from './pages/HubSpotInstallPage'
 import AIAnalyticsPage from './pages/AIAnalyticsPage'
 import GA4ConnectPage from './pages/GA4ConnectPage'
 import GA4CallbackPage from './pages/GA4CallbackPage'
@@ -169,6 +170,9 @@ function AppContent() {
 
           {/* HubSpot OAuth Callback - No layout needed */}
           <Route path="/hubspot/callback" element={<HubSpotCallbackPage />} />
+
+          {/* HubSpot Marketplace Install - No layout needed */}
+          <Route path="/hubspot/install" element={<HubSpotInstallPage />} />
 
           {/* AI Analytics - Standalone route at root level */}
           <Route path="/ai-analytics" element={
