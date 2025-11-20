@@ -37,7 +37,8 @@ export class GA4OAuthService {
 
   // Required scopes for GA4 AI Analytics
   private static readonly REQUIRED_SCOPES = [
-    'https://www.googleapis.com/auth/analytics.readonly'
+    'https://www.googleapis.com/auth/analytics.readonly',
+    'https://www.googleapis.com/auth/userinfo.email'  // Required to fetch Google account email
   ]
 
   constructor() {

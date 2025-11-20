@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { ga4Api } from '@/services/ga4'
@@ -7,6 +8,7 @@ import { cn } from '@/utils/cn'
 
 export default function GA4CallbackPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
@@ -43,6 +45,11 @@ export default function GA4CallbackPage() {
 
         if (response.success) {
           setStatus('success')
+
+          // Invalidate GA4 connection queries to force refetch
+          queryClient.invalidateQueries({ queryKey: ['ga4', 'connection'] })
+          queryClient.invalidateQueries({ queryKey: ['ga4', 'properties'] })
+
           // Redirect to connect page after 1.5 seconds
           setTimeout(() => {
             navigate('/ga4/connect')
@@ -61,7 +68,7 @@ export default function GA4CallbackPage() {
     }
 
     handleCallback()
-  }, [searchParams, navigate])
+  }, [searchParams, navigate, queryClient])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
