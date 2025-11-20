@@ -30,7 +30,7 @@ export default function GA4ConnectPage() {
     setIsLoadingProperties(true)
     try {
       const response = await ga4Api.listProperties()
-      setProperties(response.data?.properties || [])
+      setProperties(response.properties || [])
     } catch (error: any) {
       console.error('Failed to load properties:', error)
       toast.error(error?.response?.data?.error || 'Failed to load GA4 properties')
@@ -43,9 +43,9 @@ export default function GA4ConnectPage() {
     setIsLoadingAuthUrl(true)
     try {
       const response = await ga4Api.getAuthUrl()
-      if (response.data?.authUrl) {
+      if (response.authUrl) {
         // Redirect to Google OAuth
-        window.location.href = response.data.authUrl
+        window.location.href = response.authUrl
       }
     } catch (error: any) {
       console.error('Failed to get auth URL:', error)

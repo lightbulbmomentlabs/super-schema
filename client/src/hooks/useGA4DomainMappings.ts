@@ -18,7 +18,7 @@ export function useGA4DomainMappings(enabled: boolean = true) {
     queryKey: ['ga4', 'mappings'],
     queryFn: async () => {
       const response = await ga4Api.listDomainMappings()
-      return response.data?.mappings || []
+      return response.mappings || []
     },
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
