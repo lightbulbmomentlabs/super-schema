@@ -181,9 +181,12 @@ export default function HubSpotPage() {
     const initiationTime = new Date().toISOString()
     console.log('🔐 [HubSpot OAuth] Initiating OAuth flow', {
       timestamp: initiationTime,
+      clientId: clientId.substring(0, 15) + '...',
       redirectUri,
       scopes,
-      isAuthenticated: isSignedIn
+      scopesString: scopes.join(' '),
+      isAuthenticated: isSignedIn,
+      origin: window.location.origin
     })
 
     // Generate secure state parameter for CSRF protection

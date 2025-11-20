@@ -61,6 +61,8 @@ export default function HubSpotCallbackPage() {
         timeElapsedSeconds: timeElapsed
       })
 
+      // Log ALL URL parameters to catch any hidden scope-related params
+      const allParams = Object.fromEntries(searchParams.entries())
       console.log('📋 [HubSpotCallback] OAuth parameters', {
         hasCode: !!code,
         hasState: !!state,
@@ -69,15 +71,32 @@ export default function HubSpotCallbackPage() {
         hasError: !!error,
         error,
         errorDescription,
-        isSignedIn
+        isSignedIn,
+        allUrlParameters: allParams,
+        totalParameterCount: Object.keys(allParams).length
       })
 
       // Check for OAuth errors from HubSpot
       if (error) {
         console.error('❌ [HubSpotCallback] OAuth error from HubSpot', {
           error,
-          errorDescription
+          errorDescription,
+          fullErrorMessage: errorDescription || error,
+          allUrlParameters: allParams,
+          flowType: oauthFlowType,
+          timestamp: callbackTime,
+          callbackUrl: window.location.href
         })
+
+        // Store error details for debugging
+        setErrorDetails({
+          error,
+          errorDescription,
+          allParams,
+          flowType: oauthFlowType,
+          timestamp: callbackTime
+        })
+
         setStatus('error')
         setErrorMessage(errorDescription || error)
         toast.error(`Authorization failed: ${errorDescription || error}`)

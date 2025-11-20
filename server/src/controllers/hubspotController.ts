@@ -152,7 +152,10 @@ export const handleOAuthCallback = asyncHandler(
           hasRefreshToken: !!tokens.refresh_token,
           expiresIn: tokens.expires_in,
           exchangeDuration: `${exchangeDuration}ms`,
-          totalElapsed: `${Date.now() - callbackStartTime}ms`
+          totalElapsed: `${Date.now() - callbackStartTime}ms`,
+          // Log ALL token response fields to catch scope info
+          tokenResponseKeys: Object.keys(tokens),
+          scopeInResponse: (tokens as any).scope || 'NOT_PRESENT'
         })
 
         // Step 2: Get account information
@@ -162,7 +165,11 @@ export const handleOAuthCallback = asyncHandler(
           region,
           portalId: accountInfo.hub_id,
           portalName: accountInfo.hub_domain,
-          scopeCount: accountInfo.scopes?.length || 0
+          scopeCount: accountInfo.scopes?.length || 0,
+          // *** CRITICAL: Log actual granted scopes to diagnose scope mismatch ***
+          grantedScopes: accountInfo.scopes || [],
+          grantedScopesString: accountInfo.scopes?.join(' ') || 'NONE',
+          accountInfoKeys: Object.keys(accountInfo)
         })
 
         // Step 3: Store as PENDING connection (to be claimed after signup)
