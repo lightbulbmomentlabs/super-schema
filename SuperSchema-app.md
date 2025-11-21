@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-20
-**Version:** 1.2.2
+**Last Updated:** 2025-11-21
+**Version:** 1.2.3
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -1124,7 +1124,9 @@ import { ClerkProvider } from '@clerk/clerk-react'
 
 ### 6.6 Google Analytics 4 (GA4) Integration
 
-**Purpose:** Track AI crawler traffic on user websites using Google Analytics 4 data. Calculate AI Visibility Score based on crawler diversity and page coverage.
+**Purpose:** Track AI referral traffic on user websites using Google Analytics 4 data. Calculate AI Visibility Score based on referral diversity, page coverage, and engagement volume.
+
+⚠️ **CRITICAL:** Detects human clicks FROM AI chat interfaces (referral traffic), NOT bot crawlers (which GA4 filters out by default).
 
 **Configuration:**
 ```env
@@ -1188,26 +1190,42 @@ GET /api/ga4/domain-mappings
 → [{ id, propertyId, propertyName, domain, isActive, ... }]
 ```
 
-**AI Crawler Detection:**
-Identifies AI crawlers by pattern matching on `sessionSource` and `pageReferrer` dimensions:
+**AI Referral Detection:**
+Identifies AI referral traffic by matching referrer domains in `sessionSource` and `pageReferrer`:
 
 ```typescript
-const AI_CRAWLERS = {
-  'ChatGPT': ['ChatGPT-User', 'ChatGPT', 'GPTBot'],
-  'Claude': ['Claude-Web', 'ClaudeBot', 'anthropic-ai'],
-  'Gemini': ['Google-Extended', 'Gemini', 'Bard'],
-  'Perplexity': ['PerplexityBot', 'Perplexity'],
-  'SearchGPT': ['SearchGPT', 'OAI-SearchBot'],
-  // ... more crawlers
+const AI_REFERRER_PATTERNS = {
+  'ChatGPT': ['chat.openai.com', 'chatgpt.com', 'openai.com'],
+  'Claude': ['claude.ai'],
+  'Gemini': ['gemini.google.com', 'bard.google.com'],
+  'Perplexity': ['perplexity.ai', 'www.perplexity.ai'],
+  'You.com': ['you.com'],
+  'Bing Copilot': ['copilot.microsoft.com', 'bing.com/chat'],
+  'Meta AI': ['meta.ai'],
+  'DuckDuckGo AI': ['duck.ai', 'duckduckgo.com/?q=']
 }
 ```
 
+⚠️ **Why referrer domains not bot names:** GA4 automatically filters out bot traffic, so we detect human users clicking links from AI chat interfaces instead.
+
 **Metrics Calculation:**
 ```typescript
-// AI Visibility Score = (AI Diversity × 0.8) + Coverage Bonus (20%)
-// - AI Diversity: (crawlerCount / 10) × 50 (max 50 points)
-// - Coverage Bonus: 20 points if any AI crawlers detected, 0 otherwise
-// - Final Score: 0-100 (rounded)
+// AI Visibility Score (0-100) = Diversity (40%) + Coverage (40%) + Volume (20%)
+//
+// Diversity Score (0-40): (uniquePlatforms / 8) × 40
+//   - Tracks unique AI platforms detected (ChatGPT, Claude, Gemini, etc.)
+//   - Max 40 points at 8+ platforms
+//
+// Coverage Score (0-40): (aiCrawledPages / totalPages) × 40
+//   - Queries GA4 for total unique pages (all traffic sources)
+//   - Calculates % of pages visited by AI referrals
+//   - Max 40 points at 100% coverage
+//
+// Volume Score (0-20): log₁₀(sessions + 1) / log₁₀(1000) × 20
+//   - Logarithmic scale rewards engagement level
+//   - 10 sessions ≈ 10 pts, 100 sessions ≈ 16 pts, 1000+ sessions = 20 pts
+//
+// Trend: Same 3-component formula calculated per day for consistency
 
 interface GA4Metrics {
   aiVisibilityScore: number        // 0-100
@@ -1239,36 +1257,46 @@ interface PageCrawlerInfo {
 
 **API Query Structure:**
 ```typescript
-// Query GA4 Data API for Metrics
+// 1. Get total unique pages (for coverage calculation)
+const totalPagesQuery = {
+  property: `properties/${propertyId}`,
+  dimensions: [{ name: 'pagePath' }],
+  metrics: [{ name: 'screenPageViews' }],
+  limit: 50000
+}
+
+// 2. Query GA4 Data API for AI Referral Metrics
 const metricsRequest = {
   property: `properties/${propertyId}`,
   dateRanges: [{ startDate, endDate }],
   dimensions: [
     { name: 'date' },           // For last crawled tracking
-    { name: 'sessionSource' },
+    { name: 'sessionSource' },  // Contains referrer domain
     { name: 'pagePath' },
-    { name: 'pageReferrer' }
+    { name: 'pageReferrer' }    // Contains referrer URL
   ],
   metrics: [
-    { name: 'sessions' },
+    { name: 'sessions' },       // For volume calculation
     { name: 'screenPageViews' }
   ],
-  limit: 10000  // Per query limit
+  limit: 10000
 }
 
-// Query GA4 Data API for Trend (Daily Scores)
+// 3. Query GA4 for Trend (includes pagePath for daily coverage)
 const trendRequest = {
   property: `properties/${propertyId}`,
   dateRanges: [{ startDate, endDate }],
   dimensions: [
     { name: 'date' },
     { name: 'sessionSource' },
+    { name: 'pagePath' },        // Added for daily coverage
     { name: 'pageReferrer' }
   ],
   metrics: [
-    { name: 'sessions' }
+    { name: 'sessions' },        // Added for volume
+    { name: 'screenPageViews' }
   ],
-  limit: 50000  // Larger for trend data
+  limit: 50000
 }
 ```
 
@@ -1923,6 +1951,18 @@ const data = teamId
 - Added "Account Management UI" section
 - Updated database schema with new columns
 - Documented all affected files with line numbers
+
+### v1.2.3 (2025-11-21) - AI Visibility Score Accuracy Fix
+
+**Critical Fixes:**
+- Changed from bot crawler detection to AI referral traffic detection
+- Fixed score calculation: Now uses real coverage (queries total GA4 pages)
+- New 3-component formula: Diversity (40%) + Coverage (40%) + Volume (20%)
+- Added 8 AI platforms: ChatGPT, Claude, Gemini, Perplexity, You.com, Bing Copilot, Meta AI, DuckDuckGo AI
+- Fixed GA4 OAuth connection bug on localhost (`response.data.authUrl`)
+- Comprehensive debug logging for troubleshooting
+
+**Impact:** Scores now differ meaningfully between properties based on real AI referral traffic
 
 ### v1.2.0 (2025-11-19) - Phase 2 GA4 AI Analytics
 
