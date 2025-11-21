@@ -43,9 +43,9 @@ export default function GA4ConnectPage() {
     setIsLoadingAuthUrl(true)
     try {
       const response = await ga4Api.getAuthUrl()
-      if (response.authUrl) {
+      if (response.data?.authUrl) {
         // Redirect to Google OAuth
-        window.location.href = response.authUrl
+        window.location.href = response.data.authUrl
       }
     } catch (error: any) {
       console.error('Failed to get auth URL:', error)

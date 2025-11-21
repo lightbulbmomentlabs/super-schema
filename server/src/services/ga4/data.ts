@@ -1,32 +1,39 @@
 /**
  * Google Analytics 4 Data Service
- * Queries GA4 Data API to retrieve AI crawler metrics
+ * Queries GA4 Data API to retrieve AI referral traffic metrics
  *
  * This service handles:
- * - Fetching AI crawler traffic data from GA4 properties
- * - Calculating AI Visibility Score (0-100) based on diversity and coverage
+ * - Fetching AI referral traffic data from GA4 properties (human clicks from AI chat interfaces)
+ * - Calculating AI Visibility Score (0-100) based on diversity, coverage, and volume
  * - Caching metrics to minimize GA4 API calls
  * - Automatic token refresh
  *
- * AI Visibility Score Calculation:
- * - AI Diversity (50%): Number of unique AI crawlers detected (normalized to 0-50)
- * - Coverage (50%): Percentage of pages crawled by at least one AI (0-50)
- * - Total Score: AI Diversity + Coverage (0-100)
+ * AI Visibility Score Calculation (0-100):
+ * - Diversity (40%): Number of unique AI platforms detected (0-40 points, max at 8+ platforms)
+ * - Coverage (40%): Percentage of site pages visited by AI referrals (0-40 points)
+ * - Volume (20%): Engagement level using logarithmic scale (0-20 points, max at 1000+ sessions)
+ * - Total Score: Diversity + Coverage + Volume (rounded to 0-100)
+ *
+ * Note: Detects referral traffic from AI chat interfaces (ChatGPT, Claude, Gemini, Perplexity, etc.)
+ * NOT bot crawlers (which GA4 filters out by default)
  */
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { ga4OAuth } from './oauth.js'
 import { db } from '../database.js'
 
-// Known AI crawlers to detect in GA4 traffic
-const AI_CRAWLERS = {
-  'ChatGPT': ['ChatGPT-User', 'ChatGPT', 'GPTBot'],
-  'Claude': ['Claude-Web', 'ClaudeBot', 'anthropic-ai'],
-  'Gemini': ['Google-Extended', 'Gemini', 'Bard'],
-  'Perplexity': ['PerplexityBot', 'Perplexity'],
-  'You.com': ['YouBot', 'you.com'],
-  'Bing AI': ['bingbot', 'BingPreview'],
-  'SearchGPT': ['SearchGPT', 'OAI-SearchBot']
+// Known AI referrer domains to detect in GA4 traffic
+// These are human users clicking links FROM AI chat interfaces (not bot crawlers)
+// GA4 filters out bot traffic by default, so we detect referral traffic instead
+const AI_REFERRER_PATTERNS = {
+  'ChatGPT': ['chat.openai.com', 'chatgpt.com', 'openai.com'],
+  'Claude': ['claude.ai'],
+  'Gemini': ['gemini.google.com', 'bard.google.com'],
+  'Perplexity': ['perplexity.ai', 'www.perplexity.ai'],
+  'You.com': ['you.com'],
+  'Bing Copilot': ['copilot.microsoft.com', 'bing.com/chat'],
+  'Meta AI': ['meta.ai'],
+  'DuckDuckGo AI': ['duck.ai', 'duckduckgo.com/?q=']
 } as const
 
 export interface CrawlerStats {
@@ -124,6 +131,28 @@ export class GA4DataService {
         endDate
       })
 
+      // First, get total unique pages from ALL traffic (for coverage calculation)
+      console.log('📊 [GA4 Data] Querying for total unique pages (all traffic)...')
+      const [totalPagesResponse] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [
+          {
+            startDate,
+            endDate
+          }
+        ],
+        dimensions: [
+          { name: 'pagePath' }
+        ],
+        metrics: [
+          { name: 'screenPageViews' }
+        ],
+        limit: 50000 // Large limit to capture all pages
+      })
+
+      const totalUniquePages = totalPagesResponse.rows?.length || 0
+      console.log('✅ [GA4 Data] Total unique pages in GA4:', totalUniquePages)
+
       // Run report to get AI crawler traffic
       // Query for sessionSource, pagePath, pageReferrer, and date to identify AI crawlers and track last crawled
       const [response] = await analyticsClient.runReport({
@@ -151,11 +180,25 @@ export class GA4DataService {
         rowCount: response.rows?.length || 0
       })
 
+      // Log sample rows to debug what GA4 is actually returning
+      if (response.rows && response.rows.length > 0) {
+        console.log('🔍 [GA4 Data] Sample GA4 rows (first 5):',
+          response.rows.slice(0, 5).map(row => ({
+            date: row.dimensionValues?.[0]?.value,
+            sessionSource: row.dimensionValues?.[1]?.value,
+            pagePath: row.dimensionValues?.[2]?.value,
+            pageReferrer: row.dimensionValues?.[3]?.value,
+            sessions: row.metricValues?.[0]?.value,
+            pageViews: row.metricValues?.[1]?.value
+          }))
+        )
+      }
+
       // Process response to identify AI crawlers and page-level data
       const { crawlerStats, pageStats } = this.processGA4Response(response)
 
-      // Calculate metrics
-      const metrics = this.calculateMetrics(crawlerStats, pageStats, dateRangeStart, dateRangeEnd)
+      // Calculate metrics with real total page count
+      const metrics = this.calculateMetrics(crawlerStats, pageStats, totalUniquePages, dateRangeStart, dateRangeEnd)
 
       console.log('📈 [GA4 Data] Calculated metrics', {
         aiVisibilityScore: metrics.aiVisibilityScore,
@@ -209,6 +252,10 @@ export class GA4DataService {
       if (crawlerName) {
         // Initialize crawler stats if not exists
         if (!crawlerStatsMap.has(crawlerName)) {
+          console.log(`✅ [GA4 Data] Detected AI traffic: ${crawlerName}`, {
+            source: sessionSource,
+            referrer: pageReferrer
+          })
           crawlerStatsMap.set(crawlerName, {
             name: crawlerName,
             sessions: 0,
@@ -278,15 +325,25 @@ export class GA4DataService {
   }
 
   /**
-   * Identify if traffic is from an AI crawler based on source/referrer
+   * Identify if traffic is from an AI referrer based on source/referrer
+   * Focuses on detecting referral traffic from AI chat interfaces
    */
   private identifyAICrawler(source: string, referrer: string): string | null {
-    const combinedText = `${source} ${referrer}`.toLowerCase()
+    if (!source && !referrer) {
+      return null
+    }
 
-    for (const [crawlerName, patterns] of Object.entries(AI_CRAWLERS)) {
+    const lowerSource = source.toLowerCase()
+    const lowerReferrer = referrer.toLowerCase()
+
+    // Check against all AI referrer patterns
+    for (const [aiName, patterns] of Object.entries(AI_REFERRER_PATTERNS)) {
       for (const pattern of patterns) {
-        if (combinedText.includes(pattern.toLowerCase())) {
-          return crawlerName
+        const lowerPattern = pattern.toLowerCase()
+
+        // Check both source and referrer for domain matches
+        if (lowerSource.includes(lowerPattern) || lowerReferrer.includes(lowerPattern)) {
+          return aiName
         }
       }
     }
@@ -300,6 +357,7 @@ export class GA4DataService {
   private calculateMetrics(
     crawlerData: Map<string, CrawlerStats>,
     pageData: Map<string, PageCrawlerInfo>,
+    totalUniquePages: number,
     dateRangeStart: Date,
     dateRangeEnd: Date
   ): GA4MetricsResult {
@@ -316,23 +374,34 @@ export class GA4DataService {
     // Sort top crawlers by sessions
     topCrawlers.sort((a, b) => b.sessions - a.sessions)
 
-    // Calculate total unique pages visited by AI
-    const aiCrawledPages = topCrawlers.reduce((sum, crawler) => sum + crawler.uniquePages, 0)
+    // Calculate total unique pages visited by AI (using pageData which tracks unique pages)
+    const aiCrawledPages = pageData.size
 
-    // AI Diversity Score: Number of unique AI crawlers (normalized to 0-50)
-    // Assume 10+ unique crawlers = max score of 50
-    const maxCrawlers = 10
-    const aiDiversityScore = Math.min(50, (crawlerList.length / maxCrawlers) * 50)
+    // Calculate total sessions and pageviews for volume score
+    const totalAISessions = topCrawlers.reduce((sum, crawler) => sum + crawler.sessions, 0)
+    const totalAIPageViews = topCrawlers.reduce((sum, crawler) => sum + crawler.pageViews, 0)
 
-    // Coverage Percentage: For now, assume we're tracking coverage relative to AI-visited pages
-    // In future versions, we could fetch total site pages from sitemap
-    // For MVP, coverage is based on how many pages at least one AI visited
-    const totalPages = aiCrawledPages // Simplified for MVP
-    const coveragePercentage = totalPages > 0 ? 100 : 0 // If any AI visited, 100% of what we track
+    // AI Diversity Score: Number of unique AI crawlers (normalized to 40 points)
+    // Assume 8+ unique crawlers = max score of 40
+    const maxCrawlers = 8
+    const diversityScore = Math.min(40, (crawlerList.length / maxCrawlers) * 40)
 
-    // AI Visibility Score: Diversity (50%) + Coverage (50%)
-    const coverageScore = Math.min(50, (coveragePercentage / 100) * 50)
-    const aiVisibilityScore = Math.round(aiDiversityScore + coverageScore)
+    // Coverage Score: Percentage of pages crawled by AI (normalized to 40 points)
+    // Use real total pages from GA4, not just AI-crawled pages
+    const coveragePercentage = totalUniquePages > 0
+      ? (aiCrawledPages / totalUniquePages) * 100
+      : 0
+    const coverageScore = Math.min(40, (coveragePercentage / 100) * 40)
+
+    // Volume Score: AI engagement level (normalized to 20 points)
+    // Use logarithmic scale for sessions: log10(sessions + 1) / log10(1000) * 20
+    // This gives: 1 session = ~0 points, 10 sessions = ~10 points, 100 sessions = ~16 points, 1000+ sessions = 20 points
+    const volumeScore = totalAISessions > 0
+      ? Math.min(20, (Math.log10(totalAISessions + 1) / Math.log10(1000)) * 20)
+      : 0
+
+    // AI Visibility Score: Diversity (40%) + Coverage (40%) + Volume (20%) = 0-100
+    const aiVisibilityScore = Math.round(diversityScore + coverageScore + volumeScore)
 
     // Build top pages list sorted by crawler diversity (most crawlers first)
     const topPages: PageCrawlerInfo[] = Array.from(pageData.values())
@@ -347,16 +416,21 @@ export class GA4DataService {
 
     console.log('📊 [GA4 Data] Calculated metrics:', {
       aiVisibilityScore,
-      aiDiversityScore: crawlerList.length,
-      totalPages: pageData.size,
-      topPagesCount: topPages.length
+      diversityScore,
+      coverageScore,
+      volumeScore,
+      crawlerCount: crawlerList.length,
+      aiCrawledPages,
+      totalPages: totalUniquePages,
+      coveragePercentage: coveragePercentage.toFixed(2) + '%',
+      totalAISessions
     })
 
     return {
       aiVisibilityScore,
       aiDiversityScore: crawlerList.length,
       coveragePercentage,
-      totalPages,
+      totalPages: totalUniquePages,
       aiCrawledPages,
       crawlerList,
       topCrawlers: topCrawlers.slice(0, 10), // Top 10
@@ -550,6 +624,27 @@ export class GA4DataService {
 
       console.log('🔍 [GA4 Data] Querying GA4 API for daily AI crawler traffic')
 
+      // First, get total unique pages from ALL traffic
+      const [totalPagesResponse] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [
+          {
+            startDate,
+            endDate
+          }
+        ],
+        dimensions: [
+          { name: 'pagePath' }
+        ],
+        metrics: [
+          { name: 'screenPageViews' }
+        ],
+        limit: 50000
+      })
+
+      const totalUniquePages = totalPagesResponse.rows?.length || 0
+      console.log('✅ [GA4 Data] Total unique pages for trend:', totalUniquePages)
+
       // Run report with date dimension to get daily data
       const [response] = await analyticsClient.runReport({
         property: `properties/${propertyId}`,
@@ -562,10 +657,12 @@ export class GA4DataService {
         dimensions: [
           { name: 'date' }, // Daily granularity
           { name: 'sessionSource' },
+          { name: 'pagePath' },
           { name: 'pageReferrer' }
         ],
         metrics: [
-          { name: 'sessions' }
+          { name: 'sessions' },
+          { name: 'screenPageViews' }
         ],
         limit: 50000 // Larger limit for daily data
       })
@@ -575,7 +672,7 @@ export class GA4DataService {
       })
 
       // Group data by date and calculate daily scores
-      const dailyData = this.processDailyTrendData(response)
+      const dailyData = this.processDailyTrendData(response, totalUniquePages)
 
       console.log('📊 [GA4 Data] Processed trend data', {
         days: dailyData.length
@@ -590,19 +687,32 @@ export class GA4DataService {
 
   /**
    * Process daily trend data from GA4 response
+   * Uses same 3-component formula as main metrics: Diversity (40%) + Coverage (40%) + Volume (20%)
    */
-  private processDailyTrendData(response: any): Array<{ date: string; score: number; crawlerCount: number }> {
+  private processDailyTrendData(
+    response: any,
+    totalUniquePages: number
+  ): Array<{ date: string; score: number; crawlerCount: number }> {
     if (!response.rows || response.rows.length === 0) {
       return []
     }
 
     // Group data by date
-    const dailyStats = new Map<string, Set<string>>() // date -> set of unique crawlers
+    interface DailyStats {
+      crawlers: Set<string>
+      pages: Set<string>
+      sessions: number
+      pageViews: number
+    }
+    const dailyStats = new Map<string, DailyStats>()
 
     for (const row of response.rows) {
       const dateStr = row.dimensionValues?.[0]?.value || ''
       const sessionSource = row.dimensionValues?.[1]?.value || ''
-      const pageReferrer = row.dimensionValues?.[2]?.value || ''
+      const pagePath = row.dimensionValues?.[2]?.value || ''
+      const pageReferrer = row.dimensionValues?.[3]?.value || ''
+      const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10)
+      const pageViews = parseInt(row.metricValues?.[1]?.value || '0', 10)
 
       // Convert GA4 date format (YYYYMMDD) to YYYY-MM-DD
       const formattedDate = dateStr.length === 8
@@ -614,28 +724,47 @@ export class GA4DataService {
 
       if (crawlerName) {
         if (!dailyStats.has(formattedDate)) {
-          dailyStats.set(formattedDate, new Set())
+          dailyStats.set(formattedDate, {
+            crawlers: new Set(),
+            pages: new Set(),
+            sessions: 0,
+            pageViews: 0
+          })
         }
-        dailyStats.get(formattedDate)!.add(crawlerName)
+        const stats = dailyStats.get(formattedDate)!
+        stats.crawlers.add(crawlerName)
+        if (pagePath) {
+          stats.pages.add(pagePath)
+        }
+        stats.sessions += sessions
+        stats.pageViews += pageViews
       }
     }
 
-    // Calculate AI Visibility Score for each day
+    // Calculate AI Visibility Score for each day using same formula as main metrics
     const trendData: Array<{ date: string; score: number; crawlerCount: number }> = []
+    const maxCrawlers = 8
 
-    for (const [date, crawlers] of dailyStats.entries()) {
-      const crawlerCount = crawlers.size
+    for (const [date, stats] of dailyStats.entries()) {
+      const crawlerCount = stats.crawlers.size
+      const aiCrawledPages = stats.pages.size
 
-      // AI Diversity Score: Number of unique AI crawlers (normalized to 0-50)
-      // Assume 10+ unique crawlers = max score of 50
-      const maxCrawlers = 10
-      const aiDiversityScore = Math.min(50, (crawlerCount / maxCrawlers) * 50)
+      // Diversity Score (40 points max)
+      const diversityScore = Math.min(40, (crawlerCount / maxCrawlers) * 40)
 
-      // For trend view, we'll use a simplified score based primarily on diversity
-      // Coverage component would require tracking all pages per day which is more complex
-      // So we'll use: Diversity (80%) + a baseline coverage bonus (20%) if any crawlers detected
-      const coverageBonus = crawlerCount > 0 ? 20 : 0
-      const score = Math.round((aiDiversityScore * 0.8) + coverageBonus)
+      // Coverage Score (40 points max)
+      const coveragePercentage = totalUniquePages > 0
+        ? (aiCrawledPages / totalUniquePages) * 100
+        : 0
+      const coverageScore = Math.min(40, (coveragePercentage / 100) * 40)
+
+      // Volume Score (20 points max) - logarithmic scale
+      const volumeScore = stats.sessions > 0
+        ? Math.min(20, (Math.log10(stats.sessions + 1) / Math.log10(1000)) * 20)
+        : 0
+
+      // Total Score (0-100)
+      const score = Math.round(diversityScore + coverageScore + volumeScore)
 
       trendData.push({
         date,
