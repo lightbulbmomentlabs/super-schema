@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-19
-**Version:** 1.2.0
+**Last Updated:** 2025-11-20
+**Version:** 1.2.2
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -1042,6 +1042,56 @@ const response = await anthropic.messages.create({
 - Claude Sonnet: Mid-tier pricing, high quality
 - Content truncation for large pages
 
+**Error Handling & Resilience:**
+
+**529 Overload Error Handling (Anthropic Only):**
+- **Issue**: Anthropic's Claude API returns HTTP 529 when experiencing high demand
+- **Retry Strategy**: 2 retries with exponential backoff (2s, 5s = ~7s total)
+  - Reduced from 5 retries (67s) to fail faster during systemic outages
+  - Location: `server/src/services/anthropic.ts` lines 37-38
+- **Circuit Breaker Pattern**:
+  - Tracks consecutive 529 errors globally across all requests
+  - Trips after 3 consecutive 529 errors
+  - Fails fast for 5 minutes without hitting API
+  - Auto-resets after cooldown period
+  - Location: `server/src/services/anthropic.ts` lines 40-45, 78-112
+- **Credit Refund**: Automatically refunded when generation fails (see Section 3.4)
+- **User Message**: "🔋 Our AI partner (Claude) is experiencing high demand. Your credit has been refunded. Please try again in a few minutes."
+
+**Circuit Breaker Implementation:**
+```typescript
+// Configuration
+private static consecutive529Errors = 0
+private static lastCircuitBreakerCheck = Date.now()
+private readonly CIRCUIT_BREAKER_THRESHOLD = 3
+private readonly CIRCUIT_BREAKER_RESET_TIME = 300000 // 5 minutes
+
+// Check before each request
+this.checkCircuitBreaker()
+
+// Record 529 errors
+if (is529Error) {
+  this.record529Error()
+}
+
+// Reset on success
+this.resetCircuitBreaker()
+```
+
+**Why This Approach:**
+- Anthropic's 529 errors indicate systemic API overload
+- 67 seconds of retries won't help if service is truly overloaded
+- Circuit breaker prevents cascading failures during outages
+- Faster failure = better UX (7s vs 67s wait time)
+- Credit refunds ensure users aren't charged for failures
+
+**Troubleshooting 529 Errors:**
+- Check Anthropic status page: https://status.anthropic.com/
+- Circuit breaker trips after 3 consecutive failures
+- Wait 5 minutes for automatic reset
+- Users can retry immediately after first failure
+- All credits are automatically refunded
+
 ### 6.5 Clerk Integration
 
 **Configuration:**
@@ -1086,7 +1136,9 @@ GA4_AI_ANALYTICS_ENABLED=true
 
 **OAuth Scopes Required:**
 - `https://www.googleapis.com/auth/analytics.readonly` - Read GA4 data
-- `https://www.googleapis.com/auth/userinfo.email` - User identification
+- `https://www.googleapis.com/auth/userinfo.email` - **CRITICAL:** User identification for multi-account support
+
+⚠️ **IMPORTANT:** Both scopes are required. Missing `userinfo.email` will cause OAuth callback failures.
 
 **OAuth Flow:**
 ```typescript
@@ -1105,11 +1157,20 @@ POST /api/ga4/callback
 // 4. Tokens auto-refresh when expiring
 ```
 
+**Multi-Account Support (Migration 027):**
+- Users can connect multiple Google Analytics accounts
+- Each connection identified by `google_account_email`
+- Only ONE connection can be active at a time (`is_active = true`)
+- Database constraint enforces single active connection per user
+- Users can disconnect and switch between accounts via UI
+- See: `/database/migrations/027_ga4_multi_account_support.sql`
+
 **Token Management:**
 - Access tokens expire in ~1 hour
 - Refresh tokens used to get new access tokens
 - Tokens auto-refreshed on API calls
 - Encrypted at rest with AES-256-CBC (reuses encryption service)
+- **CRITICAL:** Token updates require `connectionId` (UUID), not `userId` (Clerk ID string)
 - Connection per user (not per domain)
 
 **Domain Mapping:**
@@ -1267,7 +1328,15 @@ const { mappings, createMapping, deleteMapping } = useGA4DomainMappings(connecte
 - `TopCrawlersTable` - Table of top AI crawlers with sessions and page views
 - `PageCrawlerMetricsTable` - Page-level metrics with last crawled date and crawler diversity
 - `GA4ConnectionStatus` - Connection status indicator (supports compact mode for inline usage)
+- `GA4AccountSelector` - Multi-account management component with account switching
 - `DomainMappingSelector` - Dropdown for domain selection with delete functionality
+
+**Account Management UI:**
+- Disconnect button shows in GA4ConnectPage header when connected
+- Displays connected account email: `kevin@example.com`
+- Confirmation dialog before disconnect: "Are you sure you want to disconnect this Google Analytics account?"
+- After disconnect, user can connect a different Google account
+- Location: `client/src/pages/GA4ConnectPage.tsx:111-128`
 
 **Automated Refresh:**
 ```typescript
@@ -1292,9 +1361,13 @@ cron.schedule('0 2 * * *', async () => {
 - refresh_token TEXT NOT NULL (encrypted)
 - token_expires_at TIMESTAMPTZ
 - scopes TEXT[]
-- is_active BOOLEAN DEFAULT true
+- google_account_email TEXT  -- Added in Migration 027 for multi-account support
+- is_active BOOLEAN DEFAULT true  -- Only one active connection per user
 - last_validated_at TIMESTAMPTZ
 - connected_at TIMESTAMPTZ
+
+UNIQUE INDEX one_active_connection_per_user ON ga4_connections(user_id)
+  WHERE is_active = true;
 ```
 
 **ga4_domain_mappings:**
@@ -1321,14 +1394,22 @@ cron.schedule('0 2 * * *', async () => {
 ```
 
 **Critical Files:**
-- `/server/src/services/ga4/oauth.ts` - OAuth lifecycle + token management
-- `/server/src/services/ga4/data.ts` - GA4 Data API queries + metrics calculation
+- `/server/src/services/ga4/oauth.ts` - OAuth lifecycle + token management (includes connectionId fix)
+- `/server/src/services/ga4/data.ts` - GA4 Data API queries + metrics calculation (includes token refresh fix)
 - `/server/src/services/ga4/metricsRefreshService.ts` - Automated daily refresh
 - `/server/src/controllers/ga4Controller.ts` - API endpoints
 - `/server/src/routes/ga4.ts` - Route definitions
-- `/database/migrations/026_ga4_ai_crawler_analytics.sql` - Schema
+- `/database/migrations/026_ga4_ai_crawler_analytics.sql` - Initial GA4 schema
+- `/database/migrations/027_ga4_multi_account_support.sql` - Multi-account support (google_account_email, is_active)
+- `/database/cleanup_duplicate_ga4_connections.sql` - Database cleanup utility
 - `/client/src/pages/AIAnalyticsPage.tsx` - Main dashboard
-- `/client/src/hooks/useGA4*.ts` - React Query hooks
+- `/client/src/pages/GA4ConnectPage.tsx` - OAuth connection + property selection (includes disconnect UI)
+- `/client/src/pages/GA4CallbackPage.tsx` - OAuth callback handler (includes cache invalidation)
+- `/client/src/components/GA4AccountSelector.tsx` - Multi-account selector component
+- `/client/src/hooks/useGA4Connection.ts` - Connection management hook (fixed double-nesting)
+- `/client/src/hooks/useGA4Metrics.ts` - Metrics fetching hook (fixed double-nesting)
+- `/client/src/hooks/useGA4Trend.ts` - Trend data hook (fixed double-nesting)
+- `/client/src/hooks/useGA4DomainMappings.ts` - Domain mapping hook (fixed double-nesting)
 
 **API Endpoints:**
 ```typescript
@@ -1347,6 +1428,74 @@ POST /api/ga4/metrics/refresh       - Force refresh from API
 **Error Handling:**
 - Token expiration: Automatic refresh with refresh_token
 - Invalid credentials: Clear user-friendly messages
+- Connection ID validation: Proper UUID handling for token updates
+- Query cache invalidation: Force refetch after OAuth state changes
+
+**Critical Bugs Fixed (2025-11-20):**
+
+1. **Axios Response Double-Nesting Bug**
+   - **Issue:** Multiple files accessed `response.data.property` when should access `response.property`
+   - **Root Cause:** `ga4Api` service functions already return `response.data`, consuming code must NOT add `.data` accessor
+   - **Affected Files:**
+     - `client/src/hooks/useGA4Connection.ts:59-61` - connectionData accessors
+     - `client/src/pages/GA4ConnectPage.tsx:33,46` - properties and authUrl accessors
+     - `client/src/hooks/useGA4DomainMappings.ts:21` - mappings accessor
+     - `client/src/hooks/useGA4Trend.ts:24` - trend accessor
+     - `client/src/hooks/useGA4Metrics.ts:29,47` - metrics accessors (2 locations)
+   - **Fix Pattern:** `response.data?.property` → `response.property`
+   - **Symptoms:** "No GA4 properties found" despite API returning data, properties not loading
+   - **Commits:** 1e67eb8, 81c8d11
+
+2. **Connection ID vs User ID Type Mismatch**
+   - **Issue:** Token refresh called `updateStoredTokens(userId)` but database expected UUID `connectionId`
+   - **Error:** `invalid input syntax for type uuid: "user_33hfeOP0UYLcyLEkfcCdITEYY6W"`
+   - **Root Cause:** Clerk user IDs are strings like "user_xxx", database connections have UUID primary keys
+   - **Affected Files:**
+     - `server/src/services/ga4/oauth.ts:352-405` - getStoredTokens() and updateStoredTokens()
+     - `server/src/services/ga4/data.ts:387-392,671-676` - Two callsites passing userId
+   - **Fix:**
+     - Modified `getStoredTokens()` to return `connectionId` in addition to tokens
+     - Changed `updateStoredTokens()` signature to accept `connectionId` instead of `userId`
+     - Updated both callsites in data.ts to pass `tokens.connectionId`
+   - **Symptoms:** 500 error when refreshing tokens, "invalid input syntax for type uuid"
+   - **Commit:** 47450dd
+
+3. **Missing OAuth Scope**
+   - **Issue:** Missing `userinfo.email` scope prevented fetching Google account email
+   - **Error:** "❌ [GA4 OAuth] Failed to fetch userinfo: Unauthorized"
+   - **Root Cause:** Only had `analytics.readonly` scope, not `userinfo.email`
+   - **Affected File:** `server/src/services/ga4/oauth.ts:39-42` - REQUIRED_SCOPES array
+   - **Fix:** Added `'https://www.googleapis.com/auth/userinfo.email'` to scopes
+   - **Symptoms:** OAuth succeeded but google_account_email stayed null, user redirected to auth screen
+   - **Commit:** 377d080
+
+4. **Stale React Query Cache**
+   - **Issue:** After OAuth callback, connection status showed old cached data
+   - **Affected File:** `client/src/pages/GA4CallbackPage.tsx:49-51`
+   - **Fix:** Added query invalidation after successful OAuth:
+     ```typescript
+     queryClient.invalidateQueries({ queryKey: ['ga4', 'connection'] })
+     queryClient.invalidateQueries({ queryKey: ['ga4', 'properties'] })
+     ```
+   - **Symptoms:** User redirected to auth screen after successful connection
+   - **Commit:** 377d080
+
+5. **Database Schema Mismatch**
+   - **Issue:** Code referenced `google_account_email` column before Migration 027 deployed
+   - **Error:** 500 Internal Server Error during OAuth callback
+   - **Root Cause:** Production database still on Migration 026, missing new columns
+   - **Fix:** Deploy Migration 027 before deploying code that depends on it
+   - **Lesson:** Always deploy database migrations BEFORE code that depends on them
+   - **Commit:** 90a9e06
+
+**Troubleshooting Guide:**
+
+- **"No GA4 properties found":** Check browser Network tab for actual API response. Likely axios double-nesting bug.
+- **"invalid input syntax for type uuid":** Passing userId instead of connectionId to database function.
+- **"Failed to fetch userinfo: Unauthorized":** Missing `userinfo.email` scope in OAuth configuration.
+- **Redirected to auth after successful OAuth:** React Query cache not invalidated, add `queryClient.invalidateQueries()`.
+- **500 error on OAuth callback:** Check if Migration 027 deployed to production database.
+- **Duplicate connections in database:** Use cleanup script at `/database/cleanup_duplicate_ga4_connections.sql`
 - API rate limits: Respect GA4 quotas
 - Missing permissions: Prompt for re-authorization
 - Connection validation: Health check before operations
@@ -1691,6 +1840,97 @@ const data = teamId
 - No timestamp validation
 - Potential replay vulnerability
 - Fix: Timestamp checks, nonce tracking
+
+---
+
+## 9.5 Version History
+
+### v1.2.2 (2025-11-20) - Anthropic 529 Error Handling & Circuit Breaker
+
+**Issue**: Customers experiencing 67-second waits followed by 529 overload errors when Anthropic's Claude API is under high demand.
+
+**Changes:**
+- Reduced 529 retry attempts from 5 → 2 (67s → 7s total wait time)
+- Implemented circuit breaker pattern to prevent cascading failures
+- Circuit breaker trips after 3 consecutive 529 errors
+- Auto-resets after 5-minute cooldown period
+- Updated error message to mention credit refund: "🔋 Our AI partner (Claude) is experiencing high demand. Your credit has been refunded. Please try again in a few minutes."
+- Updated log messages to reflect new 7-second retry time
+
+**Files Changed:**
+- `server/src/services/anthropic.ts` - All error handling changes
+  - Lines 37-38: Reduced MAX_RETRIES_FOR_529 and RETRY_DELAYS_FOR_529
+  - Lines 40-45: Added circuit breaker configuration
+  - Lines 78-112: Added checkCircuitBreaker(), record529Error(), resetCircuitBreaker() methods
+  - Line 168: Updated error message to mention credit refund
+  - Line 218: Added circuit breaker check before API calls
+  - Line 307: Reset circuit breaker on successful requests
+  - Line 322: Record 529 errors for tracking
+  - Line 338: Updated log message to show ~7s instead of ~67s
+
+**User Impact:**
+- Before: 67-second wait → error → confusion about credits
+- After: 7-second wait → clear error message → knows credit was refunded
+
+**Documentation:**
+- Added Section 6.4 "Error Handling & Resilience" with full circuit breaker documentation
+- Added troubleshooting guide for 529 errors
+
+### v1.2.1 (2025-11-20) - GA4 Multi-Account Support & Critical Bug Fixes
+
+**Major Changes:**
+- Added multi-account support for GA4 connections (Migration 027)
+- Fixed 5 critical bugs in GA4 integration (axios double-nesting, UUID type mismatch, OAuth scopes)
+- Added disconnect/switch account functionality with confirmation dialog
+- Implemented proper React Query cache invalidation after OAuth
+- Created database cleanup utility for duplicate connections
+
+**Database Migrations:**
+- Migration 027: Added `google_account_email` and `is_active` columns to ga4_connections
+- Added unique constraint for one active connection per user
+
+**Bug Fixes:**
+- Fixed axios response.data double-nesting bug in 6 locations across 5 files
+- Fixed Connection ID vs User ID type mismatch in token refresh (UUID vs Clerk ID string)
+- Added missing `userinfo.email` OAuth scope for account identification
+- Fixed stale React Query cache after OAuth callback
+- Resolved database schema mismatch (Migration 027 deployment)
+
+**Files Changed:**
+- server/src/services/ga4/oauth.ts (OAuth scopes, connectionId handling)
+- server/src/services/ga4/data.ts (Token refresh with connectionId)
+- client/src/hooks/useGA4Connection.ts (Fixed double-nesting)
+- client/src/hooks/useGA4Metrics.ts (Fixed double-nesting)
+- client/src/hooks/useGA4Trend.ts (Fixed double-nesting)
+- client/src/hooks/useGA4DomainMappings.ts (Fixed double-nesting)
+- client/src/pages/GA4ConnectPage.tsx (Fixed double-nesting, added disconnect UI)
+- client/src/pages/GA4CallbackPage.tsx (Cache invalidation)
+- client/src/components/GA4AccountSelector.tsx (New component)
+- database/migrations/027_ga4_multi_account_support.sql (New migration)
+- database/cleanup_duplicate_ga4_connections.sql (Cleanup utility)
+
+**Git Commits:**
+- 90a9e06 - Deploy Migration 027 and multi-account code
+- 377d080 - Add userinfo.email scope and cache invalidation
+- 1e67eb8 - Fix connection status double-nesting bug
+- 81c8d11 - Fix properties and hooks double-nesting bugs
+- 47450dd - Fix UUID type mismatch in token refresh
+- ecdbe72 - Add disconnect button UI
+
+**Documentation:**
+- Updated Section 6.6 with multi-account support details
+- Added "Critical Bugs Fixed" section with troubleshooting guide
+- Added "Account Management UI" section
+- Updated database schema with new columns
+- Documented all affected files with line numbers
+
+### v1.2.0 (2025-11-19) - Phase 2 GA4 AI Analytics
+
+**Features:**
+- AI Visibility Trend chart with daily score tracking
+- Page-level metrics with crawler diversity and last crawled date
+- Compact dashboard layout improvements
+- Enhanced analytics caching strategy
 
 ---
 

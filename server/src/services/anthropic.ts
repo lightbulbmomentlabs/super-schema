@@ -32,9 +32,17 @@ class AnthropicService {
   private readonly INITIAL_RETRY_DELAY = 1000 // 1 second
 
   // Extended retry configuration for 529 overload errors
-  // These errors need more time for Anthropic's service to recover
-  private readonly MAX_RETRIES_FOR_529 = 5
-  private readonly RETRY_DELAYS_FOR_529 = [2000, 5000, 10000, 20000, 30000] // 2s, 5s, 10s, 20s, 30s = 67s total
+  // Reduced from 5 retries (67s) to 2 retries (7s) to fail faster when Anthropic is overloaded
+  // Systemic API overload won't resolve in 67 seconds, so better to fail fast and let user retry
+  private readonly MAX_RETRIES_FOR_529 = 2
+  private readonly RETRY_DELAYS_FOR_529 = [2000, 5000] // 2s, 5s = 7s total
+
+  // Circuit breaker configuration for 529 overload errors
+  // Prevents cascading failures during Anthropic outages
+  private static consecutive529Errors = 0
+  private static lastCircuitBreakerCheck = Date.now()
+  private readonly CIRCUIT_BREAKER_THRESHOLD = 3 // Trip after 3 consecutive 529s
+  private readonly CIRCUIT_BREAKER_RESET_TIME = 300000 // 5 minutes
 
   private initializeClient(): Anthropic | null {
     if (this.clientInitialized) {
@@ -61,6 +69,46 @@ class AnthropicService {
 
     this.clientInitialized = true
     return this.client
+  }
+
+  /**
+   * Circuit breaker check for 529 overload errors
+   * Fails fast during Anthropic outages to prevent cascading failures
+   */
+  private checkCircuitBreaker(): void {
+    const now = Date.now()
+
+    // Reset counter every 5 minutes
+    if (now - AnthropicService.lastCircuitBreakerCheck > this.CIRCUIT_BREAKER_RESET_TIME) {
+      console.log('🔄 [Circuit Breaker] Resetting after cooldown period')
+      AnthropicService.consecutive529Errors = 0
+      AnthropicService.lastCircuitBreakerCheck = now
+    }
+
+    // If circuit is tripped, fail fast
+    if (AnthropicService.consecutive529Errors >= this.CIRCUIT_BREAKER_THRESHOLD) {
+      console.error(`⚠️ [Circuit Breaker] TRIPPED - ${AnthropicService.consecutive529Errors} consecutive 529 errors detected`)
+      throw new Error('🔋 Our AI partner (Claude) is experiencing high demand. Your credit has been refunded. Please try again in a few minutes.')
+    }
+  }
+
+  /**
+   * Record 529 error for circuit breaker tracking
+   */
+  private record529Error(): void {
+    AnthropicService.consecutive529Errors++
+    console.warn(`⚠️ [Circuit Breaker] 529 error count: ${AnthropicService.consecutive529Errors}/${this.CIRCUIT_BREAKER_THRESHOLD}`)
+  }
+
+  /**
+   * Reset circuit breaker on successful request
+   */
+  private resetCircuitBreaker(): void {
+    if (AnthropicService.consecutive529Errors > 0) {
+      console.log('✅ [Circuit Breaker] Reset - successful request after errors')
+      AnthropicService.consecutive529Errors = 0
+      AnthropicService.lastCircuitBreakerCheck = Date.now()
+    }
   }
 
   /**
@@ -117,7 +165,7 @@ class AnthropicService {
     }
 
     if (status === 529 || errorType === 'overloaded_error') {
-      return '🔋 Recharging our superpowers! Our AI is experiencing high demand. Please try again in a moment.'
+      return '🔋 Our AI partner (Claude) is experiencing high demand. Your credit has been refunded. Please try again in a few minutes.'
     }
 
     // Default message with actual error
@@ -166,6 +214,9 @@ class AnthropicService {
     analysis: ContentAnalysis,
     options: SchemaGenerationOptions = {}
   ): Promise<JsonLdSchema[]> {
+    // Check circuit breaker BEFORE initializing client or making request
+    this.checkCircuitBreaker()
+
     const client = this.initializeClient()
 
     if (!client) {
@@ -251,6 +302,10 @@ class AnthropicService {
         }
 
         console.log(`✅ Enhanced ${enhancedSchemas.length} Claude schemas successfully`)
+
+        // Reset circuit breaker on successful request
+        this.resetCircuitBreaker()
+
         return enhancedSchemas
 
       } catch (error: any) {
@@ -261,6 +316,12 @@ class AnthropicService {
 
         // Log error details with enhanced context
         const is529 = this.is529Error(error)
+
+        // Record 529 error for circuit breaker tracking
+        if (is529) {
+          this.record529Error()
+        }
+
         console.error(`❌ Claude API error (attempt ${attempt}/${maxRetries})${is529 ? ' [529 OVERLOAD]' : ''}:`, {
           status: error.status,
           type: error.error?.type,
@@ -274,7 +335,7 @@ class AnthropicService {
         if (!isRetryable || attempt === maxRetries) {
           // Non-retryable error or max retries reached
           if (is529) {
-            console.error(`❌ Claude API 529 overload persists after ${maxRetries} attempts over ~67 seconds`)
+            console.error(`❌ Claude API 529 overload persists after ${maxRetries} attempts over ~7 seconds`)
           } else {
             console.error(`❌ Claude API error (not retrying):`, error)
           }
