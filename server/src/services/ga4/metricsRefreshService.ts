@@ -1,6 +1,6 @@
 /**
  * GA4 Metrics Refresh Service
- * Automatically refreshes cached metrics for all active GA4 connections
+ * Automatically refreshes cached metrics and records daily snapshots for all active GA4 connections
  */
 
 import { db } from '../database.js'
@@ -9,16 +9,17 @@ import { ga4OAuth } from './oauth.js'
 
 export const ga4MetricsRefreshService = {
   /**
-   * Refresh metrics for all active GA4 connections
+   * Refresh metrics and record daily snapshots for all active GA4 connections
    * Run this daily via cron job to keep metrics up-to-date
    */
   async refreshAllMetrics(): Promise<{
     totalConnections: number
     refreshedCount: number
+    snapshotsRecorded: number
     failedCount: number
     errors: Array<{ userId: string; error: string }>
   }> {
-    console.log('[GA4 Metrics Refresh] Starting automated refresh...')
+    console.log('[GA4 Metrics Refresh] Starting automated refresh and snapshot recording...')
 
     // Get all active GA4 connections
     const query = `
@@ -39,6 +40,7 @@ export const ga4MetricsRefreshService = {
     const stats = {
       totalConnections: connections.length,
       refreshedCount: 0,
+      snapshotsRecorded: 0,
       failedCount: 0,
       errors: [] as Array<{ userId: string; error: string }>
     }
@@ -55,39 +57,39 @@ export const ga4MetricsRefreshService = {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - 30)
 
-    const startDateStr = startDate.toISOString().split('T')[0]
-    const endDateStr = endDate.toISOString().split('T')[0]
-
     // Refresh metrics for each connection
     for (const connection of connections) {
       try {
-        console.log(`[GA4 Metrics Refresh] Refreshing metrics for user ${connection.user_id}...`)
+        console.log(`[GA4 Metrics Refresh] Processing user ${connection.user_id}...`)
 
-        // Get stored OAuth tokens
-        const tokens = await ga4OAuth.getStoredTokens(connection.user_id)
-        if (!tokens) {
-          throw new Error('No OAuth tokens found')
-        }
-
-        // Fetch fresh metrics from GA4 API
-        const metrics = await ga4Data.getAICrawlerMetrics(
-          connection.property_id,
-          startDateStr,
-          endDateStr,
-          tokens
-        )
-
-        // Store in cache
-        await db.storeGA4Metrics(
+        // Fetch and cache latest metrics (last 30 days)
+        await ga4Data.getAICrawlerMetrics(
           connection.user_id,
           connection.property_id,
-          metrics,
-          startDateStr,
-          endDateStr
+          startDate,
+          endDate,
+          true // force refresh
         )
 
         stats.refreshedCount++
-        console.log(`[GA4 Metrics Refresh] ✅ Successfully refreshed for user ${connection.user_id}`)
+        console.log(`[GA4 Metrics Refresh] ✅ Metrics refreshed for user ${connection.user_id}`)
+
+        // Record daily snapshots for the last 30 days
+        // This will upsert (update or insert) snapshots for each day
+        try {
+          await ga4Data.recordDailyActivitySnapshots(
+            connection.user_id,
+            connection.property_id,
+            startDate,
+            endDate
+          )
+          stats.snapshotsRecorded++
+          console.log(`[GA4 Metrics Refresh] ✅ Snapshots recorded for user ${connection.user_id}`)
+        } catch (snapshotError: any) {
+          console.warn(`[GA4 Metrics Refresh] ⚠️  Snapshot recording failed for user ${connection.user_id}:`, snapshotError?.message)
+          // Don't fail the entire refresh if just snapshots fail
+        }
+
       } catch (error: any) {
         stats.failedCount++
         const errorMessage = error?.message || 'Unknown error'
@@ -99,7 +101,7 @@ export const ga4MetricsRefreshService = {
       }
     }
 
-    console.log(`[GA4 Metrics Refresh] Completed: ${stats.refreshedCount} successful, ${stats.failedCount} failed`)
+    console.log(`[GA4 Metrics Refresh] Completed: ${stats.refreshedCount} metrics refreshed, ${stats.snapshotsRecorded} snapshots recorded, ${stats.failedCount} failed`)
     return stats
   }
 }

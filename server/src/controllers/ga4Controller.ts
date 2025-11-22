@@ -343,6 +343,15 @@ export const createDomainMapping = asyncHandler(
       domain
     })
 
+    // Initialize default exclusion patterns for this mapping
+    try {
+      await db.initializeDefaultExclusionPatterns(mappingId, userId)
+      console.log('✅ [GA4 Controller] Default exclusion patterns initialized')
+    } catch (error) {
+      console.error('⚠️ [GA4 Controller] Failed to initialize default exclusion patterns:', error)
+      // Don't fail the request - mapping was created successfully
+    }
+
     res.json({
       success: true,
       mappingId,
@@ -548,6 +557,323 @@ export const getTrend = asyncHandler(
     res.json({
       success: true,
       trend: trendData
+    })
+  }
+)
+
+/**
+ * Get daily activity snapshots for trend visualization
+ * Returns stored snapshots from database
+ */
+export const getActivitySnapshots = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { propertyId, startDate, endDate } = req.query
+
+    console.log('📊 [GA4 Controller] Getting activity snapshots', {
+      userId,
+      propertyId,
+      startDate,
+      endDate
+    })
+
+    if (!propertyId || !startDate || !endDate) {
+      throw createError('Property ID, start date, and end date are required', 400)
+    }
+
+    // Parse dates
+    const dateRangeStart = new Date(startDate as string)
+    const dateRangeEnd = new Date(endDate as string)
+
+    if (isNaN(dateRangeStart.getTime()) || isNaN(dateRangeEnd.getTime())) {
+      throw createError('Invalid date format', 400)
+    }
+
+    // Get snapshots
+    const snapshots = await ga4Data.getActivitySnapshots(
+      userId,
+      propertyId as string,
+      dateRangeStart,
+      dateRangeEnd
+    )
+
+    console.log('✅ [GA4 Controller] Activity snapshots retrieved', {
+      userId,
+      propertyId,
+      snapshotCount: snapshots.length
+    })
+
+    res.json({
+      success: true,
+      snapshots
+    })
+  }
+)
+
+/**
+ * Record daily activity snapshots for a date range
+ * Triggered manually or by cron job
+ */
+export const recordActivitySnapshots = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { propertyId, startDate, endDate } = req.body
+
+    console.log('📸 [GA4 Controller] Recording activity snapshots', {
+      userId,
+      propertyId,
+      startDate,
+      endDate
+    })
+
+    if (!propertyId || !startDate || !endDate) {
+      throw createError('Property ID, start date, and end date are required', 400)
+    }
+
+    // Parse dates
+    const dateRangeStart = new Date(startDate)
+    const dateRangeEnd = new Date(endDate)
+
+    if (isNaN(dateRangeStart.getTime()) || isNaN(dateRangeEnd.getTime())) {
+      throw createError('Invalid date format', 400)
+    }
+
+    // Record snapshots
+    await ga4Data.recordDailyActivitySnapshots(
+      userId,
+      propertyId,
+      dateRangeStart,
+      dateRangeEnd
+    )
+
+    console.log('✅ [GA4 Controller] Activity snapshots recorded', {
+      userId,
+      propertyId
+    })
+
+    res.json({
+      success: true,
+      message: 'Activity snapshots recorded successfully'
+    })
+  }
+)
+
+/**
+ * List exclusion patterns for a domain mapping
+ */
+export const listExclusionPatterns = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { mappingId } = req.params
+
+    console.log('📋 [GA4 Controller] Listing exclusion patterns', {
+      userId,
+      mappingId
+    })
+
+    // Verify user owns this mapping
+    const mappings = await db.getGA4DomainMappings(userId)
+    const mapping = mappings.find(m => m.id === mappingId)
+    if (!mapping) {
+      throw createError('Domain mapping not found', 404)
+    }
+
+    const patterns = await db.getGA4ExclusionPatterns(mappingId)
+
+    console.log('✅ [GA4 Controller] Exclusion patterns listed', {
+      userId,
+      mappingId,
+      count: patterns.length
+    })
+
+    res.json({
+      success: true,
+      patterns
+    })
+  }
+)
+
+/**
+ * Create a new exclusion pattern
+ */
+export const createExclusionPattern = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { mappingId } = req.params
+    const { pattern, patternType, category, description } = req.body
+
+    console.log('➕ [GA4 Controller] Creating exclusion pattern', {
+      userId,
+      mappingId,
+      pattern,
+      category
+    })
+
+    if (!pattern || !patternType || !category) {
+      throw createError('Pattern, pattern type, and category are required', 400)
+    }
+
+    // Verify user owns this mapping
+    const mappings = await db.getGA4DomainMappings(userId)
+    const mapping = mappings.find(m => m.id === mappingId)
+    if (!mapping) {
+      throw createError('Domain mapping not found', 404)
+    }
+
+    const patternId = await db.createGA4ExclusionPattern({
+      mappingId,
+      pattern,
+      patternType,
+      category,
+      description,
+      isActive: true,
+      isDefault: false,
+      createdBy: userId
+    })
+
+    // Invalidate cached metrics and snapshots since exclusion patterns changed
+    await db.invalidateGA4CachedMetrics(mappingId)
+    await db.deleteGA4SnapshotsForMapping(mappingId)
+
+    console.log('✅ [GA4 Controller] Exclusion pattern created (cache and snapshots cleared)', {
+      userId,
+      mappingId,
+      patternId
+    })
+
+    res.json({
+      success: true,
+      patternId,
+      message: 'Exclusion pattern created successfully'
+    })
+  }
+)
+
+/**
+ * Update an exclusion pattern
+ */
+export const updateExclusionPattern = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { mappingId, patternId } = req.params
+    const updates = req.body
+
+    console.log('✏️ [GA4 Controller] Updating exclusion pattern', {
+      userId,
+      mappingId,
+      patternId,
+      updates
+    })
+
+    // Verify user owns this mapping
+    const mappings = await db.getGA4DomainMappings(userId)
+    const mapping = mappings.find(m => m.id === mappingId)
+    if (!mapping) {
+      throw createError('Domain mapping not found', 404)
+    }
+
+    await db.updateGA4ExclusionPattern(patternId, updates)
+
+    // Invalidate cached metrics and snapshots since exclusion patterns changed
+    await db.invalidateGA4CachedMetrics(mappingId)
+    await db.deleteGA4SnapshotsForMapping(mappingId)
+
+    console.log('✅ [GA4 Controller] Exclusion pattern updated (cache and snapshots cleared)', {
+      userId,
+      mappingId,
+      patternId
+    })
+
+    res.json({
+      success: true,
+      message: 'Exclusion pattern updated successfully'
+    })
+  }
+)
+
+/**
+ * Delete an exclusion pattern
+ */
+export const deleteExclusionPattern = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { mappingId, patternId } = req.params
+
+    console.log('🗑️ [GA4 Controller] Deleting exclusion pattern', {
+      userId,
+      mappingId,
+      patternId
+    })
+
+    // Verify user owns this mapping
+    const mappings = await db.getGA4DomainMappings(userId)
+    const mapping = mappings.find(m => m.id === mappingId)
+    if (!mapping) {
+      throw createError('Domain mapping not found', 404)
+    }
+
+    await db.deleteGA4ExclusionPattern(patternId)
+
+    // Invalidate cached metrics and snapshots since exclusion patterns changed
+    await db.invalidateGA4CachedMetrics(mappingId)
+    await db.deleteGA4SnapshotsForMapping(mappingId)
+
+    console.log('✅ [GA4 Controller] Exclusion pattern deleted (cache and snapshots cleared)', {
+      userId,
+      mappingId,
+      patternId
+    })
+
+    res.json({
+      success: true,
+      message: 'Exclusion pattern deleted successfully'
+    })
+  }
+)
+
+/**
+ * Toggle an exclusion pattern on/off
+ */
+export const toggleExclusionPattern = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.auth.userId
+    const { mappingId, patternId } = req.params
+    const { isActive } = req.body
+
+    console.log('🔄 [GA4 Controller] Toggling exclusion pattern', {
+      userId,
+      mappingId,
+      patternId,
+      isActive
+    })
+
+    if (typeof isActive !== 'boolean') {
+      throw createError('isActive must be a boolean', 400)
+    }
+
+    // Verify user owns this mapping
+    const mappings = await db.getGA4DomainMappings(userId)
+    const mapping = mappings.find(m => m.id === mappingId)
+    if (!mapping) {
+      throw createError('Domain mapping not found', 404)
+    }
+
+    await db.toggleGA4ExclusionPattern(patternId, isActive)
+
+    // Invalidate cached metrics and snapshots since exclusion patterns changed
+    await db.invalidateGA4CachedMetrics(mappingId)
+    await db.deleteGA4SnapshotsForMapping(mappingId)
+
+    console.log('✅ [GA4 Controller] Exclusion pattern toggled (cache and snapshots cleared)', {
+      userId,
+      mappingId,
+      patternId,
+      isActive
+    })
+
+    res.json({
+      success: true,
+      message: `Exclusion pattern ${isActive ? 'enabled' : 'disabled'} successfully`
     })
   }
 )

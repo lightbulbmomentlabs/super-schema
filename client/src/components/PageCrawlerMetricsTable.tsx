@@ -1,7 +1,53 @@
+import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Bot, TrendingUp, Calendar } from 'lucide-react'
+import { FileText, Bot, TrendingUp, Calendar, ChevronDown, ChevronUp, AlertCircle, Ban } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import type { PageCrawlerInfo } from '@/services/ga4'
+import type { PageCrawlerInfo, ExclusionPattern } from '@/services/ga4'
+import { PagePathActionsDropdown } from '@/components/ga4/PagePathActionsDropdown'
+import { GA4ExclusionManager } from '@/components/ga4/GA4ExclusionManager'
+import { useGA4Exclusions } from '@/hooks/useGA4Exclusions'
+
+/**
+ * Check if a path matches an exclusion pattern
+ */
+function matchesPattern(path: string, pattern: ExclusionPattern): boolean {
+  const { pattern: patternStr, patternType } = pattern
+
+  switch (patternType) {
+    case 'exact':
+      return path === patternStr
+
+    case 'prefix':
+      return path.startsWith(patternStr)
+
+    case 'suffix':
+      return path.endsWith(patternStr)
+
+    case 'regex':
+      try {
+        const regex = new RegExp(patternStr)
+        return regex.test(path)
+      } catch {
+        return false
+      }
+
+    default:
+      return false
+  }
+}
+
+/**
+ * Check if a path is excluded by any active pattern
+ */
+function isPathExcluded(path: string, patterns: ExclusionPattern[]): { excluded: boolean; pattern?: ExclusionPattern } {
+  const activePatterns = patterns.filter(p => p.isActive)
+  for (const pattern of activePatterns) {
+    if (matchesPattern(path, pattern)) {
+      return { excluded: true, pattern }
+    }
+  }
+  return { excluded: false }
+}
 
 // Helper function to format date in a friendly way
 function formatLastCrawled(dateStr: string): string {
@@ -30,15 +76,56 @@ function formatLastCrawled(dateStr: string): string {
 
 interface PageCrawlerMetricsTableProps {
   pages: PageCrawlerInfo[]
+  nonCrawledPages?: string[]
+  mappingId?: string
+  domain?: string
   isLoading?: boolean
   className?: string
 }
 
 export default function PageCrawlerMetricsTable({
   pages,
+  nonCrawledPages = [],
+  mappingId,
+  domain,
   isLoading = false,
   className = ''
 }: PageCrawlerMetricsTableProps) {
+  const [showAllCrawled, setShowAllCrawled] = useState(false)
+
+  // Fetch exclusion patterns for this mapping
+  const { data: exclusionPatterns = [] } = useGA4Exclusions(mappingId)
+
+  // Check which non-crawled pages are excluded
+  const categorizedPages = useMemo(() => {
+    const excluded: Array<{ path: string; pattern: ExclusionPattern }> = []
+    const active: string[] = []
+
+    for (const path of nonCrawledPages) {
+      const result = isPathExcluded(path, exclusionPatterns)
+      if (result.excluded && result.pattern) {
+        excluded.push({ path, pattern: result.pattern })
+      } else {
+        active.push(path)
+      }
+    }
+
+    return { excluded, active }
+  }, [nonCrawledPages, exclusionPatterns])
+
+  // Auto-expand "Pages Not Yet Discovered" section when there are pages (active or excluded)
+  const [showNonCrawled, setShowNonCrawled] = useState(false)
+
+  // Auto-expand on mount if there are any non-crawled pages
+  useEffect(() => {
+    if (categorizedPages.active.length > 0 || categorizedPages.excluded.length > 0) {
+      setShowNonCrawled(true)
+    }
+  }, [categorizedPages.active.length, categorizedPages.excluded.length])
+
+  // Show top 10 by default, all when expanded
+  const displayedPages = showAllCrawled ? pages : pages.slice(0, 10)
+  const hasMorePages = pages.length > 10
   if (isLoading) {
     return (
       <div className={cn(
@@ -139,7 +226,7 @@ export default function PageCrawlerMetricsTable({
             </tr>
           </thead>
           <tbody>
-            {pages.map((page, index) => (
+            {displayedPages.map((page, index) => (
               <motion.tr
                 key={page.path}
                 initial={{ opacity: 0, x: -20 }}
@@ -210,12 +297,146 @@ export default function PageCrawlerMetricsTable({
         </table>
       </div>
 
-      {/* Footer note */}
-      {pages.length === 10 && (
+      {/* View All / Collapse Button */}
+      {hasMorePages && (
         <div className="mt-6 pt-6 border-t border-border/50">
-          <p className="text-sm text-muted-foreground text-center">
-            Showing top 10 pages. More detailed analytics coming soon!
-          </p>
+          <button
+            onClick={() => setShowAllCrawled(!showAllCrawled)}
+            className="w-full px-4 py-3 rounded-lg bg-muted/20 hover:bg-muted/40 border border-border/50 hover:border-primary/50 transition-all text-sm font-semibold text-foreground flex items-center justify-center gap-2"
+          >
+            {showAllCrawled ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Show Top 10 Pages
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                View All {pages.length} Pages
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Non-Crawled Pages Section */}
+      {nonCrawledPages.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-border/50">
+          <button
+            onClick={() => setShowNonCrawled(!showNonCrawled)}
+            className="w-full text-left"
+          >
+            <div className="flex items-center justify-between p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 hover:border-orange-500/40 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="inline-flex items-center justify-center rounded-lg bg-orange-500/10 p-2">
+                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground">
+                    Pages Not Yet Discovered ({categorizedPages.active.length})
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {categorizedPages.excluded.length > 0
+                      ? `${categorizedPages.excluded.length} ignored • ${categorizedPages.active.length} need quality schema ✨`
+                      : 'These pages need quality schema to attract AI crawlers ✨'
+                    }
+                  </p>
+                </div>
+              </div>
+              {showNonCrawled ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </button>
+
+          {showNonCrawled && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mt-4 space-y-4"
+            >
+              {/* Exclusion Manager Panel */}
+              {mappingId && domain && (
+                <GA4ExclusionManager mappingId={mappingId} domain={domain} />
+              )}
+
+              {/* Active Pages (Not Excluded) */}
+              {categorizedPages.active.length > 0 && (
+                <div className="p-4 rounded-lg bg-muted/20 border border-border/50">
+                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    Active Pages ({categorizedPages.active.length})
+                  </h5>
+                  <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
+                    {categorizedPages.active.map((path) => (
+                      <div
+                        key={path}
+                        className="flex items-center justify-between gap-2 px-3 py-2 rounded bg-background border border-border/50 text-sm hover:border-primary/30 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full bg-orange-500/50 flex-shrink-0" />
+                          <span className="text-foreground truncate" title={path}>
+                            {path}
+                          </span>
+                        </div>
+                        {mappingId && (
+                          <PagePathActionsDropdown
+                            path={path}
+                            mappingId={mappingId}
+                            onPatternCreated={() => {
+                              // Pattern was created successfully, categorizedPages will auto-update via hook
+                            }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Excluded Pages */}
+              {categorizedPages.excluded.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-lg bg-green-500/5 border-2 border-green-500/30"
+                >
+                  <h5 className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Ban className="h-4 w-4" />
+                    Successfully Ignored ({categorizedPages.excluded.length})
+                  </h5>
+                  <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                    {categorizedPages.excluded.map(({ path, pattern }, index) => (
+                      <motion.div
+                        key={path}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between gap-2 px-3 py-2.5 rounded bg-green-500/10 border border-green-500/30 text-sm"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <Ban className="h-3 w-3 text-green-600" />
+                          </div>
+                          <span className="text-foreground/70 line-through truncate" title={`${path} - Excluded by: ${pattern.pattern}`}>
+                            {path}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-500/20 text-green-700 border border-green-500/30" title={pattern.description || undefined}>
+                            {pattern.category}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
         </div>
       )}
     </motion.div>

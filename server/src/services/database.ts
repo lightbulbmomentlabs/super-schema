@@ -3082,8 +3082,10 @@ class DatabaseService {
     coveragePercentage: number
     totalPages: number
     aiCrawledPages: number
+    ignoredPagesCount: number
     topCrawlers: any[]
     topPages: any[]
+    nonCrawledPages: any[]
   }): Promise<void> {
     if (!this.isDatabaseAvailable()) {
       console.log('Mock: storeGA4Metrics', params)
@@ -3105,13 +3107,29 @@ class DatabaseService {
         coverage_percentage: params.coveragePercentage,
         total_pages: params.totalPages,
         ai_crawled_pages: params.aiCrawledPages,
+        ignored_pages_count: params.ignoredPagesCount,
         top_crawlers: params.topCrawlers,
         top_pages: params.topPages,
+        non_crawled_pages: params.nonCrawledPages,
         refreshed_at: new Date().toISOString(),
         created_at: new Date().toISOString()
       }, {
         onConflict: 'mapping_id,date_range_start,date_range_end'
       })
+
+    if (error) throw error
+  }
+
+  async invalidateGA4CachedMetrics(mappingId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: invalidateGA4CachedMetrics', { mappingId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_crawler_metrics')
+      .delete()
+      .eq('mapping_id', mappingId)
 
     if (error) throw error
   }
@@ -3153,11 +3171,284 @@ class DatabaseService {
       coveragePercentage: data.coverage_percentage,
       totalPages: data.total_pages,
       aiCrawledPages: data.ai_crawled_pages,
+      ignoredPagesCount: data.ignored_pages_count || 0,
       topCrawlers: data.top_crawlers,
       topPages: data.top_pages,
+      nonCrawledPages: data.non_crawled_pages || [],
       refreshedAt: new Date(data.refreshed_at),
       createdAt: new Date(data.created_at)
     }
+  }
+
+  // ============================================
+  // GA4 Exclusion Pattern Methods
+  // ============================================
+
+  async getGA4ExclusionPatterns(mappingId: string) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4ExclusionPatterns', { mappingId })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .select('*')
+      .eq('mapping_id', mappingId)
+      .order('category')
+      .order('pattern')
+
+    if (error) throw error
+
+    return data.map((row: any) => ({
+      id: row.id,
+      mappingId: row.mapping_id,
+      pattern: row.pattern,
+      patternType: row.pattern_type,
+      category: row.category,
+      description: row.description,
+      isActive: row.is_active,
+      isDefault: row.is_default,
+      createdAt: new Date(row.created_at),
+      createdBy: row.created_by
+    }))
+  }
+
+  async createGA4ExclusionPattern(params: {
+    mappingId: string
+    pattern: string
+    patternType: 'exact' | 'prefix' | 'suffix' | 'regex'
+    category: 'auth' | 'callback' | 'static' | 'admin' | 'api' | 'custom'
+    description?: string
+    isActive?: boolean
+    isDefault?: boolean
+    createdBy?: string
+  }): Promise<string> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: createGA4ExclusionPattern', params)
+      return 'mock-exclusion-pattern-id'
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .insert({
+        mapping_id: params.mappingId,
+        pattern: params.pattern,
+        pattern_type: params.patternType,
+        category: params.category,
+        description: params.description || null,
+        is_active: params.isActive !== undefined ? params.isActive : true,
+        is_default: params.isDefault !== undefined ? params.isDefault : false,
+        created_by: params.createdBy || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  async updateGA4ExclusionPattern(
+    patternId: string,
+    updates: {
+      pattern?: string
+      patternType?: 'exact' | 'prefix' | 'suffix' | 'regex'
+      category?: 'auth' | 'callback' | 'static' | 'admin' | 'api' | 'custom'
+      description?: string
+      isActive?: boolean
+    }
+  ): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: updateGA4ExclusionPattern', { patternId, updates })
+      return
+    }
+
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    if (updates.pattern !== undefined) updateData.pattern = updates.pattern
+    if (updates.patternType !== undefined) updateData.pattern_type = updates.patternType
+    if (updates.category !== undefined) updateData.category = updates.category
+    if (updates.description !== undefined) updateData.description = updates.description
+    if (updates.isActive !== undefined) updateData.is_active = updates.isActive
+
+    const { error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .update(updateData)
+      .eq('id', patternId)
+
+    if (error) throw error
+  }
+
+  async deleteGA4ExclusionPattern(patternId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteGA4ExclusionPattern', { patternId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .delete()
+      .eq('id', patternId)
+
+    if (error) throw error
+  }
+
+  async toggleGA4ExclusionPattern(patternId: string, isActive: boolean): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: toggleGA4ExclusionPattern', { patternId, isActive })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .update({
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', patternId)
+
+    if (error) throw error
+  }
+
+  async initializeDefaultExclusionPatterns(mappingId: string, userId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: initializeDefaultExclusionPatterns', { mappingId, userId })
+      return
+    }
+
+    // Import the default patterns
+    const { DEFAULT_EXCLUSION_PATTERNS } = await import('./ga4/defaultExclusionPatterns.js')
+
+    // Prepare insert data
+    const patterns = DEFAULT_EXCLUSION_PATTERNS.map(p => ({
+      mapping_id: mappingId,
+      pattern: p.pattern,
+      pattern_type: p.patternType,
+      category: p.category,
+      description: p.description,
+      is_active: p.isActive,
+      is_default: p.isDefault,
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }))
+
+    // Bulk insert all default patterns
+    const { error } = await this.supabase
+      .from('ga4_excluded_path_patterns')
+      .insert(patterns)
+
+    if (error) throw error
+
+    console.log(`✅ [Database] Initialized ${patterns.length} default exclusion patterns for mapping ${mappingId}`)
+  }
+
+  // ===== GA4 Daily Activity Snapshots =====
+
+  async storeGA4DailySnapshot(params: {
+    mappingId: string
+    snapshotDate: string // ISO date string (YYYY-MM-DD)
+    aiSessions: number
+    uniqueCrawlers: number
+    aiCrawledPages: number
+    totalActivePages: number
+    crawlerList: string[]
+    exclusionPatternsHash: string
+  }): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: storeGA4DailySnapshot', params)
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_daily_activity_snapshots')
+      .upsert({
+        mapping_id: params.mappingId,
+        snapshot_date: params.snapshotDate,
+        ai_sessions: params.aiSessions,
+        unique_crawlers: params.uniqueCrawlers,
+        ai_crawled_pages: params.aiCrawledPages,
+        total_active_pages: params.totalActivePages,
+        crawler_list: params.crawlerList,
+        exclusion_patterns_hash: params.exclusionPatternsHash,
+        calculated_at: new Date().toISOString()
+      }, {
+        onConflict: 'mapping_id,snapshot_date'
+      })
+
+    if (error) throw error
+  }
+
+  async getGA4DailySnapshots(
+    mappingId: string,
+    startDate: string, // ISO date string (YYYY-MM-DD)
+    endDate: string    // ISO date string (YYYY-MM-DD)
+  ) {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getGA4DailySnapshots', { mappingId, startDate, endDate })
+      return []
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_daily_activity_snapshots')
+      .select('*')
+      .eq('mapping_id', mappingId)
+      .gte('snapshot_date', startDate)
+      .lte('snapshot_date', endDate)
+      .order('snapshot_date', { ascending: true })
+
+    if (error) throw error
+
+    return (data || []).map(row => ({
+      id: row.id,
+      mappingId: row.mapping_id,
+      snapshotDate: row.snapshot_date,
+      aiSessions: row.ai_sessions,
+      uniqueCrawlers: row.unique_crawlers,
+      aiCrawledPages: row.ai_crawled_pages,
+      totalActivePages: row.total_active_pages,
+      crawlerList: row.crawler_list,
+      exclusionPatternsHash: row.exclusion_patterns_hash,
+      calculatedAt: row.calculated_at
+    }))
+  }
+
+  async deleteGA4SnapshotsForMapping(mappingId: string): Promise<void> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: deleteGA4SnapshotsForMapping', { mappingId })
+      return
+    }
+
+    const { error } = await this.supabase
+      .from('ga4_daily_activity_snapshots')
+      .delete()
+      .eq('mapping_id', mappingId)
+
+    if (error) throw error
+
+    console.log(`🗑️  [Database] Deleted all activity snapshots for mapping ${mappingId}`)
+  }
+
+  async getLatestSnapshotDate(mappingId: string): Promise<string | null> {
+    if (!this.isDatabaseAvailable()) {
+      console.log('Mock: getLatestSnapshotDate', { mappingId })
+      return null
+    }
+
+    const { data, error } = await this.supabase
+      .from('ga4_daily_activity_snapshots')
+      .select('snapshot_date')
+      .eq('mapping_id', mappingId)
+      .order('snapshot_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw error
+
+    return data?.snapshot_date || null
   }
 
   // ============================================
