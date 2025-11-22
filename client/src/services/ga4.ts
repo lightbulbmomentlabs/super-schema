@@ -54,17 +54,50 @@ export interface GA4Metrics {
   coveragePercentage: number
   totalPages: number
   aiCrawledPages: number
+  ignoredPagesCount: number
   crawlerList: string[]
   topCrawlers: CrawlerStats[]
   topPages: PageCrawlerInfo[]
+  nonCrawledPages: string[] // Pages with traffic but no AI referral traffic
   dateRangeStart: string
   dateRangeEnd: string
+  scoreBreakdown?: {
+    diversityPoints: number      // 0-40 points
+    coveragePoints: number        // 0-40 points
+    volumePoints: number          // 0-20 points
+    totalAiSessions: number       // Raw count for reference
+  }
 }
 
 export interface TrendDataPoint {
   date: string
   score: number
   crawlerCount: number
+}
+
+export interface ActivitySnapshot {
+  date: string
+  aiSessions: number
+  uniqueCrawlers: number
+  aiCrawledPages: number
+  totalActivePages: number
+  crawlerList: string[]
+}
+
+export type ExclusionPatternType = 'exact' | 'prefix' | 'suffix' | 'regex'
+export type ExclusionCategory = 'auth' | 'callback' | 'static' | 'admin' | 'api' | 'custom'
+
+export interface ExclusionPattern {
+  id: string
+  mappingId: string
+  pattern: string
+  patternType: ExclusionPatternType
+  category: ExclusionCategory
+  description: string | null
+  isActive: boolean
+  isDefault: boolean
+  createdAt: string
+  createdBy: string | null
 }
 
 export const ga4Api = {
@@ -219,6 +252,94 @@ export const ga4Api = {
         startDate,
         endDate
       }
+    })
+    return response.data
+  },
+
+  /**
+   * Get daily activity snapshots for trend visualization
+   * Returns raw metrics (sessions, crawlers, pages) for each day
+   */
+  getActivitySnapshots: async (
+    propertyId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<ApiResponse<{ snapshots: ActivitySnapshot[] }>> => {
+    const response = await api.get('/ga4/metrics/activity-snapshots', {
+      params: {
+        propertyId,
+        startDate,
+        endDate
+      }
+    })
+    return response.data
+  },
+
+  /**
+   * List exclusion patterns for a domain mapping
+   */
+  listExclusionPatterns: async (mappingId: string): Promise<ApiResponse<{ patterns: ExclusionPattern[] }>> => {
+    const response = await api.get(`/ga4/domain-mapping/${mappingId}/exclusions`)
+    return response.data
+  },
+
+  /**
+   * Create a new exclusion pattern
+   */
+  createExclusionPattern: async (
+    mappingId: string,
+    pattern: string,
+    patternType: ExclusionPatternType,
+    category: ExclusionCategory,
+    description?: string
+  ): Promise<ApiResponse<{ patternId: string; message: string }>> => {
+    const response = await api.post(`/ga4/domain-mapping/${mappingId}/exclusions`, {
+      pattern,
+      patternType,
+      category,
+      description
+    })
+    return response.data
+  },
+
+  /**
+   * Update an existing exclusion pattern
+   */
+  updateExclusionPattern: async (
+    mappingId: string,
+    patternId: string,
+    updates: {
+      pattern?: string
+      patternType?: ExclusionPatternType
+      category?: ExclusionCategory
+      description?: string
+    }
+  ): Promise<ApiResponse<{ message: string }>> => {
+    const response = await api.patch(`/ga4/domain-mapping/${mappingId}/exclusions/${patternId}`, updates)
+    return response.data
+  },
+
+  /**
+   * Delete an exclusion pattern
+   */
+  deleteExclusionPattern: async (
+    mappingId: string,
+    patternId: string
+  ): Promise<ApiResponse<{ message: string }>> => {
+    const response = await api.delete(`/ga4/domain-mapping/${mappingId}/exclusions/${patternId}`)
+    return response.data
+  },
+
+  /**
+   * Toggle an exclusion pattern on/off
+   */
+  toggleExclusionPattern: async (
+    mappingId: string,
+    patternId: string,
+    isActive: boolean
+  ): Promise<ApiResponse<{ message: string }>> => {
+    const response = await api.patch(`/ga4/domain-mapping/${mappingId}/exclusions/${patternId}/toggle`, {
+      isActive
     })
     return response.data
   }

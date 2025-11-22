@@ -4,10 +4,10 @@ import { Calendar, RefreshCw, AlertCircle } from 'lucide-react'
 import { useGA4Connection } from '@/hooks/useGA4Connection'
 import { useGA4DomainMappings } from '@/hooks/useGA4DomainMappings'
 import { useGA4Metrics } from '@/hooks/useGA4Metrics'
-import { useGA4Trend } from '@/hooks/useGA4Trend'
+import { useGA4ActivitySnapshots } from '@/hooks/useGA4ActivitySnapshots'
 import type { GA4DomainMapping } from '@/services/ga4'
 import AIVisibilityScoreCard from '@/components/AIVisibilityScoreCard'
-import AIVisibilityTrendChart from '@/components/AIVisibilityTrendChart'
+import AIActivityTrendChart from '@/components/AIActivityTrendChart'
 import TopCrawlersTable from '@/components/TopCrawlersTable'
 import PageCrawlerMetricsTable from '@/components/PageCrawlerMetricsTable'
 import GA4ConnectionStatus from '@/components/GA4ConnectionStatus'
@@ -18,7 +18,7 @@ import { cn } from '@/utils/cn'
 export default function AIAnalyticsPage() {
   const navigate = useNavigate()
 
-  // State for date range (default to last 30 days)
+  // State for date range (default to last 30 days from today)
   const [dateRange, setDateRange] = useState(() => {
     const end = new Date()
     const start = new Date()
@@ -73,11 +73,11 @@ export default function AIAnalyticsPage() {
     !!selectedMapping
   )
 
-  // Fetch trend data for selected domain
+  // Fetch activity snapshots for selected domain
   const {
-    trend,
-    isLoading: isTrendLoading
-  } = useGA4Trend(
+    snapshots,
+    isLoading: isSnapshotsLoading
+  } = useGA4ActivitySnapshots(
     selectedMapping?.propertyId || null,
     dateRange.start,
     dateRange.end,
@@ -114,7 +114,7 @@ export default function AIAnalyticsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -236,39 +236,9 @@ export default function AIAnalyticsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleDatePreset(7)}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                      dateRange.start === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                    )}
-                  >
-                    7 days
-                  </button>
-                  <button
-                    onClick={() => handleDatePreset(30)}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                      dateRange.start === new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                    )}
-                  >
-                    30 days
-                  </button>
-                  <button
-                    onClick={() => handleDatePreset(90)}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                      dateRange.start === new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                    )}
-                  >
-                    90 days
-                  </button>
+                  <div className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground">
+                    Last 30 days
+                  </div>
                 </div>
 
                 <button
@@ -296,6 +266,7 @@ export default function AIAnalyticsPage() {
                   score={metrics?.aiVisibilityScore || 0}
                   diversityScore={metrics?.aiDiversityScore || 0}
                   coveragePercentage={metrics?.coveragePercentage || 0}
+                  scoreBreakdown={metrics?.scoreBreakdown}
                   isLoading={isMetricsLoading}
                   className="w-full"
                 />
@@ -303,9 +274,9 @@ export default function AIAnalyticsPage() {
 
               {/* AI Visibility Trend Chart */}
               <div className="lg:col-span-2 flex">
-                <AIVisibilityTrendChart
-                  trend={trend}
-                  isLoading={isTrendLoading}
+                <AIActivityTrendChart
+                  snapshots={snapshots}
+                  isLoading={isSnapshotsLoading}
                   className="w-full"
                 />
               </div>
@@ -323,7 +294,7 @@ export default function AIAnalyticsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+                className="grid grid-cols-2 lg:grid-cols-5 gap-4"
               >
                 <div className="bg-card border border-border rounded-xl p-6 text-center">
                   <p className="text-3xl font-black text-foreground mb-1">
@@ -338,10 +309,16 @@ export default function AIAnalyticsPage() {
                   <p className="text-sm text-muted-foreground">AI Crawled</p>
                 </div>
                 <div className="bg-card border border-border rounded-xl p-6 text-center">
-                  <p className="text-3xl font-black text-primary mb-1">
-                    {metrics.crawlerList.length}
+                  <p className="text-3xl font-black text-orange-500 mb-1">
+                    {metrics.ignoredPagesCount.toLocaleString()}
                   </p>
-                  <p className="text-sm text-muted-foreground">AI Crawlers</p>
+                  <p className="text-sm text-muted-foreground">Ignored Pages</p>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-6 text-center">
+                  <p className="text-3xl font-black text-red-500 mb-1">
+                    {metrics.nonCrawledPages.length.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Not Yet Discovered</p>
                 </div>
                 <div className="bg-card border border-border rounded-xl p-6 text-center">
                   <p className="text-3xl font-black text-foreground mb-1">
@@ -355,6 +332,9 @@ export default function AIAnalyticsPage() {
             {/* Page-Level Crawler Metrics Table */}
             <PageCrawlerMetricsTable
               pages={metrics?.topPages || []}
+              nonCrawledPages={metrics?.nonCrawledPages || []}
+              mappingId={selectedMapping?.id}
+              domain={selectedMapping?.domain}
               isLoading={isMetricsLoading}
             />
           </div>

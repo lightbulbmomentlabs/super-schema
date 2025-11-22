@@ -21,6 +21,7 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { ga4OAuth } from './oauth.js'
 import { db } from '../database.js'
+import { GA4PathFilter, type ExclusionPattern } from './pathFilter.js'
 
 // Known AI referrer domains to detect in GA4 traffic
 // These are human users clicking links FROM AI chat interfaces (not bot crawlers)
@@ -57,11 +58,19 @@ export interface GA4MetricsResult {
   coveragePercentage: number
   totalPages: number
   aiCrawledPages: number
+  ignoredPagesCount: number // Number of pages excluded by filters
   crawlerList: string[]
   topCrawlers: CrawlerStats[]
   topPages: PageCrawlerInfo[]
+  nonCrawledPages: string[] // Pages with traffic but no AI referral traffic
   dateRangeStart: Date
   dateRangeEnd: Date
+  scoreBreakdown: {
+    diversityPoints: number      // 0-40 points
+    coveragePoints: number        // 0-40 points
+    volumePoints: number          // 0-20 points
+    totalAiSessions: number       // Raw count for reference
+  }
 }
 
 export class GA4DataService {
@@ -121,6 +130,16 @@ export class GA4DataService {
       // Get authenticated client
       const analyticsClient = await this.getAuthenticatedClient(userId)
 
+      // Get domain mapping to fetch exclusion patterns and domain
+      const domainMapping = await db.getGA4DomainMappingByProperty(userId, propertyId)
+      if (!domainMapping) {
+        throw new Error('Domain mapping not found for this property')
+      }
+
+      // Fetch exclusion patterns for this domain mapping
+      const exclusionPatterns = await db.getGA4ExclusionPatterns(domainMapping.id)
+      console.log(`🔍 [GA4 Data] Loaded ${exclusionPatterns.length} exclusion patterns for domain ${domainMapping.domain}`)
+
       // Format dates for GA4 API (YYYY-MM-DD)
       const startDate = dateRangeStart.toISOString().split('T')[0]
       const endDate = dateRangeEnd.toISOString().split('T')[0]
@@ -128,7 +147,9 @@ export class GA4DataService {
       console.log('🔍 [GA4 Data] Querying GA4 API for AI crawler traffic', {
         propertyId,
         startDate,
-        endDate
+        endDate,
+        domain: domainMapping.domain,
+        exclusionPatternsActive: exclusionPatterns.filter(p => p.isActive).length
       })
 
       // First, get total unique pages from ALL traffic (for coverage calculation)
@@ -150,8 +171,33 @@ export class GA4DataService {
         limit: 50000 // Large limit to capture all pages
       })
 
-      const totalUniquePages = totalPagesResponse.rows?.length || 0
-      console.log('✅ [GA4 Data] Total unique pages in GA4:', totalUniquePages)
+      // Extract all page paths and apply filtering
+      const rawPagePaths = totalPagesResponse.rows?.map(row => row.dimensionValues?.[0]?.value || '') || []
+      console.log(`📊 [GA4 Data] Raw page paths from GA4: ${rawPagePaths.length}`)
+
+      // Deduplicate raw page paths BEFORE filtering to get accurate counts
+      const uniqueRawPagePaths = new Set<string>(rawPagePaths.filter(path => path))
+      const totalRawUniquePages = uniqueRawPagePaths.size
+
+      // Create path filter instance
+      const pathFilter = new GA4PathFilter(exclusionPatterns, domainMapping.domain)
+
+      // Filter out excluded paths and cross-domain contamination
+      const filteredPagePaths = Array.from(uniqueRawPagePaths).filter(path => {
+        // Apply domain matching and exclusion patterns
+        return !pathFilter.shouldExcludePath(path)
+      })
+
+      const allPagePaths = new Set<string>(filteredPagePaths)
+      const totalUniquePages = allPagePaths.size
+      const ignoredPagesCount = totalRawUniquePages - totalUniquePages
+
+      console.log('✅ [GA4 Data] Filtered page paths', {
+        rawCount: rawPagePaths.length,
+        uniqueRawCount: totalRawUniquePages,
+        filteredCount: totalUniquePages,
+        ignoredCount: ignoredPagesCount
+      })
 
       // Run report to get AI crawler traffic
       // Query for sessionSource, pagePath, pageReferrer, and date to identify AI crawlers and track last crawled
@@ -197,8 +243,8 @@ export class GA4DataService {
       // Process response to identify AI crawlers and page-level data
       const { crawlerStats, pageStats } = this.processGA4Response(response)
 
-      // Calculate metrics with real total page count
-      const metrics = this.calculateMetrics(crawlerStats, pageStats, totalUniquePages, dateRangeStart, dateRangeEnd)
+      // Calculate metrics with real total page count and all page paths
+      const metrics = this.calculateMetrics(crawlerStats, pageStats, totalUniquePages, totalRawUniquePages, ignoredPagesCount, allPagePaths, dateRangeStart, dateRangeEnd)
 
       console.log('📈 [GA4 Data] Calculated metrics', {
         aiVisibilityScore: metrics.aiVisibilityScore,
@@ -358,6 +404,9 @@ export class GA4DataService {
     crawlerData: Map<string, CrawlerStats>,
     pageData: Map<string, PageCrawlerInfo>,
     totalUniquePages: number,
+    totalRawUniquePages: number,
+    ignoredPagesCount: number,
+    allPagePaths: Set<string>,
     dateRangeStart: Date,
     dateRangeEnd: Date
   ): GA4MetricsResult {
@@ -386,10 +435,17 @@ export class GA4DataService {
     const maxCrawlers = 8
     const diversityScore = Math.min(40, (crawlerList.length / maxCrawlers) * 40)
 
-    // Coverage Score: Percentage of pages crawled by AI (normalized to 40 points)
-    // Use real total pages from GA4, not just AI-crawled pages
-    const coveragePercentage = totalUniquePages > 0
-      ? (aiCrawledPages / totalUniquePages) * 100
+    // Calculate non-crawled pages first (needed for coverage calculation)
+    const aiCrawledPagePaths = new Set(pageData.keys())
+    const nonCrawledPages: string[] = Array.from(allPagePaths)
+      .filter(path => !aiCrawledPagePaths.has(path))
+      .sort() // Alphabetical order
+
+    // Coverage Score: Percentage of active pages crawled by AI (normalized to 40 points)
+    // Formula: AI Crawled / (AI Crawled + Not Yet Discovered)
+    const totalActivePages = aiCrawledPages + nonCrawledPages.length
+    const coveragePercentage = totalActivePages > 0
+      ? (aiCrawledPages / totalActivePages) * 100
       : 0
     const coverageScore = Math.min(40, (coveragePercentage / 100) * 40)
 
@@ -422,21 +478,34 @@ export class GA4DataService {
       crawlerCount: crawlerList.length,
       aiCrawledPages,
       totalPages: totalUniquePages,
+      ignoredPages: ignoredPagesCount,
+      nonCrawledPages: nonCrawledPages.length,
       coveragePercentage: coveragePercentage.toFixed(2) + '%',
       totalAISessions
     })
+
+    // Total Pages = AI Crawled + Ignored + Not Yet Discovered
+    const totalPages = aiCrawledPages + ignoredPagesCount + nonCrawledPages.length
 
     return {
       aiVisibilityScore,
       aiDiversityScore: crawlerList.length,
       coveragePercentage,
-      totalPages: totalUniquePages,
+      totalPages,
       aiCrawledPages,
+      ignoredPagesCount,
       crawlerList,
-      topCrawlers: topCrawlers.slice(0, 10), // Top 10
-      topPages: topPages.slice(0, 10), // Top 10
+      topCrawlers: topCrawlers.slice(0, 10), // Still limit top crawlers to 10 for summary
+      topPages, // Return ALL pages (no limit)
+      nonCrawledPages, // NEW: Pages not yet discovered by AI
       dateRangeStart,
-      dateRangeEnd
+      dateRangeEnd,
+      scoreBreakdown: {
+        diversityPoints: Math.round(diversityScore),
+        coveragePoints: Math.round(coverageScore),
+        volumePoints: Math.round(volumeScore),
+        totalAiSessions: totalAISessions
+      }
     }
   }
 
@@ -527,6 +596,14 @@ export class GA4DataService {
         return null
       }
 
+      // Validate cache has all required fields (invalidate old cache missing nonCrawledPages)
+      if (!cached.nonCrawledPages) {
+        console.log('⚠️ [GA4 Data] Cache missing nonCrawledPages field, invalidating cache', {
+          ageMinutes: Math.round(cacheAge / (60 * 1000))
+        })
+        return null
+      }
+
       console.log('✅ [GA4 Data] Found fresh cached metrics', {
         ageMinutes: Math.round(cacheAge / (60 * 1000))
       })
@@ -538,9 +615,11 @@ export class GA4DataService {
         coveragePercentage: Number(cached.coveragePercentage) || 0,
         totalPages: cached.totalPages || 0,
         aiCrawledPages: cached.aiCrawledPages || 0,
+        ignoredPagesCount: cached.ignoredPagesCount || 0,
         crawlerList: cached.aiCrawlerList || [],
         topCrawlers: (cached.topCrawlers as any[]) || [],
         topPages: (cached.topPages as any[]) || [],
+        nonCrawledPages: (cached.nonCrawledPages as any[]) || [],
         dateRangeStart,
         dateRangeEnd
       }
@@ -586,8 +665,10 @@ export class GA4DataService {
         coveragePercentage: metrics.coveragePercentage,
         totalPages: metrics.totalPages,
         aiCrawledPages: metrics.aiCrawledPages,
+        ignoredPagesCount: metrics.ignoredPagesCount,
         topCrawlers: metrics.topCrawlers,
-        topPages: metrics.topPages
+        topPages: metrics.topPages,
+        nonCrawledPages: metrics.nonCrawledPages
       })
 
       console.log('✅ [GA4 Data] Metrics cached successfully')
@@ -645,6 +726,44 @@ export class GA4DataService {
       const totalUniquePages = totalPagesResponse.rows?.length || 0
       console.log('✅ [GA4 Data] Total unique pages for trend:', totalUniquePages)
 
+      // Get domain mapping to access exclusion patterns
+      const mappings = await db.getGA4DomainMappings(userId)
+      const mapping = mappings.find(m => m.propertyId === propertyId)
+
+      if (!mapping) {
+        throw new Error('Domain mapping not found')
+      }
+
+      if (!mapping.domain) {
+        throw new Error(`Domain mapping ${mapping.id} is missing domain value. Please reconnect your GA4 property.`)
+      }
+
+      console.log('🔍 [GA4 Data] Trend mapping details:', {
+        mappingId: mapping.id,
+        domain: mapping.domain,
+        domainType: typeof mapping.domain,
+        domainValue: JSON.stringify(mapping.domain),
+        propertyId: mapping.propertyId
+      })
+
+      // Get exclusion patterns for this mapping
+      const exclusionPatterns = await db.getGA4ExclusionPatterns(mapping.id)
+      console.log('🔍 [GA4 Data] Exclusion patterns loaded:', exclusionPatterns.length)
+
+      // Extra defensive: Ensure domain is a string before passing to pathFilter
+      const safeDomain = mapping.domain || ''
+      console.log('🔍 [GA4 Data] Safe domain value:', { safeDomain, type: typeof safeDomain })
+      const pathFilter = new GA4PathFilter(exclusionPatterns.filter(p => p.isActive), safeDomain)
+
+      // Extract and filter all page paths
+      const rawPagePaths = (totalPagesResponse.rows || [])
+        .map(row => row.dimensionValues?.[0]?.value)
+        .filter((path): path is string => !!path) // Remove undefined/null values
+
+      // Filter out excluded paths
+      const filteredPagePaths = rawPagePaths.filter(path => !pathFilter.shouldExcludePath(path))
+      const allPagePaths = new Set(filteredPagePaths)
+
       // Run report with date dimension to get daily data
       const [response] = await analyticsClient.runReport({
         property: `properties/${propertyId}`,
@@ -672,10 +791,11 @@ export class GA4DataService {
       })
 
       // Group data by date and calculate daily scores
-      const dailyData = this.processDailyTrendData(response, totalUniquePages)
+      const dailyData = this.processDailyTrendData(response, allPagePaths, startDate, endDate)
 
       console.log('📊 [GA4 Data] Processed trend data', {
-        days: dailyData.length
+        days: dailyData.length,
+        dateRange: `${startDate} to ${endDate}`
       })
 
       return dailyData
@@ -688,24 +808,52 @@ export class GA4DataService {
   /**
    * Process daily trend data from GA4 response
    * Uses same 3-component formula as main metrics: Diversity (40%) + Coverage (40%) + Volume (20%)
+   * Generates data points for ALL days in the date range, with score=0 for days without AI crawler activity
    */
   private processDailyTrendData(
     response: any,
-    totalUniquePages: number
+    allPagePaths: Set<string>,
+    startDate: string,
+    endDate: string
   ): Array<{ date: string; score: number; crawlerCount: number }> {
-    if (!response.rows || response.rows.length === 0) {
-      return []
-    }
 
-    // Group data by date
+    // Group AI crawler data by date
     interface DailyStats {
       crawlers: Set<string>
-      pages: Set<string>
+      aiPages: Set<string> // Pages crawled by AI
+      allPages: Set<string> // All pages with traffic (AI or not)
       sessions: number
       pageViews: number
     }
     const dailyStats = new Map<string, DailyStats>()
 
+    // First pass: collect all traffic (both AI and non-AI) to know which pages had activity each day
+    for (const row of response.rows) {
+      const dateStr = row.dimensionValues?.[0]?.value || ''
+      const pagePath = row.dimensionValues?.[2]?.value || ''
+
+      // Convert GA4 date format (YYYYMMDD) to YYYY-MM-DD
+      const formattedDate = dateStr.length === 8
+        ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+        : dateStr
+
+      if (!dailyStats.has(formattedDate)) {
+        dailyStats.set(formattedDate, {
+          crawlers: new Set(),
+          aiPages: new Set(),
+          allPages: new Set(),
+          sessions: 0,
+          pageViews: 0
+        })
+      }
+
+      const stats = dailyStats.get(formattedDate)!
+      if (pagePath) {
+        stats.allPages.add(pagePath)
+      }
+    }
+
+    // Second pass: identify AI crawler traffic
     for (const row of response.rows) {
       const dateStr = row.dimensionValues?.[0]?.value || ''
       const sessionSource = row.dimensionValues?.[1]?.value || ''
@@ -723,38 +871,52 @@ export class GA4DataService {
       const crawlerName = this.identifyAICrawler(sessionSource, pageReferrer)
 
       if (crawlerName) {
-        if (!dailyStats.has(formattedDate)) {
-          dailyStats.set(formattedDate, {
-            crawlers: new Set(),
-            pages: new Set(),
-            sessions: 0,
-            pageViews: 0
-          })
-        }
         const stats = dailyStats.get(formattedDate)!
         stats.crawlers.add(crawlerName)
         if (pagePath) {
-          stats.pages.add(pagePath)
+          stats.aiPages.add(pagePath)
         }
         stats.sessions += sessions
         stats.pageViews += pageViews
       }
     }
 
-    // Calculate AI Visibility Score for each day using same formula as main metrics
+    // Generate data points for ALL days in the date range
     const trendData: Array<{ date: string; score: number; crawlerCount: number }> = []
     const maxCrawlers = 8
 
-    for (const [date, stats] of dailyStats.entries()) {
+    // Parse start and end dates
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    // Generate data point for each day in range
+    for (let currentDate = new Date(start); currentDate <= end; currentDate.setDate(currentDate.getDate() + 1)) {
+      const dateStr = currentDate.toISOString().split('T')[0] // YYYY-MM-DD format
+
+      // Get stats for this day (or use empty stats if no traffic at all)
+      const stats = dailyStats.get(dateStr) || {
+        crawlers: new Set(),
+        aiPages: new Set(),
+        allPages: new Set(),
+        sessions: 0,
+        pageViews: 0
+      }
+
       const crawlerCount = stats.crawlers.size
-      const aiCrawledPages = stats.pages.size
+      const aiCrawledPages = stats.aiPages.size
 
       // Diversity Score (40 points max)
       const diversityScore = Math.min(40, (crawlerCount / maxCrawlers) * 40)
 
       // Coverage Score (40 points max)
-      const coveragePercentage = totalUniquePages > 0
-        ? (aiCrawledPages / totalUniquePages) * 100
+      // Use pages with traffic ON THIS SPECIFIC DAY (not all pages across entire date range)
+      const pagesWithTrafficToday = stats.allPages.size
+      const nonCrawledPagesToday = pagesWithTrafficToday - aiCrawledPages
+
+      // Use same formula as main metrics: AI Crawled / (AI Crawled + Not Yet Discovered)
+      const totalActivePages = aiCrawledPages + nonCrawledPagesToday
+      const coveragePercentage = totalActivePages > 0
+        ? (aiCrawledPages / totalActivePages) * 100
         : 0
       const coverageScore = Math.min(40, (coveragePercentage / 100) * 40)
 
@@ -767,16 +929,244 @@ export class GA4DataService {
       const score = Math.round(diversityScore + coverageScore + volumeScore)
 
       trendData.push({
-        date,
+        date: dateStr,
         score,
         crawlerCount
       })
     }
 
-    // Sort by date
-    trendData.sort((a, b) => a.date.localeCompare(b.date))
-
     return trendData
+  }
+
+  /**
+   * Record daily activity snapshots from GA4 data
+   * Stores raw metrics (sessions, crawlers, pages) for each day in the date range
+   * Used by the trend chart to display activity over time
+   */
+  async recordDailyActivitySnapshots(
+    userId: string,
+    propertyId: string,
+    dateRangeStart: Date,
+    dateRangeEnd: Date
+  ): Promise<void> {
+    try {
+      console.log('📸 [GA4 Data] Recording daily activity snapshots', {
+        userId,
+        propertyId,
+        dateRangeStart: dateRangeStart.toISOString().split('T')[0],
+        dateRangeEnd: dateRangeEnd.toISOString().split('T')[0]
+      })
+
+      // Get authenticated client
+      const analyticsClient = await this.getAuthenticatedClient(userId)
+
+      // Format dates for GA4 API (YYYY-MM-DD)
+      const startDate = dateRangeStart.toISOString().split('T')[0]
+      const endDate = dateRangeEnd.toISOString().split('T')[0]
+
+      // Get domain mapping to access exclusion patterns
+      const mappings = await db.getGA4DomainMappings(userId)
+      const mapping = mappings.find(m => m.propertyId === propertyId)
+
+      if (!mapping) {
+        throw new Error('Domain mapping not found')
+      }
+
+      if (!mapping.domain) {
+        throw new Error(`Domain mapping ${mapping.id} is missing domain value. Please reconnect your GA4 property.`)
+      }
+
+      // Get exclusion patterns for this mapping
+      const exclusionPatterns = await db.getGA4ExclusionPatterns(mapping.id)
+      const safeDomain = mapping.domain || ''
+      const pathFilter = new GA4PathFilter(exclusionPatterns.filter(p => p.isActive), safeDomain)
+
+      // Create hash of exclusion patterns for cache invalidation
+      const patternsHash = this.hashExclusionPatterns(exclusionPatterns.filter(p => p.isActive))
+
+      // Run report with date dimension to get daily data
+      const [response] = await analyticsClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [
+          {
+            startDate,
+            endDate
+          }
+        ],
+        dimensions: [
+          { name: 'date' },
+          { name: 'sessionSource' },
+          { name: 'pagePath' },
+          { name: 'pageReferrer' }
+        ],
+        metrics: [
+          { name: 'sessions' },
+          { name: 'screenPageViews' }
+        ],
+        limit: 50000
+      })
+
+      console.log('✅ [GA4 Data] Received GA4 API response for snapshots', {
+        rowCount: response.rows?.length || 0
+      })
+
+      // Group data by date
+      interface DailyStats {
+        crawlers: Set<string>
+        aiPages: Set<string>
+        allPages: Set<string>
+        sessions: number
+      }
+      const dailyStats = new Map<string, DailyStats>()
+
+      // First pass: collect all traffic to know which pages had activity each day
+      for (const row of response.rows) {
+        const dateStr = row.dimensionValues?.[0]?.value || ''
+        const pagePath = row.dimensionValues?.[2]?.value || ''
+
+        // Convert GA4 date format (YYYYMMDD) to YYYY-MM-DD
+        const formattedDate = dateStr.length === 8
+          ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+          : dateStr
+
+        if (!dailyStats.has(formattedDate)) {
+          dailyStats.set(formattedDate, {
+            crawlers: new Set(),
+            aiPages: new Set(),
+            allPages: new Set(),
+            sessions: 0
+          })
+        }
+
+        const stats = dailyStats.get(formattedDate)!
+        if (pagePath && !pathFilter.shouldExcludePath(pagePath)) {
+          stats.allPages.add(pagePath)
+        }
+      }
+
+      // Second pass: identify AI crawler traffic
+      for (const row of response.rows) {
+        const dateStr = row.dimensionValues?.[0]?.value || ''
+        const sessionSource = row.dimensionValues?.[1]?.value || ''
+        const pagePath = row.dimensionValues?.[2]?.value || ''
+        const pageReferrer = row.dimensionValues?.[3]?.value || ''
+        const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10)
+
+        // Convert GA4 date format (YYYYMMDD) to YYYY-MM-DD
+        const formattedDate = dateStr.length === 8
+          ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
+          : dateStr
+
+        // Check if this traffic is from an AI crawler
+        const crawlerName = this.identifyAICrawler(sessionSource, pageReferrer)
+
+        if (crawlerName && pagePath && !pathFilter.shouldExcludePath(pagePath)) {
+          const stats = dailyStats.get(formattedDate)!
+          stats.crawlers.add(crawlerName)
+          stats.aiPages.add(pagePath)
+          stats.sessions += sessions
+        }
+      }
+
+      // Store snapshots for each day
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+
+      for (let currentDate = new Date(start); currentDate <= end; currentDate.setDate(currentDate.getDate() + 1)) {
+        const dateStr = currentDate.toISOString().split('T')[0]
+
+        // Get stats for this day (or use empty stats if no traffic)
+        const stats = dailyStats.get(dateStr) || {
+          crawlers: new Set(),
+          aiPages: new Set(),
+          allPages: new Set(),
+          sessions: 0
+        }
+
+        await db.storeGA4DailySnapshot({
+          mappingId: mapping.id,
+          snapshotDate: dateStr,
+          aiSessions: stats.sessions,
+          uniqueCrawlers: stats.crawlers.size,
+          aiCrawledPages: stats.aiPages.size,
+          totalActivePages: stats.allPages.size,
+          crawlerList: Array.from(stats.crawlers),
+          exclusionPatternsHash: patternsHash
+        })
+      }
+
+      console.log('✅ [GA4 Data] Recorded daily snapshots', {
+        days: dailyStats.size,
+        dateRange: `${startDate} to ${endDate}`
+      })
+    } catch (error) {
+      console.error('❌ [GA4 Data] Failed to record daily snapshots:', error)
+      throw new Error('Failed to record daily activity snapshots')
+    }
+  }
+
+  /**
+   * Get activity snapshots from database (for trend chart)
+   * Returns empty array if no snapshots exist, allowing fallback to on-demand calculation
+   */
+  async getActivitySnapshots(
+    userId: string,
+    propertyId: string,
+    dateRangeStart: Date,
+    dateRangeEnd: Date
+  ): Promise<Array<{
+    date: string
+    aiSessions: number
+    uniqueCrawlers: number
+    aiCrawledPages: number
+    totalActivePages: number
+    crawlerList: string[]
+  }>> {
+    try {
+      const startDate = dateRangeStart.toISOString().split('T')[0]
+      const endDate = dateRangeEnd.toISOString().split('T')[0]
+
+      // Get domain mapping
+      const mappings = await db.getGA4DomainMappings(userId)
+      const mapping = mappings.find(m => m.propertyId === propertyId)
+
+      if (!mapping) {
+        throw new Error('Domain mapping not found')
+      }
+
+      const snapshots = await db.getGA4DailySnapshots(mapping.id, startDate, endDate)
+
+      return snapshots.map(s => ({
+        date: s.snapshotDate,
+        aiSessions: s.aiSessions,
+        uniqueCrawlers: s.uniqueCrawlers,
+        aiCrawledPages: s.aiCrawledPages,
+        totalActivePages: s.totalActivePages,
+        crawlerList: s.crawlerList || []
+      }))
+    } catch (error) {
+      console.error('❌ [GA4 Data] Failed to get activity snapshots:', error)
+      return [] // Return empty array on error to allow fallback
+    }
+  }
+
+  /**
+   * Create a hash of exclusion patterns for cache invalidation
+   */
+  private hashExclusionPatterns(patterns: ExclusionPattern[]): string {
+    const sortedPatterns = patterns
+      .map(p => `${p.pattern}:${p.patternType}:${p.isActive}`)
+      .sort()
+      .join('|')
+
+    // Simple hash function (could use crypto.createHash for production)
+    let hash = 0
+    for (let i = 0; i < sortedPatterns.length; i++) {
+      const char = sortedPatterns.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return hash.toString(36)
   }
 
   /**
