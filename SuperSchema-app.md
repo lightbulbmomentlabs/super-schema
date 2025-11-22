@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-21
-**Version:** 1.2.3
+**Last Updated:** 2025-11-22
+**Version:** 1.2.5
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -1351,7 +1351,8 @@ const { mappings, createMapping, deleteMapping } = useGA4DomainMappings(connecte
 ```
 
 **Components:**
-- `AIVisibilityScoreCard` - Circular progress score display with diversity and coverage breakdown
+- `AIVisibilityScoreCard` - Circular progress score display with breakdown bars showing Diversity (0-40 pts), Coverage (0-40 pts), and Volume (0-20 pts) component scores
+- `AIVisibilityScoreInfoModal` - Modal explaining score calculation methodology with examples
 - `AIVisibilityTrendChart` - Line chart showing AI Visibility Score over time with Recharts
 - `TopCrawlersTable` - Table of top AI crawlers with sessions and page views
 - `PageCrawlerMetricsTable` - Page-level metrics with last crawled date and crawler diversity
@@ -1951,6 +1952,59 @@ const data = teamId
 - Added "Account Management UI" section
 - Updated database schema with new columns
 - Documented all affected files with line numbers
+
+### v1.2.5 (2025-11-22) - AI Visibility Score Breakdown Bars
+
+**UX Enhancement:**
+- Added 3 horizontal breakdown bars below AI Visibility Score circle showing component scores:
+  - **AI Diversity** (0-40 pts): Purple/primary color with Sparkles icon
+  - **Coverage** (0-40 pts): Blue/info color with TrendingUp icon
+  - **Volume** (0-20 pts): Green/success color with Activity icon
+- Removed redundant grid section (AI Diversity/Coverage metrics) that duplicated breakdown bar information
+- Each bar displays points out of max (e.g., "10/40 pts") and animated progress fill
+- Framer Motion animations with staggered delays (1.0s, 1.1s, 1.2s) for smooth visual effect
+
+**Backend Changes:**
+- Added `scoreBreakdown` field to GA4MetricsResult interface (server/src/services/ga4/data.ts:68-73)
+- Updated metrics return statement to include breakdown object (lines 503-508)
+
+**Frontend Changes:**
+- Updated GA4Metrics interface with optional scoreBreakdown field (client/src/services/ga4.ts:64-69)
+- Enhanced AIVisibilityScoreCard component to accept and display breakdown bars (client/src/components/AIVisibilityScoreCard.tsx:11-16, 184-252)
+- Updated AIAnalyticsPage to pass scoreBreakdown prop (client/src/pages/AIAnalyticsPage.tsx:269)
+- Removed grid section showing duplicate metrics (AIVisibilityScoreCard.tsx:157-182 deleted)
+
+**Design Pattern:**
+- Matches existing Schema Quality score pattern for UI consistency
+- Uses semantic color tokens (bg-primary, bg-info, bg-success)
+- Horizontal progress bars with rounded-full h-2 height
+- Icon + label on left, score display on right
+
+**Impact:** Users now see clear visual breakdown of how their AI Visibility Score is calculated, making it easier to identify which component needs improvement
+
+### v1.2.4 (2025-11-21) - AI Analytics UX Improvements & Critical Bug Fix
+
+**UX Improvements:**
+- New wider two-column modal design pattern (max-w-4xl) for better readability on all screen sizes
+- Replaced small (i) icon with prominent "How is this calculated?" link at bottom of AI Visibility Score card
+- Fixed sticky header z-index (z-20) to prevent overlap when scrolling
+- Collapsible sections for viewing all crawled pages (not just top 10)
+- "Pages Not Yet Discovered" section showing pages that need schema attention
+
+**Critical Bug Fix:**
+- Fixed `allPagePaths` scoping issue in `calculateMetrics` method (server/src/services/ga4/data.ts:207, 363-370)
+- Root cause: `allPagePaths` Set was not passed as parameter from `fetchMetricsFromGA4` to `calculateMetrics`
+- Symptom: 500 error when clicking "Refresh Data" button with `ReferenceError: allPagePaths is not defined`
+- Solution: Added `allPagePaths: Set<string>` parameter to method signature and updated call site
+
+**Files Changed:**
+- server/src/services/ga4/data.ts (lines 207, 363-370, 423-427)
+- client/src/components/AIVisibilityScoreInfoModal.tsx (new file, 138 lines)
+- client/src/components/AIVisibilityScoreCard.tsx (lines 81-87, 186-195)
+- client/src/pages/AIAnalyticsPage.tsx (line 117)
+- client/src/components/PageCrawlerMetricsTable.tsx (already had features, now functional)
+
+**Impact:** Users can now refresh data without errors and see complete page analytics
 
 ### v1.2.3 (2025-11-21) - AI Visibility Score Accuracy Fix
 

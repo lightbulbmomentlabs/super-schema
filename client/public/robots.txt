@@ -1,9 +1,54 @@
 # Robots.txt for SuperSchema.ai
-# Allow search engines to crawl public pages but block API endpoints
+# Explicitly allow AI crawlers to access public content for better discoverability
 
+# === AI CRAWLERS (Explicit Allow) ===
+
+# OpenAI Crawlers
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Google AI
+User-agent: Google-Extended
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+# Common Crawl (used by many AI models for training)
+User-agent: CCBot
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta AI
+User-agent: FacebookBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# Cohere
+User-agent: cohere-ai
+Allow: /
+
+# === TRADITIONAL SEARCH ENGINES & OTHER BOTS ===
 User-agent: *
-
-# Allow all public pages
 Allow: /
 
 # Block API endpoints (reduce unnecessary 401 errors in logs)
@@ -12,5 +57,5 @@ Disallow: /api/
 # Allow specific public API endpoints
 Allow: /api/release-notes
 
-# Sitemap location (update this if you add a sitemap)
-# Sitemap: https://superschema.ai/sitemap.xml
+# Sitemap location
+Sitemap: https://superschema.ai/sitemap.xml

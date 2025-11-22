@@ -1,11 +1,19 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, TrendingUp, Eye } from 'lucide-react'
+import { Sparkles, TrendingUp, Eye, Info, Activity } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import AIVisibilityScoreInfoModal from './AIVisibilityScoreInfoModal'
 
 interface AIVisibilityScoreCardProps {
   score: number
   diversityScore: number
   coveragePercentage: number
+  scoreBreakdown?: {
+    diversityPoints: number      // 0-40 points
+    coveragePoints: number        // 0-40 points
+    volumePoints: number          // 0-20 points
+    totalAiSessions: number       // Raw count for reference
+  }
   isLoading?: boolean
   className?: string
 }
@@ -14,9 +22,11 @@ export default function AIVisibilityScoreCard({
   score,
   diversityScore,
   coveragePercentage,
+  scoreBreakdown,
   isLoading = false,
   className = ''
 }: AIVisibilityScoreCardProps) {
+  const [showInfoModal, setShowInfoModal] = useState(false)
   // Get color based on score
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-500'
@@ -143,33 +153,94 @@ export default function AIVisibilityScoreCard({
         </motion.div>
       </div>
 
-      {/* Breakdown */}
-      <div className="relative z-10 grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-border/50">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-foreground mb-1">
-            {diversityScore}
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-            <Sparkles className="h-4 w-4" />
-            AI Diversity
-          </div>
-          <div className="text-xs text-muted-foreground/70 mt-1">
-            unique crawlers
+      {/* Score Breakdown Bars */}
+      {scoreBreakdown && (
+        <div className="relative z-10 mt-6 pt-6 border-t border-border/50">
+          <div className="space-y-3">
+            {/* AI Diversity Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center text-foreground">
+                  <Sparkles className="h-4 w-4 mr-2 text-primary" />
+                  AI Diversity
+                </span>
+                <span className="font-semibold text-foreground text-sm">
+                  {scoreBreakdown.diversityPoints}/40 pts
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(scoreBreakdown.diversityPoints / 40) * 100}%` }}
+                  transition={{ delay: 1.0, duration: 0.5, ease: 'easeOut' }}
+                  className="h-2 rounded-full bg-primary transition-all duration-500"
+                />
+              </div>
+            </div>
+
+            {/* Coverage Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center text-foreground">
+                  <TrendingUp className="h-4 w-4 mr-2 text-info" />
+                  Coverage
+                </span>
+                <span className="font-semibold text-foreground text-sm">
+                  {scoreBreakdown.coveragePoints}/40 pts
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(scoreBreakdown.coveragePoints / 40) * 100}%` }}
+                  transition={{ delay: 1.1, duration: 0.5, ease: 'easeOut' }}
+                  className="h-2 rounded-full bg-info transition-all duration-500"
+                />
+              </div>
+            </div>
+
+            {/* Volume Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium flex items-center text-foreground">
+                  <Activity className="h-4 w-4 mr-2 text-success" />
+                  Volume
+                </span>
+                <span className="font-semibold text-foreground text-sm">
+                  {scoreBreakdown.volumePoints}/20 pts
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(scoreBreakdown.volumePoints / 20) * 100}%` }}
+                  transition={{ delay: 1.2, duration: 0.5, ease: 'easeOut' }}
+                  className="h-2 rounded-full bg-success transition-all duration-500"
+                />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-foreground mb-1">
-            {coveragePercentage.toFixed(1)}%
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-            <TrendingUp className="h-4 w-4" />
-            Coverage
-          </div>
-          <div className="text-xs text-muted-foreground/70 mt-1">
-            pages crawled
-          </div>
-        </div>
+      )}
+
+      {/* How this is calculated - Prominent Link */}
+      <div className="relative z-10 mt-4 pt-4 border-t border-border/50">
+        <button
+          onClick={() => setShowInfoModal(true)}
+          className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors font-medium flex items-center justify-center gap-1.5"
+        >
+          <Info className="h-4 w-4" />
+          How is this calculated?
+        </button>
       </div>
+
+      {/* Info Modal */}
+      {showInfoModal && (
+        <AIVisibilityScoreInfoModal
+          currentScore={score}
+          onClose={() => setShowInfoModal(false)}
+        />
+      )}
     </motion.div>
   )
 }
