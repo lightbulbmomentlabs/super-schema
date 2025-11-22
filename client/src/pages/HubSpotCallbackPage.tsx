@@ -220,7 +220,11 @@ export default function HubSpotCallbackPage() {
           if (response.success && response.data) {
             setStatus('success')
             toast.success(`Successfully connected to ${response.data.portalName || 'HubSpot'}!`)
-            setTimeout(() => navigate('/hubspot'), 2000)
+            // Navigate with URL params to trigger domain association modal
+            setTimeout(() => {
+              const connectionId = response.data.connectionId || response.data.portalId
+              navigate(`/hubspot?success=true&showDomainModal=true&connectionId=${connectionId}`)
+            }, 2000)
           } else {
             throw new Error('Failed to connect HubSpot account')
           }

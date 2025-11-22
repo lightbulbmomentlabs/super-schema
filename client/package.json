@@ -18,7 +18,7 @@
     "@tanstack/react-query-devtools": "^5.56.2",
     "autoprefixer": "^10.4.21",
     "axios": "^1.7.7",
-    "canvas-confetti": "^1.9.3",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",

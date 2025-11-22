@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
+import { useSearchParams } from 'react-router-dom'
 import { hubspotApi } from '@/services/hubspot'
 import { apiService } from '@/services/api'
-import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe, AlertTriangle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertCircle, ExternalLink, Trash2, Plus, X, Globe, AlertTriangle, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmModal from '@/components/ConfirmModal'
+import { HubSpotDomainAssociationModal, shouldShowDomainPrompt } from '@/components/HubSpotDomainAssociationModal'
 
 export default function HubSpotPage() {
   const queryClient = useQueryClient()
   const { isLoaded, isSignedIn } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [newDomain, setNewDomain] = useState<{ [key: string]: string }>({})
   const [showAddDomain, setShowAddDomain] = useState<{ [key: string]: boolean }>({})
@@ -22,6 +25,10 @@ export default function HubSpotPage() {
     connectionId: null,
     portalName: undefined
   })
+
+  // Domain association modal state
+  const [isDomainModalOpen, setIsDomainModalOpen] = useState(false)
+  const [domainModalConnection, setDomainModalConnection] = useState<any>(null)
 
   const handleDismissHowItWorks = () => {
     setShowHowItWorks(false)
@@ -58,6 +65,28 @@ export default function HubSpotPage() {
   })
 
   const connections = connectionsResponse?.data || []
+
+  // Check URL params to show domain modal after successful OAuth
+  useEffect(() => {
+    const showModal = searchParams.get('showDomainModal')
+    const connectionId = searchParams.get('connectionId')
+
+    if (showModal === 'true' && connectionId && connections.length > 0) {
+      // Find the connection by ID
+      const connection = connections.find((c: any) => c.id === connectionId)
+
+      if (connection) {
+        // Check if connection has no domains and prompt hasn't been shown
+        if (connection.associated_domains?.length === 0 && shouldShowDomainPrompt(connectionId)) {
+          setDomainModalConnection(connection)
+          setIsDomainModalOpen(true)
+        }
+
+        // Clear URL params
+        setSearchParams({})
+      }
+    }
+  }, [connections, searchParams, setSearchParams])
 
   // Get detailed error message
   const getErrorMessage = () => {
@@ -276,20 +305,20 @@ export default function HubSpotPage() {
           </div>
         )}
 
-        {/* Beta Notice with Connect Button */}
-        <div className="mb-8 flex items-start gap-4 p-4 bg-info/10 border border-info/20 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-info mt-0.5 flex-shrink-0" />
+        {/* Connect CTA Banner */}
+        <div className="mb-8 flex items-start gap-4 p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg">
+          <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
-              <p className="text-sm font-medium text-foreground">Beta</p>
+              <p className="text-sm font-semibold text-foreground">Push Schema in One Click</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                This feature is in beta. Contact support if you run into any issues.
+                Connect your HubSpot account to instantly deploy schema markup to your pages—no coding required.
               </p>
             </div>
             <div className="flex justify-end">
               <button
                 onClick={handleConnectHubSpot}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium whitespace-nowrap shadow-sm"
               >
                 Connect HubSpot Account
               </button>
@@ -339,15 +368,23 @@ export default function HubSpotPage() {
                           <h3 className="font-semibold text-lg">
                             {connection.portalName || `Portal ${connection.hubspotPortalId}`}
                           </h3>
-                          {connection.isActive ? (
-                            <span className="flex items-center text-xs px-2 py-1 rounded-full bg-success text-success-foreground">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Active
-                            </span>
-                          ) : (
+                          {!connection.isActive ? (
                             <span className="flex items-center text-xs px-2 py-1 rounded-full bg-destructive text-destructive-foreground">
                               <XCircle className="h-3 w-3 mr-1" />
                               Inactive
+                            </span>
+                          ) : connection.associatedDomains && connection.associatedDomains.length > 0 ? (
+                            <span className="flex items-center text-xs px-2 py-1 rounded-full bg-success text-success-foreground">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Ready
+                            </span>
+                          ) : (
+                            <span
+                              className="flex items-center text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40 cursor-help"
+                              title="Add a domain below to enable automatic portal selection"
+                            >
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Add Domain
                             </span>
                           )}
                         </div>
@@ -418,10 +455,18 @@ export default function HubSpotPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                        <p className="text-sm text-amber-700 dark:text-amber-400">
-                          ⚠️ No domains associated yet. Add domains to enable automatic portal selection.
-                        </p>
+                      <div className="mb-3 p-4 bg-blue-500/10 border-2 border-blue-500/20 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                              One More Step!
+                            </p>
+                            <p className="text-xs text-blue-700 dark:text-blue-400">
+                              Add your domain to enable automatic portal selection when pushing&nbsp;schema.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -429,10 +474,14 @@ export default function HubSpotPage() {
                     {!showAddDomain[connection.id] ? (
                       <button
                         onClick={() => setShowAddDomain({ ...showAddDomain, [connection.id]: true })}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm bg-primary/10 text-primary border-2 border-dashed border-primary/30 rounded-md hover:bg-primary/20 hover:border-primary/50 transition-colors font-medium"
+                        className={`w-full flex items-center justify-center space-x-2 px-4 py-3 text-sm rounded-md transition-all font-semibold ${
+                          connection.associatedDomains && connection.associatedDomains.length > 0
+                            ? 'bg-primary/10 text-primary border-2 border-dashed border-primary/30 hover:bg-primary/20 hover:border-primary/50'
+                            : 'bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-[1.02] border-2 border-primary animate-pulse'
+                        }`}
                       >
                         <Plus className="h-4 w-4" />
-                        <span>Add Domain</span>
+                        <span>{connection.associatedDomains && connection.associatedDomains.length > 0 ? 'Add Another Domain' : 'Add Domain to Complete Setup'}</span>
                       </button>
                     ) : (
                       <div className="space-y-2">
@@ -502,6 +551,18 @@ export default function HubSpotPage() {
           cancelText="Cancel"
           variant="danger"
         />
+
+        {/* Domain Association Modal */}
+        {domainModalConnection && (
+          <HubSpotDomainAssociationModal
+            connection={domainModalConnection}
+            isOpen={isDomainModalOpen}
+            onClose={() => {
+              setIsDomainModalOpen(false)
+              setDomainModalConnection(null)
+            }}
+          />
+        )}
       </div>
     </div>
   )
