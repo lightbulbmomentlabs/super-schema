@@ -301,7 +301,10 @@ if (hasMinimalContent && attempt === 1) {
 6. Server exchanges code for access/refresh tokens
 7. Tokens encrypted with AES-256-CBC
 8. Connection stored in hubspot_connections table
-9. User can push schemas to HubSpot CMS
+9. Redirect to /hubspot?showDomainModal=true&connectionId={id}
+10. Domain association modal appears with celebration confetti
+11. User adds domain (or skips) to enable auto-portal selection
+12. User can push schemas to HubSpot CMS
 ```
 
 **Flow 2: Marketplace-First (Innovative) ⚠️**
@@ -325,6 +328,18 @@ if (hasMinimalContent && attempt === 1) {
 - **Token Refresh:** Auto-refresh when expiration within 5 minutes
 - **Pending Cleanup:** Cron job every 15 minutes deletes expired pending connections
 - **State Parameter:** CSRF protection with cryptographically secure tokens
+
+**Domain Association UX (NEW):**
+- **Modal Component:** `HubSpotDomainAssociationModal.tsx` appears post-OAuth
+- **Celebration:** Confetti animation on open and successful domain addition
+- **Smart Detection:** Auto-suggests most common domain from user's schema library
+- **localStorage Tracking:** Only shows once per connection (key: `hubspot_domain_prompts_shown`)
+- **Status Badges:**
+  - "Add Domain" (blue) = No domains associated yet
+  - "Ready" (green) = Domains configured, ready to push
+  - "Inactive" (red) = Connection disabled
+- **Purpose:** Enables automatic portal selection when pushing schema (detects portal by domain)
+- **Skippable:** Users can defer domain setup but see persistent reminders
 
 **HubSpot CMS Features:**
 - List blog posts and pages from portal
