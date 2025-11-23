@@ -12,6 +12,7 @@ import FAQItem from '@/components/FAQItem'
 import TestimonialScroller from '@/components/TestimonialScroller'
 import HubSpotIcon from '@/components/icons/HubSpotIcon'
 import ResourcesDropdown from '@/components/ResourcesDropdown'
+import AnimatedSchemaScore from '@/components/landing/AnimatedSchemaScore'
 import { useKonamiCode } from '@/hooks/useKonamiCode'
 
 export default function LandingPage() {
@@ -641,46 +642,49 @@ export default function LandingPage() {
       {/* Scoring System Section */}
       <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1">
-              <img
-                src="/aeo-schema-generator-schema-quality-score.jpg"
-                alt="Schema Quality Score Interface showing real-time scoring metrics"
-                className="w-full h-auto rounded-[25px] shadow-2xl"
-              />
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Know Your Schema Score
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Not all schema markup is created equal. Our intelligent scoring system grades your generated schema on completeness, accuracy, and AEO optimization potential.
+            </p>
+          </motion.div>
+
+          {/* Animated Score Visualization */}
+          <AnimatedSchemaScore />
+
+          {/* Feature Highlights */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-16 grid md:grid-cols-3 gap-8"
+          >
+            <div className="text-center">
+              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-4" />
+              <p className="font-medium mb-2">Real-time Quality Scoring</p>
+              <p className="text-sm text-muted-foreground">See exactly how well your schema performs before you implement it</p>
             </div>
-            <div className="order-1 md:order-2">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Know Your Schema Score
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Not all schema markup is created equal. Our intelligent scoring system grades your generated schema on completeness, accuracy, and AEO optimization potential.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-medium">Real-time Quality Scoring</p>
-                    <p className="text-sm text-muted-foreground">See exactly how well your schema performs before you implement it</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-medium">Completeness Metrics</p>
-                    <p className="text-sm text-muted-foreground">Understand what's missing and what could be improved</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
-                  <div>
-                    <p className="font-medium">AEO Optimization Insights</p>
-                    <p className="text-sm text-muted-foreground">Get specific recommendations for better AI search visibility</p>
-                  </div>
-                </div>
-              </div>
+            <div className="text-center">
+              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-4" />
+              <p className="font-medium mb-2">Completeness Metrics</p>
+              <p className="text-sm text-muted-foreground">Understand what's missing and what could be improved</p>
             </div>
-          </div>
+            <div className="text-center">
+              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-4" />
+              <p className="font-medium mb-2">AEO Optimization Insights</p>
+              <p className="text-sm text-muted-foreground">Get specific recommendations for better AI search visibility</p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
