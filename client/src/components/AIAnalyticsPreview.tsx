@@ -236,16 +236,6 @@ export function AIAnalyticsPreview({
             </p>
           </div>
         </motion.div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Questions?{' '}
-            <a href="mailto:support@superschema.ai" className="text-primary hover:underline cursor-pointer">
-              Contact us
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   );

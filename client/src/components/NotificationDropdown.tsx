@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bell, Check, Sparkles, AlertCircle, X } from 'lucide-react'
+import { Bell, Check, Sparkles, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 import { useUserNotifications } from '@/hooks/useUserNotifications'

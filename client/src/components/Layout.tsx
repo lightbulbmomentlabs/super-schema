@@ -26,7 +26,6 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
 import { apiService } from '@/services/api'
 import { HeaderSkeleton } from './skeletons/HeaderSkeleton'
-import { FEATURE_FLAGS } from '@/config/featureFlags'
 
 interface LayoutProps {
   children: ReactNode
@@ -36,7 +35,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Generate', href: '/generate', icon: LightningBoltIcon },
   { name: 'URL Library', href: '/library', icon: Library },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'AI Analytics', href: '/ai-analytics', icon: Eye, badge: 'BETA' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
@@ -127,24 +126,51 @@ export default function Layout({ children }: LayoutProps) {
           <div className="md:hidden border-t border-border bg-background">
             <div className="w-full px-4 py-4 space-y-2">
               {navigation.map((item) => {
-                const isActive = location.pathname === item.href
+                const isActive = location.pathname === item.href || (item.href === '/ai-analytics' && location.pathname.startsWith('/ga4/'))
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                      'flex items-center justify-between px-3 py-3 text-sm font-medium rounded-md transition-colors',
                       isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <item.icon className="mr-3 h-5 w-5" />
-                    {item.name}
+                    <div className="flex items-center">
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {item.name}
+                    </div>
+                    {item.badge && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 )
               })}
+
+              {/* Separator */}
+              <div className="py-2">
+                <div className="h-px bg-border" />
+              </div>
+
+              {/* Settings Link */}
+              <Link
+                to="/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                  location.pathname === '/settings'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <Settings className="mr-3 h-5 w-5" />
+                Settings
+              </Link>
 
               {/* HubSpot Link */}
               <Link
@@ -160,23 +186,6 @@ export default function Layout({ children }: LayoutProps) {
                 <HubSpotIcon className="mr-3 h-5 w-5" />
                 HubSpot
               </Link>
-
-              {/* AI Analytics Link */}
-              {FEATURE_FLAGS.GA4_AI_ANALYTICS_ENABLED && (
-                <Link
-                  to="/ai-analytics"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={cn(
-                    'flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
-                    location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  )}
-                >
-                  <Eye className="mr-3 h-5 w-5" />
-                  AI Analytics
-                </Link>
-              )}
 
               {/* What's New Link */}
               <Link
@@ -262,33 +271,64 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
                 <nav className="mt-5 flex-1 px-2 space-y-1">
                   {navigation.map((item) => {
-                    const isActive = location.pathname === item.href
+                    const isActive = location.pathname === item.href || (item.href === '/ai-analytics' && location.pathname.startsWith('/ga4/'))
                     return (
                       <Link
                         key={item.name}
                         to={item.href}
                         className={cn(
-                          'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                          'group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors',
                           isActive
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
                       >
-                        <item.icon
-                          className={cn(
-                            'mr-3 flex-shrink-0 h-5 w-5',
-                            isActive ? 'text-primary-foreground' : 'text-muted-foreground'
-                          )}
-                        />
-                        {item.name}
+                        <div className="flex items-center">
+                          <item.icon
+                            className={cn(
+                              'mr-3 flex-shrink-0 h-5 w-5',
+                              isActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                            )}
+                          />
+                          {item.name}
+                        </div>
+                        {item.badge && (
+                          <span className={cn(
+                            'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                            isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/20 text-primary'
+                          )}>
+                            {item.badge}
+                          </span>
+                        )}
                       </Link>
                     )
                   })}
 
-                  {/* HubSpot Integration - Available to all users */}
+                  {/* Separator */}
                   <div className="pt-4 pb-2">
                     <div className="h-px bg-border" />
                   </div>
+
+                  {/* Settings */}
+                  <Link
+                    to="/settings"
+                    className={cn(
+                      'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                      location.pathname === '/settings'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <Settings
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        location.pathname === '/settings' ? 'text-primary-foreground' : 'text-muted-foreground'
+                      )}
+                    />
+                    Settings
+                  </Link>
+
+                  {/* HubSpot Integration */}
                   <Link
                     to="/hubspot"
                     className={cn(
@@ -306,27 +346,6 @@ export default function Layout({ children }: LayoutProps) {
                     />
                     HubSpot
                   </Link>
-
-                  {/* AI Analytics - Available to all users */}
-                  {FEATURE_FLAGS.GA4_AI_ANALYTICS_ENABLED && (
-                    <Link
-                      to="/ai-analytics"
-                      className={cn(
-                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                        location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                      )}
-                    >
-                      <Eye
-                        className={cn(
-                          'mr-3 flex-shrink-0 h-5 w-5',
-                          (location.pathname === '/ai-analytics' || location.pathname.startsWith('/ga4/')) ? 'text-primary-foreground' : 'text-muted-foreground'
-                        )}
-                      />
-                      AI Analytics
-                    </Link>
-                  )}
 
                   {/* What's New - Available to all users */}
                   <Link
