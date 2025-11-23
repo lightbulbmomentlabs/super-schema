@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
 **Last Updated:** 2025-11-23
-**Version:** 1.2.6
+**Version:** 1.2.7
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -34,6 +34,7 @@ SuperSchema (formerly AEO Schema Generator) is a SaaS application that automatic
 - HubSpot integration for direct CMS deployment
 - Team collaboration for agencies
 - URL library for managing generated schemas
+- AI Visibility tracking (GA4-powered AI referral traffic analytics)
 
 ### Tech Stack Summary
 
@@ -532,12 +533,20 @@ export const FEATURE_FLAGS = {
 **Private Beta Feature System:**
 - Feature flag management with 4 status levels: `in_development`, `private_beta`, `beta`, `live`
 - User beta access requests and admin approval workflow
-- User-specific feature access control
-- In-app notifications for beta access grants
-- Admin dashboard for managing beta requests
+- User-specific feature access control via `FeatureGate` component
+- In-app notifications for beta access grants (NotificationDropdown with bell icon)
+- BETA badge display in navigation (10px font, subtle styling)
+- Admin dashboard for managing beta requests with filters (feature, customer type, status)
+- Preview pages with sample data for private beta features
 - Location: `/server/src/controllers/featureController.ts`, `/server/src/controllers/adminController.ts`
 - Database tables: `features`, `beta_requests`, `user_feature_access`, `user_notifications`
-- Frontend: `/client/src/components/FeatureGate.tsx`, `/client/src/pages/admin/AdminPrivateBetaRequests.tsx`
+- Frontend Components:
+  - `/client/src/components/FeatureGate.tsx` - Access control wrapper
+  - `/client/src/components/FeaturePreview.tsx` - Preview wrapper
+  - `/client/src/components/AIAnalyticsPreview.tsx` - AI Visibility preview with sample data
+  - `/client/src/components/NotificationDropdown.tsx` - Notification management
+  - `/client/src/pages/admin/AdminPrivateBetaRequests.tsx` - Admin beta management
+- Navigation: `/client/src/components/Layout.tsx` (supports badge property on nav items)
 - Migration: `/database/migrations/032_private_beta_system.sql`
 
 ---
@@ -777,6 +786,7 @@ is_admin(user_id)                         -- Check admin privileges
 - `/client/src/pages/admin/AdminMonitoring.tsx` - Error logs and monitoring
 - `/client/src/pages/admin/AdminTickets.tsx` - Support ticket management
 - `/client/src/pages/admin/AdminContent.tsx` - Release notes management
+- `/client/src/pages/admin/AdminPrivateBetaRequests.tsx` - Beta request management with filters
 - `/client/src/components/AdminPurchaseAnalytics.tsx` (20KB) - Purchase metrics
 
 **Team Management:**
@@ -789,9 +799,15 @@ is_admin(user_id)                         -- Check admin privileges
 - `/client/src/pages/CreditsPage.tsx` - Credit management
 
 **Layout:**
-- `/client/src/components/Layout.tsx` - Main app layout
+- `/client/src/components/Layout.tsx` - Main app layout with navigation (supports BETA badges, Bot icon for AI Visibility, Megaphone for What's New)
 - `/client/src/components/AdminLayout.tsx` - Admin area layout
 - `/client/src/components/Header.tsx`, `/client/src/components/Footer.tsx`
+- `/client/src/components/NotificationDropdown.tsx` - Notification bell dropdown with unread count
+
+**Feature System:**
+- `/client/src/components/FeatureGate.tsx` - Feature access control wrapper
+- `/client/src/components/FeaturePreview.tsx` - Preview wrapper for beta features
+- `/client/src/components/AIAnalyticsPreview.tsx` - AI Visibility preview page with sample data
 
 ### 5.2 Routing Structure
 
@@ -810,6 +826,7 @@ is_admin(user_id)                         -- Check admin privileges
 - `/dashboard/*` - Dashboard routes
 - `/settings` - User settings
 - `/team/*` - Team management (feature flagged)
+- `/ai-analytics` - AI Visibility dashboard (with FeatureGate protection for private beta)
 
 **Admin Routes:**
 - `/admin` - Admin layout wrapper
@@ -818,6 +835,7 @@ is_admin(user_id)                         -- Check admin privileges
 - `/admin/monitoring` - Error monitoring
 - `/admin/tickets` - Support tickets
 - `/admin/content` - Content management
+- `/admin/beta-requests` - Private beta request management
 
 **Educational/SEO Routes:**
 - `/aeo`, `/geo`, `/ai-search-optimization`, `/schema-markup` - Pillar pages
@@ -866,6 +884,19 @@ is_admin(user_id)                         -- Check admin privileges
 - `GET /schema-failures` - Failed generations
 - `GET /errors` - Error logs
 - `POST /users/:userId/credits` - Grant credits
+- `GET /beta-requests` - List beta requests (with filters)
+- `POST /beta-requests/:requestId/grant` - Grant beta access
+
+**Features:** `/api/features`
+- `GET /` - List all features
+- `POST /request-access` - Request beta access for a feature
+- `GET /access` - Check user's feature access
+- `GET /access/:featureSlug` - Check access for specific feature
+
+**Notifications:** `/api/notifications`
+- `GET /` - Get user notifications (with unread filtering)
+- `PATCH /:id/read` - Mark notification as read
+- `PATCH /read-all` - Mark all notifications as read
 
 **Webhooks:** `/webhooks`
 - `POST /stripe` - Stripe webhook (raw body)
@@ -896,6 +927,8 @@ is_admin(user_id)                         -- Check admin privileges
 - `useTeam` - Team operations
 - `useVersionCheck` - Version detection
 - `useWhatsNewNotifications` - Release notes
+- `useFeatureAccess` - Check user's feature access and status
+- `useUserNotifications` - Manage user notifications with unread count, mark as read
 
 ### 5.5 Utility Functions
 
@@ -1351,7 +1384,7 @@ await db.storeGA4Metrics(userId, propertyId, metrics, startDate, endDate)
 **Frontend Implementation:**
 
 **Routes:**
-- `/ai-analytics` - Main dashboard (AIAnalyticsPage)
+- `/ai-analytics` - Main AI Visibility dashboard (AIAnalyticsPage)
 - `/ga4/connect` - OAuth connection + domain mapping (GA4ConnectPage)
 - `/ga4/callback` - OAuth callback handler (GA4CallbackPage)
 
@@ -1982,6 +2015,40 @@ const data = teamId
 - Added "Account Management UI" section
 - Updated database schema with new columns
 - Documented all affected files with line numbers
+
+### v1.2.7 (2025-11-23) - AI Visibility Rebranding & Navigation UX
+
+**Branding:**
+- Rebranded "AI Analytics" to "AI Visibility" throughout the application
+- Updated navigation to emphasize the unique value proposition of tracking AI crawler visibility
+
+**Navigation Icons:**
+- Changed AI Visibility icon from Eye to Bot (friendly robot icon) for more approachable branding
+- Changed What's New icon from Bell to Megaphone for better announcement representation
+- Made BETA badge smaller (10px font from 12px) for more subtle appearance
+
+**UI/UX Improvements:**
+- Removed "Questions? Contact us" footer from AI Analytics preview page for cleaner design
+- Maintained BETA badge display in navigation for clear feature status indication
+- Badge styling adapts when active (lighter background) vs inactive (primary color)
+
+**Bug Fixes:**
+- Fixed date-fns build failures by replacing with native JavaScript `toLocaleDateString()`
+- Removed date-fns from NotificationDropdown.tsx (lines 1-7, 131-139)
+- Removed date-fns from AdminPrivateBetaRequests.tsx (lines 14-16, 239-243)
+- Verified no remaining date-fns imports across entire client codebase
+
+**Technical Details:**
+- Updated navigation array in Layout.tsx to support badge property (line 38)
+- Navigation items support optional `badge` field for BETA/NEW indicators
+- Component styling uses conditional classes for active/inactive badge states
+- Files changed:
+  - client/src/components/Layout.tsx (navigation structure and icons)
+  - client/src/components/AIAnalyticsPreview.tsx (removed footer)
+  - client/src/components/NotificationDropdown.tsx (date formatting)
+  - client/src/pages/admin/AdminPrivateBetaRequests.tsx (date formatting)
+
+**Impact:** More distinctive branding that clearly communicates the AI visibility value proposition, improved navigation UX with friendly icons, and eliminated external dependencies for date formatting
 
 ### v1.2.6 (2025-11-23) - Private Beta Feature System
 
