@@ -9,8 +9,8 @@ import {
   Shield,
   Menu,
   X,
-  Bell,
-  Eye
+  Megaphone,
+  Bot
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import SuperSchemaLogo from './SuperSchemaLogo'
@@ -35,7 +35,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Generate', href: '/generate', icon: LightningBoltIcon },
   { name: 'URL Library', href: '/library', icon: Library },
-  { name: 'AI Analytics', href: '/ai-analytics', icon: Eye, badge: 'BETA' },
+  { name: 'AI Visibility', href: '/ai-analytics', icon: Bot, badge: 'BETA' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
@@ -144,7 +144,7 @@ export default function Layout({ children }: LayoutProps) {
                       {item.name}
                     </div>
                     {item.badge && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/20 text-primary">
                         {item.badge}
                       </span>
                     )}
@@ -198,7 +198,7 @@ export default function Layout({ children }: LayoutProps) {
                     : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Bell className="mr-3 h-5 w-5" />
+                <Megaphone className="mr-3 h-5 w-5" />
                 <span className="flex items-center gap-2">
                   What's New
                   {unreadCount > 0 && location.pathname !== '/whats-new' && (
@@ -294,7 +294,7 @@ export default function Layout({ children }: LayoutProps) {
                         </div>
                         {item.badge && (
                           <span className={cn(
-                            'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                            'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium',
                             isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/20 text-primary'
                           )}>
                             {item.badge}
@@ -357,7 +357,7 @@ export default function Layout({ children }: LayoutProps) {
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <Bell
+                    <Megaphone
                       className={cn(
                         'mr-3 flex-shrink-0 h-5 w-5',
                         location.pathname === '/whats-new' ? 'text-primary-foreground' : 'text-muted-foreground'
