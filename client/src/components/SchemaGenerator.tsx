@@ -28,7 +28,6 @@ import UnassociatedDomainModal from './UnassociatedDomainModal'
 import SuccessPreviewInterstitial from './SuccessPreviewInterstitial'
 import RefineCalloutModal from './RefineCalloutModal'
 import RefiningOverlay from './RefiningOverlay'
-import JokeDisplay from './JokeDisplay'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
 import { cn } from '@/utils/cn'
@@ -1610,7 +1609,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             </div>
           )}
 
-          {/* Schema Editor with Refining Overlay */}
+          {/* Schema Editor with Generating/Refining Overlay */}
           <div className="relative">
             <SchemaEditor
               key={`schema-editor-${selectedSchemaIndex}-${currentUrlId}`}
@@ -1622,8 +1621,11 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
               highlightedChanges={highlightedChanges}
             />
 
+            {/* Animated overlay during initial generation */}
+            {isGenerating && <RefiningOverlay isRefining={true} context="generating" />}
+
             {/* Animated overlay during refinement */}
-            <RefiningOverlay isRefining={isRefining} />
+            {isRefining && <RefiningOverlay isRefining={true} context="refining" />}
           </div>
 
           {/* Push to HubSpot Button - Show for all users with HubSpot connections */}
@@ -1669,14 +1671,16 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
             </div>
           )}
 
-          {/* Loading State with Dad Jokes */}
+          {/* Loading State */}
           {displaySchemas.length === 0 && isGenerating && (
-            <JokeDisplay />
+            <div className="relative min-h-[500px] bg-card border border-border rounded-lg">
+              <RefiningOverlay isRefining={true} context="generating" />
+            </div>
           )}
 
           {/* Help Text - Ready State */}
           {displaySchemas.length === 0 && !isGenerating && (
-            <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-lg">
+            <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-lg flex flex-col items-center justify-center min-h-[500px]">
               <LightningBoltIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Ready to Generate Schema</h3>
               <p className="text-sm max-w-md mx-auto">

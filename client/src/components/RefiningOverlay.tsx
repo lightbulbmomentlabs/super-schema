@@ -3,18 +3,30 @@ import { Sparkles, Zap, TrendingUp, Stars } from 'lucide-react'
 
 interface RefiningOverlayProps {
   isRefining: boolean
+  context?: 'generating' | 'refining'
 }
 
-export default function RefiningOverlay({ isRefining }: RefiningOverlayProps) {
+export default function RefiningOverlay({ isRefining, context = 'refining' }: RefiningOverlayProps) {
   const [messageIndex, setMessageIndex] = useState(0)
 
-  // Fun messages that rotate while refining
-  const messages = [
+  // Messages for initial schema generation
+  const generatingMessages = [
+    { icon: Sparkles, text: "Analyzing your content...", subtext: "Extracting key information for optimal schema" },
+    { icon: TrendingUp, text: "Identifying schema opportunities...", subtext: "Finding the best markup for your page" },
+    { icon: Zap, text: "Crafting optimal schema...", subtext: "Building AI-optimized structured data" },
+    { icon: Stars, text: "Finalizing markup...", subtext: "Preparing your schema for search engines and AI" },
+  ]
+
+  // Messages for schema refinement
+  const refiningMessages = [
     { icon: Sparkles, text: "Teaching the AIs to love your content...", subtext: "ChatGPT, Perplexity, and Gemini approved" },
     { icon: TrendingUp, text: "Supercharging your AEO score...", subtext: "From invisible to irresistible" },
     { icon: Zap, text: "Making it super!", subtext: "Because good isn't good enough" },
     { icon: Stars, text: "Translating to AI-speak...", subtext: "Crystal clear for every AI engine" },
   ]
+
+  // Select messages based on context
+  const messages = context === 'generating' ? generatingMessages : refiningMessages
 
   // Rotate messages every 2.5 seconds
   useEffect(() => {
