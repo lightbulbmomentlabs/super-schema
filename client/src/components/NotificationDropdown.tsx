@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 import { useUserNotifications } from '@/hooks/useUserNotifications'
 import { NotificationBadge } from './NotificationBadge'
-import { format } from 'date-fns'
 
 /**
  * Notification dropdown component that displays user notifications
@@ -130,7 +129,14 @@ export default function NotificationDropdown() {
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
                         <p className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
+                          {new Date(notification.created_at).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
                         </p>
                         {notification.type === 'beta_access_granted' && (
                           <Link
