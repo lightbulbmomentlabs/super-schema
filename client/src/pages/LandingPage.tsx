@@ -13,6 +13,7 @@ import TestimonialScroller from '@/components/TestimonialScroller'
 import HubSpotIcon from '@/components/icons/HubSpotIcon'
 import ResourcesDropdown from '@/components/ResourcesDropdown'
 import AnimatedSchemaScore from '@/components/landing/AnimatedSchemaScore'
+import AIRefinementDemo from '@/components/landing/AIRefinementDemo'
 import { useKonamiCode } from '@/hooks/useKonamiCode'
 
 export default function LandingPage() {
@@ -723,12 +724,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div>
-              <img
-                src="/aeo-schema-refinements.jpg"
-                alt="AI Schema Refinement Interface showing one-click optimization"
-                className="w-full h-auto rounded-[25px] shadow-2xl"
-              />
+            <div className="flex items-center justify-center">
+              <AIRefinementDemo />
             </div>
           </div>
         </div>
