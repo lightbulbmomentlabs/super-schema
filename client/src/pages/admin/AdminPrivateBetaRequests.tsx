@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { markTabAsViewed } from '@/hooks/useAdminBadgeCounts';
-import { format } from 'date-fns';
 import ConfirmModal from '@/components/ConfirmModal';
 
 export default function AdminPrivateBetaRequests() {
@@ -237,7 +236,11 @@ export default function AdminPrivateBetaRequests() {
                     <td className="p-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        {format(new Date(request.requested_at), 'MMM d, yyyy')}
+                        {new Date(request.requested_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
                       </div>
                     </td>
                     <td className="p-4">
