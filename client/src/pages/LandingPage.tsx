@@ -388,7 +388,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.5 }}
                 className="block mb-2"
               >
-                AEO Schema Generator
+                AI Search is Here
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -396,7 +396,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.7 }}
                 className="block bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent"
               >
-                That's Actually Super
+                Make Sure You're In It
               </motion.span>
             </h1>
 
@@ -406,8 +406,7 @@ export default function LandingPage() {
               transition={{ delay: 0.9 }}
               className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
             >
-              Stop wrestling with JSON-LD syntax at 2am. Our AI-powered schema markup tool automatically creates optimized structured data for answer engine optimization (AEO) and SEO.
-              Because life's too short for manual schema markup. ⚡
+              Millions of people now use ChatGPT, Perplexity, and Google AI instead of traditional search. Don't get left out. Our AI tool automatically creates the schema markup you need for answer engine optimization (AEO) and better SEO—no coding required. Because being invisible to AI isn't an option. 💪
             </motion.p>
 
             <AnimatePresence>
