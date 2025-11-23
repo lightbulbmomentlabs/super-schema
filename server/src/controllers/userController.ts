@@ -211,7 +211,14 @@ export const initializeUser = asyncHandler(async (req: AuthenticatedRequest, res
         message: 'Account initialized successfully! You have received 2 free credits.'
       })
     } else {
-      console.log('🔧 [INIT USER] User already exists, checking if they need welcome credits...')
+      console.log('🔧 [INIT USER] User already exists, syncing latest data from Clerk...')
+
+      // Sync user data from Clerk (email, firstName, lastName may have changed)
+      await db.upsertUserFromClerk(userId, email, firstName, lastName)
+      console.log('🔧 [INIT USER] User data synced from Clerk')
+
+      // Refresh user data after sync
+      user = await db.getUser(userId)
 
       // Check if this is an existing user who never received welcome credits
       // (They have 0 credits AND have never used any credits)

@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-22
-**Version:** 1.2.5
+**Last Updated:** 2025-11-23
+**Version:** 1.2.6
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -529,6 +529,17 @@ export const FEATURE_FLAGS = {
 - Categories: new_feature, enhancement, performance, bug_fix
 - Location: `/client/src/hooks/useWhatsNewNotifications.tsx`
 
+**Private Beta Feature System:**
+- Feature flag management with 4 status levels: `in_development`, `private_beta`, `beta`, `live`
+- User beta access requests and admin approval workflow
+- User-specific feature access control
+- In-app notifications for beta access grants
+- Admin dashboard for managing beta requests
+- Location: `/server/src/controllers/featureController.ts`, `/server/src/controllers/adminController.ts`
+- Database tables: `features`, `beta_requests`, `user_feature_access`, `user_notifications`
+- Frontend: `/client/src/components/FeatureGate.tsx`, `/client/src/pages/admin/AdminPrivateBetaRequests.tsx`
+- Migration: `/database/migrations/032_private_beta_system.sql`
+
 ---
 
 ## 4. Database Schema
@@ -719,6 +730,10 @@ INDEX: invite_token, expires_at
 - `hubspot_domain_associations` - Domain to connection mapping
 - `error_logs` - Application error logging (error_type, message, stack_trace)
 - `imported_schemas` - Track schema preview/imports
+- `features` - Feature flag registry (slug, name, description, status)
+- `beta_requests` - User beta access requests (user_id, feature_id, granted_at)
+- `user_feature_access` - Granted feature access (user_id, feature_id, granted_by)
+- `user_notifications` - In-app notifications (type, title, message, is_read)
 
 ### 4.3 Row Level Security (RLS)
 
@@ -1967,6 +1982,43 @@ const data = teamId
 - Added "Account Management UI" section
 - Updated database schema with new columns
 - Documented all affected files with line numbers
+
+### v1.2.6 (2025-11-23) - Private Beta Feature System
+
+**Infrastructure:**
+- Implemented comprehensive private beta feature flag system with 4 status levels:
+  - `in_development`: Hidden from all non-admin users
+  - `private_beta`: Visible to users with granted access (admin approval required)
+  - `beta`: Public beta (available to all users)
+  - `live`: Generally available
+- Database migration 032_private_beta_system.sql creates 4 new tables (features, beta_requests, user_feature_access, user_notifications)
+- Foreign key relationships ensure data integrity between users, features, and access grants
+- Indexed queries for fast access checks and pending request filtering
+
+**Backend:**
+- Added featureController.ts with endpoints for feature access checks, beta requests, and notifications (server/src/controllers/featureController.ts)
+- Extended adminController.ts with beta request approval workflow (server/src/controllers/adminController.ts:728-828)
+- New routes in server/src/routes/features.ts for feature management
+- Updated Database interface in database.ts with types for all new tables (lines 198-289)
+- Fixed missing `Update` type for support_tickets table
+- Fixed user_feature_access table structure (composite primary key, no id field)
+
+**Frontend:**
+- Created FeatureGate component for wrapping features behind access control (client/src/components/FeatureGate.tsx)
+- Added useFeatureAccess hook for checking user access (client/src/hooks/useFeatureAccess.ts)
+- Admin dashboard for managing beta requests (client/src/pages/admin/AdminPrivateBetaRequests.tsx)
+- Notification dropdown for beta access grants (client/src/components/NotificationDropdown.tsx)
+
+**TypeScript Fixes:**
+- Added explicit type assertion for joined Supabase queries in adminController.ts
+- Resolved `never` type inference issues with new table definitions
+- Ensured nullable fields match SQL schema (description in features table)
+
+**Initial Feature:**
+- AI Analytics feature (`ai-analytics` slug) set to private_beta status
+- Wrapped AIAnalyticsPage with FeatureGate component
+
+**Impact:** Enables controlled rollout of new features to select users, with admin approval workflow and automatic user notifications
 
 ### v1.2.5 (2025-11-22) - AI Visibility Score Breakdown Bars
 

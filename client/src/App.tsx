@@ -17,6 +17,7 @@ import AdminUsers from './pages/admin/AdminUsers'
 import AdminMonitoring from './pages/admin/AdminMonitoring'
 import AdminTickets from './pages/admin/AdminTickets'
 import AdminContent from './pages/admin/AdminContent'
+import AdminPrivateBetaRequests from './pages/admin/AdminPrivateBetaRequests'
 import HubSpotPage from './pages/HubSpotPage'
 import HubSpotCallbackPage from './pages/HubSpotCallbackPage'
 import HubSpotInstallPage from './pages/HubSpotInstallPage'
@@ -245,6 +246,7 @@ function AppContent() {
             <Route path="monitoring" element={<AdminMonitoring />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="content" element={<AdminContent />} />
+            <Route path="beta-requests" element={<AdminPrivateBetaRequests />} />
           </Route>
 
           {/* Fallback route */}

@@ -191,6 +191,101 @@ export interface Database {
           message: string
           status?: 'open' | 'in_progress' | 'resolved'
         }
+        Update: {
+          status?: 'open' | 'in_progress' | 'resolved'
+        }
+      }
+      features: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          description: string | null
+          status: 'in_development' | 'private_beta' | 'beta' | 'live'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          description?: string | null
+          status?: 'in_development' | 'private_beta' | 'beta' | 'live'
+        }
+        Update: {
+          slug?: string
+          name?: string
+          description?: string | null
+          status?: 'in_development' | 'private_beta' | 'beta' | 'live'
+        }
+      }
+      beta_requests: {
+        Row: {
+          id: string
+          user_id: string
+          feature_id: string
+          requested_at: string
+          granted_at: string | null
+          granted_by_admin_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          feature_id: string
+          requested_at?: string
+          granted_at?: string | null
+          granted_by_admin_id?: string | null
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by_admin_id?: string | null
+        }
+      }
+      user_feature_access: {
+        Row: {
+          user_id: string
+          feature_id: string
+          granted_at: string
+          granted_by: string | null
+        }
+        Insert: {
+          user_id: string
+          feature_id: string
+          granted_at?: string
+          granted_by: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string
+        }
+      }
+      user_notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          feature_id: string | null
+          is_read: boolean
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          feature_id?: string | null
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          is_read?: boolean
+          read_at?: string | null
+        }
       }
     }
     Functions: {
@@ -269,8 +364,15 @@ class DatabaseService {
           autoRefreshToken: false,
           persistSession: false
         }
-      })
+      }) as SupabaseClient<Database>
     }
+  }
+
+  /**
+   * Get the Supabase client instance for direct queries
+   */
+  get client(): SupabaseClient<Database> {
+    return this.supabase as SupabaseClient<Database>
   }
 
   private isDatabaseAvailable(): boolean {

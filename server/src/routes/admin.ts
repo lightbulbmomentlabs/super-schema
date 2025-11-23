@@ -25,7 +25,12 @@ import {
   getPowerUsersAnalytics,
   getSchemaQualityAnalytics,
   getConversionAnalytics,
-  getPurchaseAnalytics
+  getPurchaseAnalytics,
+  getBetaRequests,
+  grantBetaAccess,
+  revokeBetaAccess,
+  getFeatures,
+  updateFeatureStatus
 } from '../controllers/adminController.js'
 
 const router = Router()
@@ -115,5 +120,22 @@ router.get('/analytics/conversions', getConversionAnalytics)
 
 // GET /api/admin/analytics/purchases - Get purchase analytics
 router.get('/analytics/purchases', getPurchaseAnalytics)
+
+// Private Beta Management Routes
+
+// GET /api/admin/beta-requests - Get all beta access requests with filtering
+router.get('/beta-requests', getBetaRequests)
+
+// POST /api/admin/beta-requests/:requestId/grant - Grant beta access to a user
+router.post('/beta-requests/:requestId/grant', grantBetaAccess)
+
+// POST /api/admin/beta-access/revoke - Revoke beta access from a user
+router.post('/beta-access/revoke', revokeBetaAccess)
+
+// GET /api/admin/features - Get all features with request statistics
+router.get('/features', getFeatures)
+
+// PATCH /api/admin/features/:featureId/status - Update feature status
+router.patch('/features/:featureId/status', updateFeatureStatus)
 
 export default router

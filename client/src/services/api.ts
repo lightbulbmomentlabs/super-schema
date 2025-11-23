@@ -926,6 +926,93 @@ class ApiService {
     return response.data
   }
 
+  // Private Beta Management - Admin Endpoints
+
+  async getBetaRequests(filters?: {
+    featureId?: string
+    isPaying?: boolean
+    granted?: boolean
+    limit?: number
+    offset?: number
+  }): Promise<ApiResponse<{
+    requests: Array<any>
+    total: number
+    limit: number
+    offset: number
+  }>> {
+    const params = new URLSearchParams()
+    if (filters?.featureId) params.append('featureId', filters.featureId)
+    if (filters?.isPaying !== undefined) params.append('isPaying', String(filters.isPaying))
+    if (filters?.granted !== undefined) params.append('granted', String(filters.granted))
+    if (filters?.limit) params.append('limit', String(filters.limit))
+    if (filters?.offset) params.append('offset', String(filters.offset))
+
+    const response = await api.get(`/admin/beta-requests?${params.toString()}`)
+    return response.data
+  }
+
+  async grantBetaAccess(requestId: string): Promise<ApiResponse<any>> {
+    const response = await api.post(`/admin/beta-requests/${requestId}/grant`)
+    return response.data
+  }
+
+  async revokeBetaAccess(userId: string, featureId: string): Promise<ApiResponse<any>> {
+    const response = await api.post('/admin/beta-access/revoke', { userId, featureId })
+    return response.data
+  }
+
+  async getFeatures(): Promise<ApiResponse<any>> {
+    const response = await api.get('/admin/features')
+    return response.data
+  }
+
+  async updateFeatureStatus(featureId: string, status: string): Promise<ApiResponse<any>> {
+    const response = await api.patch(`/admin/features/${featureId}/status`, { status })
+    return response.data
+  }
+
+  // Private Beta Management - User Endpoints
+
+  async requestFeatureBetaAccess(featureId: string): Promise<ApiResponse<any>> {
+    const response = await api.post(`/features/${featureId}/request-beta`)
+    return response.data
+  }
+
+  async checkFeatureAccess(featureSlug: string): Promise<ApiResponse<{
+    hasAccess: boolean
+    feature: any
+    reason: string
+    hasPendingRequest?: boolean
+    requestedAt?: string
+  }>> {
+    const response = await api.get(`/features/${featureSlug}/access`)
+    return response.data
+  }
+
+  async getAllFeatures(): Promise<ApiResponse<{ features: Array<any> }>> {
+    const response = await api.get('/features')
+    return response.data
+  }
+
+  // Notifications
+
+  async getUserNotifications(unreadOnly?: boolean): Promise<ApiResponse<{ notifications: Array<any> }>> {
+    const params = new URLSearchParams()
+    if (unreadOnly) params.append('unreadOnly', 'true')
+    const response = await api.get(`/features/notifications?${params.toString()}`)
+    return response.data
+  }
+
+  async markNotificationRead(notificationId: string): Promise<ApiResponse<any>> {
+    const response = await api.patch(`/features/notifications/${notificationId}/read`)
+    return response.data
+  }
+
+  async markAllNotificationsRead(): Promise<ApiResponse<any>> {
+    const response = await api.patch('/features/notifications/read-all')
+    return response.data
+  }
+
   // Version detection - fetches app version from health endpoint
   async getVersion(): Promise<{ version: string; buildTime: string }> {
     const response = await axios.get(`${API_URL}/health`)

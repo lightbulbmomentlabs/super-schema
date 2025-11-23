@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, RefreshCw, AlertCircle } from 'lucide-react'
+import { Calendar, RefreshCw, AlertCircle, Loader2 } from 'lucide-react'
 import { useGA4Connection } from '@/hooks/useGA4Connection'
 import { useGA4DomainMappings } from '@/hooks/useGA4DomainMappings'
 import { useGA4Metrics } from '@/hooks/useGA4Metrics'
@@ -12,10 +12,11 @@ import TopCrawlersTable from '@/components/TopCrawlersTable'
 import PageCrawlerMetricsTable from '@/components/PageCrawlerMetricsTable'
 import GA4ConnectionStatus from '@/components/GA4ConnectionStatus'
 import DomainMappingSelector from '@/components/DomainMappingSelector'
+import { FeatureGate } from '@/components/FeatureGate'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 
-export default function AIAnalyticsPage() {
+function AIAnalyticsContent() {
   const navigate = useNavigate()
 
   // State for date range (default to last 30 days from today)
@@ -29,6 +30,10 @@ export default function AIAnalyticsPage() {
     }
   })
 
+  // Minimum loading time state to prevent flash
+  const [showLoading, setShowLoading] = useState(true)
+  const [minLoadingTimePassed, setMinLoadingTimePassed] = useState(false)
+
   // Fetch connection status
   const {
     connected,
@@ -37,8 +42,25 @@ export default function AIAnalyticsPage() {
     disconnect,
     isDisconnecting,
     switchConnection,
-    isSwitching
+    isSwitching,
+    isLoading: isConnectionLoading
   } = useGA4Connection()
+
+  // Ensure loading state shows for at least 500ms to prevent flash
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinLoadingTimePassed(true)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Update showLoading based on both connection loading and minimum time
+  useEffect(() => {
+    if (!isConnectionLoading && minLoadingTimePassed) {
+      setShowLoading(false)
+    }
+  }, [isConnectionLoading, minLoadingTimePassed])
 
   // Fetch domain mappings
   const {
@@ -131,8 +153,29 @@ export default function AIAnalyticsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        {/* Show loading state while checking connection */}
+        {showLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card border border-border rounded-2xl p-12 text-center"
+          >
+            <div className="max-w-md mx-auto">
+              <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-4 mb-4">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Loading...
+              </h2>
+              <p className="text-muted-foreground">
+                Checking your Google Analytics connection
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {/* If not connected, show empty state */}
-        {!connected && (
+        {!showLoading && !connected && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -341,5 +384,13 @@ export default function AIAnalyticsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function AIAnalyticsPage() {
+  return (
+    <FeatureGate featureSlug="ai-analytics">
+      <AIAnalyticsContent />
+    </FeatureGate>
   )
 }

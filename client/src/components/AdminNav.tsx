@@ -4,7 +4,8 @@ import {
   Users,
   Activity,
   MessageSquare,
-  FileText
+  FileText,
+  Rocket
 } from 'lucide-react'
 import { useAdminBadgeCounts } from '@/hooks/useAdminBadgeCounts'
 import AdminBadge from './AdminBadge'
@@ -26,6 +27,7 @@ export default function AdminNav() {
     { to: '/admin/monitoring', label: 'Monitoring', icon: Activity, badgeCount: monitoringCount },
     { to: '/admin/tickets', label: 'Tickets', icon: MessageSquare, badgeCount: ticketsCount },
     { to: '/admin/content', label: 'Content', icon: FileText },
+    { to: '/admin/beta-requests', label: 'Beta Requests', icon: Rocket },
   ]
   return (
     <nav className="border-b border-border bg-card">

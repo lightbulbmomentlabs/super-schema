@@ -61,3 +61,10 @@ logs
 
 # Redis dumps
 dump.rdb
+
+# Test files and screenshots
+.playwright-mcp/
+*.png
+server/check-user.ts
+server/src/scripts/
+server/src/db/

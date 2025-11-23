@@ -20,6 +20,7 @@ import Footer from './Footer'
 import ThemeToggle from './ThemeToggle'
 import ResourcesDropdown from './ResourcesDropdown'
 import TeamSwitcher from './TeamSwitcher'
+import NotificationDropdown from './NotificationDropdown'
 import { NotificationBadge } from './NotificationBadge'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useWhatsNewNotifications } from '@/hooks/useWhatsNewNotifications'
@@ -81,6 +82,7 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="text-sm text-muted-foreground">
                   Welcome back, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
                 </span>
+                <NotificationDropdown />
                 <ThemeToggle />
                 <UserButton
                   afterSignOutUrl="/"
@@ -96,6 +98,7 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Mobile Controls */}
           <div className="flex md:hidden items-center space-x-2">
+            <NotificationDropdown />
             <ThemeToggle />
             <UserButton
               afterSignOutUrl="/"

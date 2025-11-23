@@ -116,10 +116,8 @@ export const modifyUserCredits = asyncHandler(async (req: AuthenticatedRequest, 
   }
 
   // Add or subtract credits
-  if (amount > 0) {
+  if (amount !== 0) {
     await db.addCredits(userId, amount, reason)
-  } else if (amount < 0) {
-    await db.deductCredits(userId, Math.abs(amount), reason)
   }
 
   // Get updated user
@@ -605,5 +603,371 @@ export const getPurchaseAnalytics = asyncHandler(async (req: AuthenticatedReques
     success: true,
     data: purchaseAnalytics,
     message: 'Purchase analytics retrieved successfully'
+  })
+})
+
+// Private Beta Management Endpoints
+
+/**
+ * Get all beta access requests with user and feature details
+ * Supports filtering by feature, payment status, and grant status
+ */
+export const getBetaRequests = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { db } = await import('../services/database.js')
+
+  const featureId = req.query.featureId as string | undefined
+  const isPaying = req.query.isPaying === 'true' ? true : req.query.isPaying === 'false' ? false : undefined
+  const granted = req.query.granted === 'true' ? true : req.query.granted === 'false' ? false : undefined
+  const limit = parseInt(req.query.limit as string) || 100
+  const offset = parseInt(req.query.offset as string) || 0
+
+  // Build Supabase query for beta requests with user and feature data
+  // Note: Use the specific foreign key relationship name to avoid ambiguity
+  let query = db.client
+    .from('beta_requests')
+    .select(`
+      *,
+      users!beta_requests_user_id_fkey(email, first_name, last_name, credit_balance, id),
+      features!inner(name, slug, status)
+    `)
+
+  // Apply filters
+  if (featureId) {
+    query = query.eq('feature_id', featureId)
+  }
+
+  if (granted === true) {
+    query = query.not('granted_at', 'is', null)
+  } else if (granted === false) {
+    query = query.is('granted_at', null)
+  }
+
+  // Apply pagination and ordering
+  query = query
+    .order('requested_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  const { data: requests, error, count } = await query
+
+  if (error) {
+    console.error('Error fetching beta requests:', error)
+    throw createError('Failed to fetch beta requests', 500)
+  }
+
+  // Check if each user is a paying customer
+  const requestsWithPaymentStatus = await Promise.all(
+    (requests || []).map(async (request: any) => {
+      const { count: purchaseCount } = await db.client
+        .from('credit_transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', request.user_id)
+        .eq('type', 'purchase')
+
+      return {
+        id: request.id,
+        user_id: request.user_id,
+        feature_id: request.feature_id,
+        requested_at: request.requested_at,
+        granted_at: request.granted_at,
+        granted_by_admin_id: request.granted_by_admin_id,
+        email: request.users.email,
+        first_name: request.users.first_name,
+        last_name: request.users.last_name,
+        credit_balance: request.users.credit_balance,
+        feature_name: request.features.name,
+        feature_slug: request.features.slug,
+        feature_status: request.features.status,
+        is_paying_customer: (purchaseCount || 0) > 0
+      }
+    })
+  )
+
+  // Filter by payment status if specified
+  let filteredRequests = requestsWithPaymentStatus
+  if (isPaying !== undefined) {
+    filteredRequests = requestsWithPaymentStatus.filter(r => r.is_paying_customer === isPaying)
+  }
+
+  // Sort: paying customers first, then by request date
+  filteredRequests.sort((a, b) => {
+    if (a.is_paying_customer !== b.is_paying_customer) {
+      return a.is_paying_customer ? -1 : 1
+    }
+    return new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime()
+  })
+
+  // Get total count for pagination
+  let countQuery = db.client
+    .from('beta_requests')
+    .select('*', { count: 'exact', head: true })
+
+  if (featureId) {
+    countQuery = countQuery.eq('feature_id', featureId)
+  }
+
+  if (granted === true) {
+    countQuery = countQuery.not('granted_at', 'is', null)
+  } else if (granted === false) {
+    countQuery = countQuery.is('granted_at', null)
+  }
+
+  const { count: total } = await countQuery
+
+  res.json({
+    success: true,
+    data: {
+      requests: filteredRequests,
+      total: total || 0,
+      limit,
+      offset
+    }
+  })
+})
+
+/**
+ * Grant beta access to a user for a specific feature
+ * Creates notification for the user
+ */
+export const grantBetaAccess = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { db } = await import('../services/database.js')
+  const { requestId } = req.params
+  const adminId = req.auth?.userId
+
+  if (!adminId) {
+    throw createError('Authentication required', 401)
+  }
+
+  // Get the beta request with feature details
+  const { data: requestData, error: requestError } = await db.client
+    .from('beta_requests')
+    .select(`
+      *,
+      features!inner(name, slug)
+    `)
+    .eq('id', requestId)
+    .single() as {
+      data: {
+        id: string
+        user_id: string
+        feature_id: string
+        requested_at: string
+        granted_at: string | null
+        granted_by_admin_id: string | null
+        features: {
+          name: string
+          slug: string
+        }
+      } | null
+      error: any
+    }
+
+  if (requestError || !requestData) {
+    throw createError('Beta request not found', 404)
+  }
+
+  // Check if already granted
+  if (requestData.granted_at) {
+    throw createError('Beta access already granted', 400)
+  }
+
+  // Grant access
+  const now = new Date().toISOString()
+
+  // Update beta request
+  const { error: updateError } = await db.client
+    .from('beta_requests')
+    .update({
+      granted_at: now,
+      granted_by_admin_id: adminId
+    })
+    .eq('id', requestId)
+
+  if (updateError) {
+    console.error('Error updating beta request:', updateError)
+    throw createError('Failed to update beta request', 500)
+  }
+
+  // Add to user_feature_access (upsert)
+  const { error: accessError } = await db.client
+    .from('user_feature_access')
+    .upsert({
+      user_id: requestData.user_id,
+      feature_id: requestData.feature_id,
+      granted_at: now,
+      granted_by: adminId
+    })
+
+  if (accessError) {
+    console.error('Error granting feature access:', accessError)
+    throw createError('Failed to grant feature access', 500)
+  }
+
+  // Create notification
+  const notificationId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+
+  const { error: notifError } = await db.client
+    .from('user_notifications')
+    .insert({
+      id: notificationId,
+      user_id: requestData.user_id,
+      type: 'beta_access_granted',
+      title: `Access Granted: ${requestData.features.name}`,
+      message: `You now have access to ${requestData.features.name}! Check it out and let us know what you think.`,
+      feature_id: requestData.feature_id,
+      is_read: false
+    })
+
+  if (notifError) {
+    console.error('Error creating notification:', notifError)
+  }
+
+  console.log(`✅ [AdminController] Beta access granted:`, {
+    requestId,
+    userId: requestData.user_id,
+    featureSlug: requestData.features.slug,
+    grantedBy: adminId
+  })
+
+  res.json({
+    success: true,
+    message: 'Beta access granted successfully',
+    data: {
+      requestId,
+      userId: requestData.user_id,
+      featureId: requestData.feature_id
+    }
+  })
+})
+
+/**
+ * Revoke beta access from a user
+ */
+export const revokeBetaAccess = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { dbClient } = await import('../db/index.js')
+  const { userId, featureId } = req.body
+
+  if (!userId || !featureId) {
+    throw createError('userId and featureId are required', 400)
+  }
+
+  // Remove from user_feature_access
+  dbClient.prepare(`
+    DELETE FROM user_feature_access
+    WHERE user_id = ? AND feature_id = ?
+  `).run(userId, featureId)
+
+  // Update beta request
+  dbClient.prepare(`
+    UPDATE beta_requests
+    SET granted_at = NULL, granted_by_admin_id = NULL
+    WHERE user_id = ? AND feature_id = ?
+  `).run(userId, featureId)
+
+  console.log(`🔒 [AdminController] Beta access revoked:`, {
+    userId,
+    featureId
+  })
+
+  res.json({
+    success: true,
+    message: 'Beta access revoked successfully'
+  })
+})
+
+/**
+ * Get all features with request statistics
+ */
+export const getFeatures = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { db } = await import('../services/database.js')
+
+  // Get all features
+  const { data: features, error: featuresError } = await db.client
+    .from('features')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (featuresError) {
+    console.error('Error fetching features:', featuresError)
+    throw createError('Failed to fetch features', 500)
+  }
+
+  // For each feature, get statistics
+  const featuresWithStats = await Promise.all(
+    (features || []).map(async (feature: any) => {
+      // Get total requests count
+      const { count: totalRequests } = await db.client
+        .from('beta_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('feature_id', feature.id)
+
+      // Get pending requests count
+      const { count: pendingRequests } = await db.client
+        .from('beta_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('feature_id', feature.id)
+        .is('granted_at', null)
+
+      // Get granted access count
+      const { count: grantedCount } = await db.client
+        .from('user_feature_access')
+        .select('*', { count: 'exact', head: true })
+        .eq('feature_id', feature.id)
+
+      return {
+        ...feature,
+        total_requests: totalRequests || 0,
+        pending_requests: pendingRequests || 0,
+        granted_count: grantedCount || 0
+      }
+    })
+  )
+
+  res.json({
+    success: true,
+    data: featuresWithStats
+  })
+})
+
+/**
+ * Update feature status
+ */
+export const updateFeatureStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { dbClient } = await import('../db/index.js')
+  const { featureId } = req.params
+  const { status } = req.body
+
+  const validStatuses = ['in_development', 'private_beta', 'beta', 'live']
+  if (!validStatuses.includes(status)) {
+    throw createError('Invalid status. Must be one of: in_development, private_beta, beta, live', 400)
+  }
+
+  // Check if feature exists
+  const feature = dbClient.prepare('SELECT * FROM features WHERE id = ?').get(featureId)
+
+  if (!feature) {
+    throw createError('Feature not found', 404)
+  }
+
+  // Update status
+  dbClient.prepare(`
+    UPDATE features
+    SET status = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(status, featureId)
+
+  console.log(`📊 [AdminController] Feature status updated:`, {
+    featureId,
+    oldStatus: feature.status,
+    newStatus: status
+  })
+
+  res.json({
+    success: true,
+    message: `Feature status updated to ${status}`,
+    data: {
+      featureId,
+      oldStatus: feature.status,
+      newStatus: status
+    }
   })
 })
