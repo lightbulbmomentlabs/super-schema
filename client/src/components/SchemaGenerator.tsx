@@ -22,6 +22,7 @@ import LowCreditWarning from './LowCreditWarning'
 import DuplicateUrlModal from './DuplicateUrlModal'
 import TimeoutErrorModal from './TimeoutErrorModal'
 import CrawlerBlockedModal from './CrawlerBlockedModal'
+import SchemaMismatchModal from './SchemaMismatchModal'
 import SupportModal from './SupportModal'
 import HubSpotContentMatcher from './HubSpotContentMatcher'
 import UnassociatedDomainModal from './UnassociatedDomainModal'
@@ -113,6 +114,15 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [crawlerBlockedData, setCrawlerBlockedData] = useState<{
     url: string
     blockingReasons: string[]
+  } | null>(null)
+
+  // Schema mismatch modal state (for content type incompatibility)
+  const [showSchemaMismatchModal, setShowSchemaMismatchModal] = useState(false)
+  const [schemaMismatchData, setSchemaMismatchData] = useState<{
+    url: string
+    requestedType: string
+    suggestedAlternatives: string[]
+    errorMessage: string
   } | null>(null)
 
   // Support modal state
@@ -468,6 +478,33 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
           blockingReasons
         })
         setShowCrawlerBlockedModal(true)
+        return
+      }
+
+      // Handle content mismatch errors with modal (422 status)
+      if (error.response?.status === 422 && errorMessage === 'CONTENT_MISMATCH') {
+        const responseData = error.response?.data?.data || {}
+        const suggestedAlternatives = responseData.suggestedAlternatives || []
+        const requestedType = responseData.requestedType || selectedSchemaType
+        const errorMsg = error.response?.data?.message || 'Content does not match requested schema type'
+
+        // Track content mismatch analytics
+        console.log('🔍 Content mismatch detected:', {
+          url,
+          requestedType,
+          suggestedAlternatives,
+          errorMessage: errorMsg,
+          timestamp: new Date().toISOString()
+        })
+
+        // Show content mismatch modal
+        setSchemaMismatchData({
+          url,
+          requestedType,
+          suggestedAlternatives,
+          errorMessage: errorMsg
+        })
+        setShowSchemaMismatchModal(true)
         return
       }
 
@@ -1722,6 +1759,41 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         onClose={() => setShowCrawlerBlockedModal(false)}
         url={crawlerBlockedData?.url || ''}
         blockingReasons={crawlerBlockedData?.blockingReasons || []}
+      />
+
+      {/* Schema Mismatch Modal */}
+      <SchemaMismatchModal
+        isOpen={showSchemaMismatchModal}
+        onClose={() => setShowSchemaMismatchModal(false)}
+        url={schemaMismatchData?.url || ''}
+        requestedType={schemaMismatchData?.requestedType || ''}
+        suggestedAlternatives={schemaMismatchData?.suggestedAlternatives || []}
+        errorMessage={schemaMismatchData?.errorMessage || ''}
+        onTryAutoDetect={() => {
+          setShowSchemaMismatchModal(false)
+          setSelectedSchemaType('Auto')
+          // Re-trigger generation with Auto (no requestedSchemaTypes)
+          if (schemaMismatchData?.url) {
+            generateMutation.mutate({
+              url: schemaMismatchData.url,
+              options
+            })
+          }
+        }}
+        onSelectAlternative={(type: string) => {
+          setShowSchemaMismatchModal(false)
+          setSelectedSchemaType(type)
+          // Re-trigger generation with selected type
+          if (schemaMismatchData?.url) {
+            generateMutation.mutate({
+              url: schemaMismatchData.url,
+              options: {
+                ...options,
+                requestedSchemaTypes: [type]
+              }
+            })
+          }
+        }}
       />
 
       {/* Support Modal */}

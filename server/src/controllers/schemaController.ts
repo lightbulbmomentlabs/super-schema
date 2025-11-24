@@ -148,8 +148,25 @@ export const generateSchema = asyncHandler(async (req: AuthenticatedRequest, res
         userId,
         url: validatedData.url,
         errorMessage: result.metadata.errorMessage,
+        errorCode: result.metadata.errorCode,
         processingTime: result.metadata.processingTimeMs
       })
+
+      // Handle content mismatch errors with 422 status and structured response
+      if (result.metadata.errorCode === 'CONTENT_MISMATCH') {
+        console.log('🔍 Content mismatch detected, returning 422 with suggestions:', result.metadata.suggestedAlternatives)
+        return res.status(422).json({
+          success: false,
+          error: 'CONTENT_MISMATCH',
+          message: result.metadata.errorMessage || 'Requested schema type not compatible with page content',
+          data: {
+            url: validatedData.url,
+            requestedType: result.metadata.requestedType,
+            suggestedAlternatives: result.metadata.suggestedAlternatives || [],
+            metadata: result.metadata
+          }
+        })
+      }
 
       res.status(400).json({
         success: false,

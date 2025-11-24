@@ -69,6 +69,19 @@ export interface EnhancedMetadata {
     }>
   }
 
+  // Video metadata (comprehensive)
+  videos: Array<{
+    url: string
+    embedUrl?: string
+    provider?: string  // youtube, vimeo, wistia, hubspot, etc.
+    title?: string
+    description?: string
+    thumbnailUrl?: string
+    duration?: string
+    width?: number
+    height?: number
+  }>
+
   // Existing JSON-LD structured data
   existingJsonLd: any[]
 
@@ -407,6 +420,9 @@ class HtmlCleaningService {
     // Image metadata
     const images = this.extractImageMetadata($)
 
+    // Video metadata
+    const videos = this.extractVideoMetadata($)
+
     // Business information
     const business = this.extractBusinessInfo($)
 
@@ -436,6 +452,7 @@ class HtmlCleaningService {
       tags,
       keywords,
       images,
+      videos,
       existingJsonLd,
       business,
       contentAnalysis,
@@ -1221,6 +1238,187 @@ class HtmlCleaningService {
     }
   }
 
+  /**
+   * Extract video metadata from various video embed sources
+   * Supports: YouTube, Vimeo, Wistia, HubSpot, Vidyard, Brightcove, and native HTML5 video
+   */
+  private extractVideoMetadata($: CheerioAPI): Array<{
+    url: string
+    embedUrl?: string
+    provider?: string
+    title?: string
+    description?: string
+    thumbnailUrl?: string
+    duration?: string
+    width?: number
+    height?: number
+  }> {
+    const videos: Array<{
+      url: string
+      embedUrl?: string
+      provider?: string
+      title?: string
+      description?: string
+      thumbnailUrl?: string
+      duration?: string
+      width?: number
+      height?: number
+    }> = []
+
+    // Extract YouTube videos
+    $('iframe[src*="youtube.com"], iframe[src*="youtu.be"]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const videoIdMatch = src.match(/(?:youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/v\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/)
+      if (videoIdMatch) {
+        const videoId = videoIdMatch[1]
+        videos.push({
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          embedUrl: src,
+          provider: 'YouTube',
+          thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+          title: $el.attr('title') || $el.attr('data-title'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Extract Vimeo videos
+    $('iframe[src*="vimeo.com"]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const videoIdMatch = src.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+      if (videoIdMatch) {
+        const videoId = videoIdMatch[1]
+        videos.push({
+          url: `https://vimeo.com/${videoId}`,
+          embedUrl: src,
+          provider: 'Vimeo',
+          title: $el.attr('title') || $el.attr('data-title'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Extract Wistia videos
+    $('iframe[src*="wistia"], [class*="wistia"], [data-wistia-id]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const wistiaId = $el.attr('data-wistia-id') ||
+                       src.match(/wistia\.(?:com|net)\/(?:embed\/iframe\/|medias\/)([a-zA-Z0-9]+)/)?.[1] ||
+                       $el.attr('class')?.match(/wistia_embed.*wistia_async_([a-zA-Z0-9]+)/)?.[1]
+      if (wistiaId) {
+        videos.push({
+          url: `https://fast.wistia.com/medias/${wistiaId}`,
+          embedUrl: src || undefined,
+          provider: 'Wistia',
+          title: $el.attr('data-title') || $el.attr('title'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Extract HubSpot videos
+    $('iframe[src*="hubspot"], [class*="hubspot-video"], [class*="hs-video"], div[data-video-id]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const videoId = $el.attr('data-video-id') ||
+                      src.match(/hubspot\.com.*video.*\/(\d+)/)?.[1] ||
+                      src.match(/hsforms\.com.*video.*\/([a-zA-Z0-9-]+)/)?.[1]
+
+      // Get surrounding context for title
+      const parent = $el.parent()
+      const title = $el.attr('title') ||
+                    $el.attr('data-title') ||
+                    parent.find('h1, h2, h3, h4, .video-title').first().text().trim() ||
+                    parent.attr('aria-label')
+
+      videos.push({
+        url: src || `hubspot-video-${videoId || 'embedded'}`,
+        embedUrl: src || undefined,
+        provider: 'HubSpot',
+        title: title || 'HubSpot Video',
+        width: parseInt($el.attr('width') || '0') || undefined,
+        height: parseInt($el.attr('height') || '0') || undefined
+      })
+    })
+
+    // Extract Vidyard videos
+    $('iframe[src*="vidyard"], [class*="vidyard"], [data-vidyard-id]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const vidyardId = $el.attr('data-vidyard-id') || src.match(/vidyard\.com\/(?:embed|watch)\/([a-zA-Z0-9]+)/)?.[1]
+      if (vidyardId) {
+        videos.push({
+          url: `https://share.vidyard.com/watch/${vidyardId}`,
+          embedUrl: src || undefined,
+          provider: 'Vidyard',
+          title: $el.attr('data-title') || $el.attr('title'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Extract Brightcove videos
+    $('iframe[src*="brightcove"], video-js[data-video-id]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const videoId = $el.attr('data-video-id') || src.match(/players\.brightcove\.net.*\/(\d+)/)?.[1]
+      videos.push({
+        url: src || `brightcove-video-${videoId || 'embedded'}`,
+        embedUrl: src || undefined,
+        provider: 'Brightcove',
+        title: $el.attr('data-title') || $el.attr('title'),
+        width: parseInt($el.attr('width') || '0') || undefined,
+        height: parseInt($el.attr('height') || '0') || undefined
+      })
+    })
+
+    // Extract native HTML5 video elements
+    $('video').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || $el.find('source').first().attr('src')
+      if (src) {
+        videos.push({
+          url: src,
+          provider: 'Native',
+          title: $el.attr('title') || $el.attr('aria-label'),
+          thumbnailUrl: $el.attr('poster'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Extract Loom videos
+    $('iframe[src*="loom.com"]').each((_, el) => {
+      const $el = $(el)
+      const src = $el.attr('src') || ''
+      const videoIdMatch = src.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/)
+      if (videoIdMatch) {
+        videos.push({
+          url: `https://www.loom.com/share/${videoIdMatch[1]}`,
+          embedUrl: src,
+          provider: 'Loom',
+          title: $el.attr('title'),
+          width: parseInt($el.attr('width') || '0') || undefined,
+          height: parseInt($el.attr('height') || '0') || undefined
+        })
+      }
+    })
+
+    // Log extracted videos for debugging
+    if (videos.length > 0) {
+      console.log(`🎬 Extracted ${videos.length} video(s) from page:`, videos.map(v => ({ provider: v.provider, url: v.url })))
+    }
+
+    return videos.slice(0, 10) // Limit to 10 videos
+  }
+
   private extractExistingJsonLd($: CheerioAPI): any[] {
     const jsonLdData: any[] = []
 
@@ -1269,8 +1467,35 @@ class HtmlCleaningService {
     else if (url.includes('/contact')) type = 'contact'
     else if (url === new URL(url).origin || url.endsWith('/')) type = 'homepage'
 
-    // Analyze content patterns
-    const hasVideoContent = $('video, iframe[src*="youtube"], iframe[src*="vimeo"]').length > 0
+    // Analyze content patterns - Enhanced video detection for multiple providers
+    // Check for: native video, YouTube, Vimeo, Wistia, HubSpot, Vidyard, Brightcove, JW Player, etc.
+    const videoSelectors = [
+      'video',                                    // Native HTML5 video
+      'iframe[src*="youtube"]',                   // YouTube
+      'iframe[src*="youtu.be"]',                  // YouTube short URLs
+      'iframe[src*="vimeo"]',                     // Vimeo
+      'iframe[src*="wistia"]',                    // Wistia
+      'iframe[src*="hubspot"]',                   // HubSpot video
+      'iframe[src*="vidyard"]',                   // Vidyard
+      'iframe[src*="brightcove"]',                // Brightcove
+      'iframe[src*="jwplatform"]',                // JW Player
+      'iframe[src*="dailymotion"]',               // Dailymotion
+      'iframe[src*="loom"]',                      // Loom
+      'iframe[src*="viddler"]',                   // Viddler
+      'iframe[src*="sproutvideo"]',               // Sprout Video
+      '[class*="wistia"]',                        // Wistia embed div
+      '[class*="hubspot-video"]',                 // HubSpot video class
+      '[class*="hs-video"]',                      // HubSpot video module
+      '[class*="hhs-video"]',                     // HubSpot video (alternative)
+      '[class*="vidyard"]',                       // Vidyard embed
+      '[data-wistia-id]',                         // Wistia data attribute
+      '[data-video-id]',                          // Generic video data attribute
+      '[data-vidyard-id]',                        // Vidyard data attribute
+      '.video-container video',                   // Common video container pattern
+      '.video-wrapper video',                     // Common video wrapper pattern
+      '[id*="video-player"]',                     // Video player IDs
+    ].join(', ')
+    const hasVideoContent = $(videoSelectors).length > 0
     const hasFaqContent = $('[class*="faq"], [class*="question"]').length > 2
     const hasProductContent = $('[class*="product"], [class*="price"], [class*="buy"]').length > 0
     const hasContactInfo = $('[href^="tel:"], [href^="mailto:"]').length > 0

@@ -1,10 +1,17 @@
 import { scraperService } from './scraper.js'
-import { openaiService, type SchemaGenerationOptions } from './openai.js'
+import { openaiService, type SchemaGenerationOptions, type ContentAnalysis } from './openai.js'
 import { anthropicService } from './anthropic.js'
 import { validatorService } from './validator.js'
 import { db } from './database.js'
 import { extractSchemaType } from '../utils/schemaTypeDetector.js'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
+
+// Content compatibility check result interface
+interface CompatibilityResult {
+  isCompatible: boolean
+  reason: string
+  suggestions: string[]
+}
 
 // AI Model Provider Selection
 // Set AI_MODEL_PROVIDER=anthropic (recommended) or AI_MODEL_PROVIDER=openai
@@ -27,6 +34,9 @@ export interface SchemaGenerationResult {
     processingTimeMs: number
     creditsUsed: number
     errorMessage?: string
+    errorCode?: string  // Error code for frontend handling (e.g., 'CONTENT_MISMATCH')
+    suggestedAlternatives?: string[]  // Alternative schema types when content mismatch
+    requestedType?: string  // The schema type that was requested
     contentAnalysis?: {
       isValid: boolean
       suggestions: string[]
@@ -120,6 +130,58 @@ class SchemaGeneratorService {
       // 6. Skip content validation for now (it's too strict and blocking valid content)
       // TODO: Re-implement content validation with better logic
       console.log('⚠️ Skipping content validation to allow schema generation')
+
+      // 6.5 PRE-VALIDATION: Check if requested schema type is compatible with page content
+      // This prevents wasted AI calls and provides better user experience
+      if (schemaType !== 'Auto') {
+        const compatibility = this.checkSchemaTypeCompatibility(schemaType, contentAnalysis)
+
+        if (!compatibility.isCompatible) {
+          console.log(`❌ Content mismatch detected: ${schemaType} not compatible with page content`)
+          console.log(`   Reason: ${compatibility.reason}`)
+          console.log(`   Suggestions: ${compatibility.suggestions.join(', ')}`)
+
+          // Refund credits since we're not making an AI call
+          if (!isLocalhost && shouldChargeCredits && useAtomicCredits && creditsConsumed) {
+            try {
+              await db.refundCredits(
+                request.userId,
+                1,
+                `Refund: Content mismatch - ${schemaType} not found on page`
+              )
+              console.log('💰 [Atomic Credits] Refunded 1 credit - content mismatch detected pre-AI')
+            } catch (refundError) {
+              console.error('❌ Failed to refund credits:', refundError)
+            }
+          }
+
+          // Update generation record with mismatch info
+          if (generationId) {
+            await db.updateSchemaGeneration(generationId, {
+              status: 'failed',
+              errorMessage: compatibility.reason,
+              processingTimeMs: Date.now() - startTime,
+              failureReason: 'content_mismatch',
+              failureStage: 'pre_validation'
+            })
+          }
+
+          return {
+            success: false,
+            schemas: [],
+            validationResults: [],
+            metadata: {
+              url: request.url,
+              processingTimeMs: Date.now() - startTime,
+              creditsUsed: 0,
+              errorMessage: compatibility.reason,
+              errorCode: 'CONTENT_MISMATCH',
+              suggestedAlternatives: compatibility.suggestions,
+              requestedType: schemaType
+            }
+          }
+        }
+      }
 
       // 7. Generate schemas using AI with requested schema type
       const optionsToPass = {
@@ -741,6 +803,134 @@ class SchemaGeneratorService {
       strengths: [],
       actionItems: []
     }
+  }
+
+  // Check if requested schema type is compatible with page content
+  // This prevents wasted AI calls when content clearly doesn't match
+  private checkSchemaTypeCompatibility(
+    requestedType: string,
+    analysis: ContentAnalysis
+  ): CompatibilityResult {
+    const metadata = analysis.metadata
+
+    // Get content analysis which includes hasVideoContent from enhanced video detection
+    const contentAnalysis = (metadata as any)?.contentAnalysis
+
+    // Debug logging for video detection
+    console.log('🔍 [Pre-validation] Content analysis check:', {
+      requestedType,
+      hasMetadataVideos: metadata?.videos && metadata.videos.length > 0,
+      videosCount: metadata?.videos?.length || 0,
+      hasVideoContent: contentAnalysis?.hasVideoContent,
+      contentAnalysisType: contentAnalysis?.type
+    })
+
+    switch (requestedType) {
+      case 'VideoObject':
+        // Check for video content: embedded videos from multiple providers
+        // Uses enhanced detection: YouTube, Vimeo, Wistia, HubSpot, Vidyard, Brightcove, etc.
+        const hasVideos = (metadata?.videos && metadata.videos.length > 0) || contentAnalysis?.hasVideoContent
+        console.log('🎬 [VideoObject check] hasVideos:', hasVideos)
+        if (!hasVideos) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not contain video content. No video embeds (YouTube, Vimeo, Wistia, HubSpot, Vidyard, etc.) were detected.',
+            suggestions: ['WebPage', 'Organization', 'Service']
+          }
+        }
+        break
+
+      case 'FAQPage':
+        // Check for FAQ content: Q&A pairs or FAQ class patterns
+        const hasFAQ = (metadata?.faqContent && metadata.faqContent.length > 0) || contentAnalysis?.hasFaqContent
+        if (!hasFAQ) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not contain FAQ-formatted content. No question/answer pairs were detected in the page structure.',
+            suggestions: ['Article', 'WebPage', 'BlogPosting']
+          }
+        }
+        break
+
+      case 'Product':
+        // Check for product content: prices, product info
+        const hasProduct = metadata?.productInfo
+        if (!hasProduct) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not appear to be a product page. No product information, pricing, or e-commerce elements were detected.',
+            suggestions: ['WebPage', 'Service', 'Organization']
+          }
+        }
+        break
+
+      case 'Event':
+        // Check for event content: dates, times, locations
+        const hasEvent = metadata?.eventInfo
+        if (!hasEvent) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not contain event information. No event dates, times, or venue details were detected.',
+            suggestions: ['WebPage', 'Article', 'Organization']
+          }
+        }
+        break
+
+      case 'Recipe':
+        // Check for recipe content via URL patterns
+        const isRecipeUrl = analysis.url.toLowerCase().includes('/recipe')
+        if (!isRecipeUrl) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not appear to be a recipe page. Recipe schema requires structured cooking instructions, ingredients, and preparation details.',
+            suggestions: ['Article', 'HowTo', 'WebPage']
+          }
+        }
+        break
+
+      case 'LocalBusiness':
+        // Check for business contact info
+        const hasBusinessInfo = metadata?.businessInfo?.address || metadata?.contactInfo
+        if (!hasBusinessInfo) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not contain local business information. No physical address or contact details were detected.',
+            suggestions: ['Organization', 'WebPage', 'Service']
+          }
+        }
+        break
+
+      case 'ImageObject':
+        // Check for images
+        const hasImages = (metadata?.images && metadata.images.length > 0) || metadata?.imageInfo?.featuredImage
+        if (!hasImages) {
+          return {
+            isCompatible: false,
+            reason: 'This page does not contain meaningful image content for ImageObject schema.',
+            suggestions: ['WebPage', 'Article', 'Organization']
+          }
+        }
+        break
+
+      // These types are generally safe for any page
+      case 'WebPage':
+      case 'Organization':
+      case 'Article':
+      case 'BlogPosting':
+      case 'Service':
+      case 'Person':
+      case 'BreadcrumbList':
+      case 'Auto':
+        // These are always compatible
+        break
+
+      default:
+        // For unknown types, allow the AI to try
+        console.log(`⚠️ No compatibility check defined for type: ${requestedType}`)
+        break
+    }
+
+    return { isCompatible: true, reason: '', suggestions: [] }
   }
 
   // Generate HTML script tags for easy copy-pasting into <head>
