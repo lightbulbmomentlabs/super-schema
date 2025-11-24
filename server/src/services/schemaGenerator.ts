@@ -299,7 +299,6 @@ class SchemaGeneratorService {
           processingTimeMs: processingTime,
           creditsUsed: (!isLocalhost && shouldChargeCredits) ? 1 : 0,
           schemaType: finalSchemaType, // Return final type (explicitly requested or auto-detected)
-          contentAnalysis: contentAnalysis,
           contentQualitySuggestions: (contentAnalysis as any).contentQualitySuggestions || []
         }
       }

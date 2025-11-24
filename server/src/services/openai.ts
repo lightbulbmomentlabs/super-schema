@@ -50,7 +50,17 @@ export interface ContentAnalysis {
     publishDate?: string
     modifiedDate?: string
     images?: string[]
-    videos?: string[]
+    videos?: string[] | Array<{
+      url: string
+      embedUrl?: string
+      provider?: string
+      title?: string
+      description?: string
+      thumbnailUrl?: string
+      duration?: string
+      width?: number
+      height?: number
+    }>
     breadcrumbs?: Array<{ name: string; url?: string }>
     contactInfo?: any
     businessInfo?: BusinessInfo
@@ -126,6 +136,17 @@ export interface ContentAnalysis {
     twitterCard?: any
     existingJsonLd?: any[]
     technical?: any
+
+    // Content analysis for pre-validation (hasVideoContent, hasFaqContent, etc.)
+    contentAnalysis?: {
+      type: 'article' | 'product' | 'homepage' | 'about' | 'contact' | 'blog' | 'news' | 'faq' | 'unknown'
+      wordCount: number
+      readingTime: number
+      hasVideoContent: boolean
+      hasFaqContent: boolean
+      hasProductContent: boolean
+      hasContactInfo: boolean
+    }
   }
 }
 
@@ -388,6 +409,13 @@ Date Modified: ${analysis.metadata?.modifiedDate || analysis.metadata?.publishDa
 === IMAGES ===
 Featured Image: ${analysis.metadata?.imageInfo?.featuredImage || '[NOT FOUND - OMIT image property]'}
 Publisher Logo: ${analysis.metadata?.businessInfo?.logo || '[NOT FOUND - CREATE ImageObject with featured image or site icon]'}
+
+=== VIDEOS ===
+${analysis.metadata?.videos && analysis.metadata.videos.length > 0
+  ? `Video Count: ${analysis.metadata.videos.length}
+Video URLs: ${JSON.stringify(analysis.metadata.videos)}
+⚠️ IMPORTANT: When generating VideoObject schema, use the video URLs above. If detailed video metadata (title, description, duration, uploadDate) is not available, extract them from the page content or use reasonable defaults based on the page context.`
+  : 'No embedded videos detected on this page.'}
 
 === PUBLISHER/ORGANIZATION ===
 Organization Name: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}

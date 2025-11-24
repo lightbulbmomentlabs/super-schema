@@ -387,6 +387,12 @@ class ScraperService {
             wordCount: structuredContent.metadata.contentAnalysis.wordCount,
             contentType: structuredContent.metadata.contentAnalysis.type as any,
 
+            // Pass through full videos array for VideoObject schema generation (includes provider, title, thumbnail, etc.)
+            videos: structuredContent.metadata.videos || [],
+
+            // Pass through full contentAnalysis for pre-validation (hasVideoContent, hasFaqContent, etc.)
+            contentAnalysis: structuredContent.metadata.contentAnalysis,
+
             // Image info for schema generation
             imageInfo: {
               featuredImage: structuredContent.metadata.images.featured?.url
