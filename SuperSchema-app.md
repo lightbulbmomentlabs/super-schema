@@ -826,7 +826,7 @@ is_admin(user_id)                         -- Check admin privileges
 - `/dashboard/*` - Dashboard routes
 - `/settings` - User settings
 - `/team/*` - Team management (feature flagged)
-- `/ai-analytics` - AI Visibility dashboard (with FeatureGate protection for private beta)
+- `/ai-visibility` - AI Visibility dashboard (with FeatureGate protection for private beta)
 
 **Admin Routes:**
 - `/admin` - Admin layout wrapper
@@ -1384,7 +1384,7 @@ await db.storeGA4Metrics(userId, propertyId, metrics, startDate, endDate)
 **Frontend Implementation:**
 
 **Routes:**
-- `/ai-analytics` - Main AI Visibility dashboard (AIAnalyticsPage)
+- `/ai-visibility` - Main AI Visibility dashboard (AIAnalyticsPage)
 - `/ga4/connect` - OAuth connection + domain mapping (GA4ConnectPage)
 - `/ga4/callback` - OAuth callback handler (GA4CallbackPage)
 
@@ -2082,7 +2082,7 @@ const data = teamId
 - Ensured nullable fields match SQL schema (description in features table)
 
 **Initial Feature:**
-- AI Analytics feature (`ai-analytics` slug) set to private_beta status
+- AI Visibility feature (`ai-visibility` slug) set to private_beta status
 - Wrapped AIAnalyticsPage with FeatureGate component
 
 **Impact:** Enables controlled rollout of new features to select users, with admin approval workflow and automatic user notifications
