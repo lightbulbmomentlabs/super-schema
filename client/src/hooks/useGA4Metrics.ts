@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ga4Api, type GA4Metrics } from '@/services/ga4'
+import { ga4Api } from '@/services/ga4'
 import toast from 'react-hot-toast'
 
 /**
@@ -46,6 +46,9 @@ export function useGA4Metrics(
         ['ga4', 'metrics', propertyId, startDate, endDate],
         response.metrics
       )
+      // Invalidate snapshots cache to trigger re-fetch for trend chart
+      // (snapshots are now recorded during refresh on the backend)
+      queryClient.invalidateQueries({ queryKey: ['ga4', 'activity-snapshots'] })
       toast.success('Metrics refreshed successfully')
     },
     onError: (error: any) => {

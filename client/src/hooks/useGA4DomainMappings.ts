@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ga4Api, type GA4DomainMapping } from '@/services/ga4'
+import { ga4Api } from '@/services/ga4'
 import toast from 'react-hot-toast'
 
 /**

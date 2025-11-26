@@ -1108,6 +1108,7 @@ export class GA4DataService {
   /**
    * Get activity snapshots from database (for trend chart)
    * Returns empty array if no snapshots exist, allowing fallback to on-demand calculation
+   * Updated: Force reload debug
    */
   async getActivitySnapshots(
     userId: string,
@@ -1126,15 +1127,35 @@ export class GA4DataService {
       const startDate = dateRangeStart.toISOString().split('T')[0]
       const endDate = dateRangeEnd.toISOString().split('T')[0]
 
+      console.log('🔍 [GA4 Data] getActivitySnapshots - Fetching snapshots', {
+        userId,
+        propertyId,
+        startDate,
+        endDate
+      })
+
       // Get domain mapping
       const mappings = await db.getGA4DomainMappings(userId)
       const mapping = mappings.find(m => m.propertyId === propertyId)
+
+      console.log('🔍 [GA4 Data] getActivitySnapshots - Mapping lookup', {
+        mappingsCount: mappings.length,
+        mappingPropertyIds: mappings.map(m => m.propertyId),
+        foundMapping: mapping ? { id: mapping.id, domain: mapping.domain } : null
+      })
 
       if (!mapping) {
         throw new Error('Domain mapping not found')
       }
 
       const snapshots = await db.getGA4DailySnapshots(mapping.id, startDate, endDate)
+
+      console.log('🔍 [GA4 Data] getActivitySnapshots - Retrieved from DB', {
+        mappingId: mapping.id,
+        snapshotsCount: snapshots.length,
+        firstSnapshot: snapshots[0] || null,
+        lastSnapshot: snapshots[snapshots.length - 1] || null
+      })
 
       return snapshots.map(s => ({
         date: s.snapshotDate,

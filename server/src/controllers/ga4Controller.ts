@@ -352,6 +352,15 @@ export const createDomainMapping = asyncHandler(
       // Don't fail the request - mapping was created successfully
     }
 
+    // Record initial activity snapshots for last 30 days (async, don't block response)
+    const snapshotEndDate = new Date()
+    const snapshotStartDate = new Date()
+    snapshotStartDate.setDate(snapshotStartDate.getDate() - 30)
+
+    ga4Data.recordDailyActivitySnapshots(userId, propertyId, snapshotStartDate, snapshotEndDate)
+      .then(() => console.log('✅ [GA4 Controller] Initial activity snapshots recorded for new mapping'))
+      .catch((err: any) => console.error('⚠️ [GA4 Controller] Failed to record initial snapshots:', err?.message))
+
     res.json({
       success: true,
       mappingId,
@@ -504,6 +513,15 @@ export const refreshMetrics = asyncHandler(
       propertyId,
       aiVisibilityScore: metrics.aiVisibilityScore
     })
+
+    // Also record/update activity snapshots for the date range
+    try {
+      await ga4Data.recordDailyActivitySnapshots(userId, propertyId, dateRangeStart, dateRangeEnd)
+      console.log('✅ [GA4 Controller] Activity snapshots updated during refresh')
+    } catch (snapshotError: any) {
+      console.warn('⚠️ [GA4 Controller] Snapshot recording failed during refresh:', snapshotError?.message)
+      // Don't fail the request - metrics were refreshed successfully
+    }
 
     res.json({
       success: true,

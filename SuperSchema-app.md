@@ -1,6 +1,6 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-26
 **Version:** 1.2.7
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
@@ -1411,12 +1411,22 @@ const { trend, isLoading: isTrendLoading } = useGA4Trend(
 
 // Domain mappings
 const { mappings, createMapping, deleteMapping } = useGA4DomainMappings(connected)
+
+// Activity snapshots for trend chart (daily AI metrics)
+const { snapshots, isLoading: isSnapshotsLoading } = useGA4ActivitySnapshots(
+  propertyId,
+  startDate,
+  endDate,
+  enabled
+)
 ```
+
+⚠️ **API Response Pattern:** GA4 API endpoints return data directly at root level (e.g., `{ success: true, snapshots: [...] }`), NOT nested under a `data` property. Hooks must access `response.snapshots` directly, not `response.data.snapshots`.
 
 **Components:**
 - `AIVisibilityScoreCard` - Circular progress score display with breakdown bars showing Diversity (0-40 pts), Coverage (0-40 pts), and Volume (0-20 pts) component scores
 - `AIVisibilityScoreInfoModal` - Modal explaining score calculation methodology with examples
-- `AIVisibilityTrendChart` - Line chart showing AI Visibility Score over time with Recharts
+- `AIActivityTrendChart` - ComposedChart showing daily AI activity metrics (sessions, crawlers, pages) with stacked areas and lines using Recharts. Uses `useGA4ActivitySnapshots` hook.
 - `TopCrawlersTable` - Table of top AI crawlers with sessions and page views
 - `PageCrawlerMetricsTable` - Page-level metrics with last crawled date and crawler diversity
 - `GA4ConnectionStatus` - Connection status indicator (supports compact mode for inline usage)

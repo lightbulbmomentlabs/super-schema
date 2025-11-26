@@ -6,6 +6,10 @@
 import { api } from './api'
 import type { ApiResponse } from 'aeo-schema-generator-shared/types'
 
+// Note: GA4 API endpoints return data at root level (e.g., { success, metrics })
+// not nested under 'data' like the generic ApiResponse<T> suggests.
+// We use GA4-specific response types (GA4MetricsResponse, etc.) for type safety.
+
 export interface GA4Connection {
   id: string
   googleAccountEmail: string | null
@@ -100,6 +104,46 @@ export interface ExclusionPattern {
   createdBy: string | null
 }
 
+/**
+ * GA4-specific API response types
+ * These match the actual backend response structure where data is at root level
+ * (not nested under 'data' like the generic ApiResponse<T> suggests)
+ */
+export interface GA4BaseResponse {
+  success: boolean
+  error?: string
+}
+
+export interface GA4MetricsResponse extends GA4BaseResponse {
+  metrics: GA4Metrics
+}
+
+export interface GA4ActivitySnapshotsResponse extends GA4BaseResponse {
+  snapshots: ActivitySnapshot[]
+}
+
+export interface GA4ConnectionResponse extends GA4BaseResponse {
+  connected: boolean
+  connections: GA4Connection[]
+  activeConnection: GA4Connection | null
+}
+
+export interface GA4PropertiesResponse extends GA4BaseResponse {
+  properties: GA4Property[]
+}
+
+export interface GA4MappingsResponse extends GA4BaseResponse {
+  mappings: GA4DomainMapping[]
+}
+
+export interface GA4TrendResponse extends GA4BaseResponse {
+  trend: TrendDataPoint[]
+}
+
+export interface GA4ExclusionsResponse extends GA4BaseResponse {
+  patterns: ExclusionPattern[]
+}
+
 export const ga4Api = {
   /**
    * Get OAuth authorization URL
@@ -130,11 +174,7 @@ export const ga4Api = {
    * Get current GA4 connection status
    * Returns all connections and the currently active one
    */
-  getConnectionStatus: async (): Promise<ApiResponse<{
-    connected: boolean
-    connections: GA4Connection[]
-    activeConnection: GA4Connection | null
-  }>> => {
+  getConnectionStatus: async (): Promise<GA4ConnectionResponse> => {
     const response = await api.get('/ga4/connection')
     return response.data
   },
@@ -161,7 +201,7 @@ export const ga4Api = {
   /**
    * List all GA4 properties accessible to the user
    */
-  listProperties: async (): Promise<ApiResponse<{ properties: GA4Property[] }>> => {
+  listProperties: async (): Promise<GA4PropertiesResponse> => {
     const response = await api.get('/ga4/properties')
     return response.data
   },
@@ -188,7 +228,7 @@ export const ga4Api = {
   /**
    * List all domain mappings for the user
    */
-  listDomainMappings: async (): Promise<ApiResponse<{ mappings: GA4DomainMapping[] }>> => {
+  listDomainMappings: async (): Promise<GA4MappingsResponse> => {
     const response = await api.get('/ga4/domain-mappings')
     return response.data
   },
@@ -208,7 +248,7 @@ export const ga4Api = {
     propertyId: string,
     startDate: string,
     endDate: string
-  ): Promise<ApiResponse<{ metrics: GA4Metrics }>> => {
+  ): Promise<GA4MetricsResponse> => {
     const response = await api.get('/ga4/metrics', {
       params: {
         propertyId,
@@ -226,10 +266,7 @@ export const ga4Api = {
     propertyId: string,
     startDate: string,
     endDate: string
-  ): Promise<ApiResponse<{
-    metrics: GA4Metrics
-    message: string
-  }>> => {
+  ): Promise<GA4MetricsResponse & { message: string }> => {
     const response = await api.post('/ga4/metrics/refresh', {
       propertyId,
       startDate,
@@ -245,7 +282,7 @@ export const ga4Api = {
     propertyId: string,
     startDate: string,
     endDate: string
-  ): Promise<ApiResponse<{ trend: TrendDataPoint[] }>> => {
+  ): Promise<GA4TrendResponse> => {
     const response = await api.get('/ga4/metrics/trend', {
       params: {
         propertyId,
@@ -264,7 +301,7 @@ export const ga4Api = {
     propertyId: string,
     startDate: string,
     endDate: string
-  ): Promise<ApiResponse<{ snapshots: ActivitySnapshot[] }>> => {
+  ): Promise<GA4ActivitySnapshotsResponse> => {
     const response = await api.get('/ga4/metrics/activity-snapshots', {
       params: {
         propertyId,
@@ -278,7 +315,7 @@ export const ga4Api = {
   /**
    * List exclusion patterns for a domain mapping
    */
-  listExclusionPatterns: async (mappingId: string): Promise<ApiResponse<{ patterns: ExclusionPattern[] }>> => {
+  listExclusionPatterns: async (mappingId: string): Promise<GA4ExclusionsResponse> => {
     const response = await api.get(`/ga4/domain-mapping/${mappingId}/exclusions`)
     return response.data
   },

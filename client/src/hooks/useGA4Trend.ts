@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ga4Api, type TrendDataPoint } from '@/services/ga4'
+import { ga4Api } from '@/services/ga4'
 
 /**
  * Hook to fetch AI Visibility Score trend data
