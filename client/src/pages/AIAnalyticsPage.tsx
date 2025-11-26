@@ -98,7 +98,8 @@ function AIAnalyticsContent() {
   // Fetch activity snapshots for selected domain
   const {
     snapshots,
-    isLoading: isSnapshotsLoading
+    isLoading: isSnapshotsLoading,
+    refetch: refetchSnapshots
   } = useGA4ActivitySnapshots(
     selectedMapping?.propertyId || null,
     dateRange.start,
@@ -141,7 +142,7 @@ function AIAnalyticsContent() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-black bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-                AI Analytics
+                AI Visibility
               </h1>
               <p className="text-muted-foreground mt-1">
                 Track how AI crawlers discover and index your content
@@ -320,6 +321,7 @@ function AIAnalyticsContent() {
                 <AIActivityTrendChart
                   snapshots={snapshots}
                   isLoading={isSnapshotsLoading}
+                  onRetry={() => refetchSnapshots()}
                   className="w-full"
                 />
               </div>

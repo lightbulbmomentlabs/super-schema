@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Activity, Calendar } from 'lucide-react'
+import { Activity, Calendar, RefreshCw } from 'lucide-react'
 import {
   ComposedChart,
   Line,
@@ -17,12 +17,14 @@ import type { ActivitySnapshot } from '@/services/ga4'
 interface AIActivityTrendChartProps {
   snapshots: ActivitySnapshot[]
   isLoading?: boolean
+  onRetry?: () => void
   className?: string
 }
 
 export default function AIActivityTrendChart({
   snapshots,
   isLoading = false,
+  onRetry,
   className = ''
 }: AIActivityTrendChartProps) {
   // Loading state
@@ -61,6 +63,15 @@ export default function AIActivityTrendChart({
           <p className="text-sm text-muted-foreground/70 mt-1">
             Activity snapshots will be recorded daily starting tonight
           </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 hover:border-primary/50 transition-all inline-flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Check Again
+            </button>
+          )}
         </div>
       </div>
     )

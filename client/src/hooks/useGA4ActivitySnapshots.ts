@@ -15,7 +15,8 @@ export function useGA4ActivitySnapshots(
   const {
     data: snapshots = [],
     isLoading,
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: ['ga4', 'activity-snapshots', propertyId, startDate, endDate],
     queryFn: async (): Promise<ActivitySnapshot[]> => {
@@ -36,6 +37,7 @@ export function useGA4ActivitySnapshots(
   return {
     snapshots,
     isLoading,
-    error: error ? (error as Error).message : null
+    error: error ? (error as Error).message : null,
+    refetch
   }
 }

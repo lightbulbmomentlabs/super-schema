@@ -80,8 +80,13 @@ export default function GA4ConnectPage() {
         domain: domain.trim()
       },
       {
-        onSuccess: () => {
-          navigate('/ai-visibility')
+        onSuccess: (data) => {
+          navigate('/ai-visibility', {
+            state: {
+              newMappingCreated: true,
+              mappingId: data?.data?.mappingId
+            }
+          })
         }
       }
     )
@@ -309,10 +314,10 @@ export default function GA4ConnectPage() {
                   {isCreating ? (
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      Creating Mapping...
+                      Setting up analytics...
                     </span>
                   ) : (
-                    'Create Mapping'
+                    'Create Domain Mapping'
                   )}
                 </button>
               </div>
