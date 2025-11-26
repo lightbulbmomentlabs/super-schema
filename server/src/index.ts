@@ -204,6 +204,15 @@ app.get('/docs', (req, res, next) => {
   next() // Fallback to SPA
 })
 
+// Route /pricing to Astro static HTML for AI crawler accessibility
+app.get('/pricing', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'pricing', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
 // Serve index.html for all non-API routes (SPA fallback)
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'))
