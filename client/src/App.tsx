@@ -175,12 +175,15 @@ function AppContent() {
           {/* HubSpot Marketplace Install - No layout needed */}
           <Route path="/hubspot/install" element={<HubSpotInstallPage />} />
 
-          {/* AI Analytics - Standalone route at root level */}
-          <Route path="/ai-analytics" element={
+          {/* AI Visibility - Standalone route at root level */}
+          <Route path="/ai-visibility" element={
             <Layout>
               <AIAnalyticsPage />
             </Layout>
           } />
+
+          {/* TODO: Remove this redirect after 30-60 days (added 2025-01-26) */}
+          <Route path="/ai-analytics" element={<Navigate to="/ai-visibility" replace />} />
 
           {/* GA4 Connect - Standalone route at root level */}
           <Route path="/ga4/connect" element={

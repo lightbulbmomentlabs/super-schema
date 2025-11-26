@@ -389,7 +389,7 @@ function AIAnalyticsContent() {
 
 export default function AIAnalyticsPage() {
   return (
-    <FeatureGate featureSlug="ai-analytics">
+    <FeatureGate featureSlug="ai-visibility">
       <AIAnalyticsContent />
     </FeatureGate>
   )

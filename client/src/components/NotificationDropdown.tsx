@@ -140,7 +140,7 @@ export default function NotificationDropdown() {
                         </p>
                         {notification.type === 'beta_access_granted' && (
                           <Link
-                            to="/ai-analytics"
+                            to="/ai-visibility"
                             className="text-xs text-primary hover:underline mt-2 inline-block"
                             onClick={() => {
                               setIsOpen(false)

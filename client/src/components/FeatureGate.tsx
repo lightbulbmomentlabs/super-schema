@@ -77,7 +77,7 @@ export function FeatureGate({ featureSlug, children, loadingFallback }: FeatureG
       // Show preview page unless user has been granted access
       if (!hasAccess) {
         // Use custom preview for AI Analytics
-        if (featureSlug === 'ai-analytics') {
+        if (featureSlug === 'ai-visibility') {
           return (
             <>
               {isAdminPreviewMode && (

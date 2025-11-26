@@ -35,7 +35,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Generate', href: '/generate', icon: LightningBoltIcon },
   { name: 'URL Library', href: '/library', icon: Library },
-  { name: 'AI Visibility', href: '/ai-analytics', icon: Bot, badge: 'BETA' },
+  { name: 'AI Visibility', href: '/ai-visibility', icon: Bot, badge: 'BETA' },
 ]
 
 export default function Layout({ children }: LayoutProps) {
@@ -126,7 +126,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="md:hidden border-t border-border bg-background">
             <div className="w-full px-4 py-4 space-y-2">
               {navigation.map((item) => {
-                const isActive = location.pathname === item.href || (item.href === '/ai-analytics' && location.pathname.startsWith('/ga4/'))
+                const isActive = location.pathname === item.href || (item.href === '/ai-visibility' && location.pathname.startsWith('/ga4/'))
                 return (
                   <Link
                     key={item.name}
@@ -271,7 +271,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
                 <nav className="mt-5 flex-1 px-2 space-y-1">
                   {navigation.map((item) => {
-                    const isActive = location.pathname === item.href || (item.href === '/ai-analytics' && location.pathname.startsWith('/ga4/'))
+                    const isActive = location.pathname === item.href || (item.href === '/ai-visibility' && location.pathname.startsWith('/ga4/'))
                     return (
                       <Link
                         key={item.name}
