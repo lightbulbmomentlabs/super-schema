@@ -398,7 +398,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.7 }}
                 className="block bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent"
               >
-                Make Sure You're In It
+                Be the Answer AI Gives
               </motion.span>
             </h1>
 

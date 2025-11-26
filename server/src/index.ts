@@ -138,6 +138,16 @@ if (existsSync(astroDistPath)) {
   app.use('/_astro', express.static(path.join(astroDistPath, '_astro')))
 }
 
+// Route / (home page) to Astro static HTML for AI crawler accessibility
+// MUST come BEFORE express.static to catch root URL before SPA fallback
+app.get('/', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'home', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
 app.use(express.static(clientDistPath))
 
 // Route /aeo to Astro static HTML for AI crawler accessibility
@@ -179,6 +189,15 @@ app.get('/schema-markup', (req, res, next) => {
 // Route /schema-markup/improve-quality-score to Astro static HTML for AI crawler accessibility
 app.get('/schema-markup/improve-quality-score', (req, res, next) => {
   const astroPath = path.join(astroDistPath, 'schema-markup', 'improve-quality-score', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
+// Route /docs to Astro static HTML for AI crawler accessibility
+app.get('/docs', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'docs', 'index.html')
   if (existsSync(astroPath)) {
     return res.sendFile(astroPath)
   }

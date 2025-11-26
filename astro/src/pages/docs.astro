@@ -1,0 +1,1083 @@
+---
+import '../styles/global.css'
+import PillarPageNavStatic from '../components/PillarPageNavStatic.astro'
+import FooterStatic from '../components/FooterStatic.astro'
+
+// Documentation sections
+const sections = [
+  {
+    id: 'getting-started',
+    title: 'Getting Started',
+    content: {
+      intro: 'SuperSchema is an AI-powered tool that automatically generates schema markup (JSON-LD) for your website. Schema markup helps search engines and AI tools like ChatGPT, Perplexity, and Google AI Overviews better understand your content, leading to better rankings and visibility.',
+      steps: [
+        'Sign up for a free account (you\'ll get 2 free credits to start)',
+        'Go to the Generate page',
+        'Paste a URL or use URL Discovery to crawl your website',
+        'Click "Generate Schema" and watch the AI work its magic',
+        'Copy the generated JSON-LD code and add it to your website\'s <head> section'
+      ],
+      tip: 'Start with your most important pages (homepage, product pages, blog posts) to see the biggest impact on your search visibility.'
+    }
+  },
+  {
+    id: 'url-discovery',
+    title: 'URL Discovery',
+    content: {
+      intro: 'URL Discovery is our website crawler that automatically finds all the pages on your website. Instead of manually entering URLs one by one, just drop in your domain and let us do the heavy lifting.',
+      steps: [
+        'Go to the Generate page',
+        'Find the "URL Discovery" section at the top',
+        'Enter your domain (e.g., example.com)',
+        'Click "Discover URLs"',
+        'Wait while our crawler finds all your pages (usually takes 10-30 seconds)',
+        'All discovered URLs are automatically saved to your Library'
+      ],
+      discovers: [
+        'All pages linked from your homepage',
+        'Blog posts and articles',
+        'Product pages',
+        'Category and archive pages',
+        'Static pages (about, contact, etc.)'
+      ],
+      warning: 'URL Discovery finds pages that are publicly accessible and linked from other pages. It won\'t find pages that require login or aren\'t linked anywhere.'
+    }
+  },
+  {
+    id: 'schema-generation',
+    title: 'Schema Generation',
+    content: {
+      intro: 'SuperSchema uses AI to analyze your webpage and automatically generate the correct schema markup. No manual data entry, no Schema.org documentation hunting—just paste a URL and go.',
+      steps: [
+        'Navigate to the Generate page',
+        'Enter a URL in the "URL to Generate Schema" field',
+        'Click "Generate Schema"',
+        'The AI will analyze your page (takes 5-15 seconds)',
+        'Review the generated schema in the editor',
+        'Copy the HTML script tags or push directly to HubSpot'
+      ],
+      schemaTypes: [
+        { type: 'Article', desc: 'Blog posts, news articles, guides' },
+        { type: 'BlogPosting', desc: 'Blog posts specifically' },
+        { type: 'Product', desc: 'E-commerce products with prices, reviews' },
+        { type: 'LocalBusiness', desc: 'Physical businesses with locations' },
+        { type: 'Organization', desc: 'Company information' },
+        { type: 'Person', desc: 'Author bios, team member pages' },
+        { type: 'Event', desc: 'Conferences, webinars, meetups' },
+        { type: 'Recipe', desc: 'Food recipes with ingredients and instructions' },
+        { type: 'FAQPage', desc: 'FAQ sections' },
+        { type: 'HowTo', desc: 'Step-by-step guides' },
+        { type: 'WebPage', desc: 'Generic web pages' }
+      ],
+      extracts: [
+        'Titles, headings, and content',
+        'Author information',
+        'Publication dates',
+        'Images and media',
+        'Product prices and availability',
+        'Ratings and reviews',
+        'Business hours and contact info',
+        'Event dates and locations'
+      ],
+      tip: 'Our AI reads your actual page content, so the schema is based on real data—not generic templates or hallucinations like you\'d get from ChatGPT.'
+    }
+  },
+  {
+    id: 'quality-refinement',
+    title: 'Schema Quality & Refinement',
+    content: {
+      intro: 'Every schema gets a quality score from 0-100 based on completeness, accuracy, and best practices. Higher scores mean better chances of rich snippets and AI citations.',
+      scores: [
+        { range: '90-100', label: 'Excellent', desc: 'Complete, optimized schema with all recommended properties', color: 'green' },
+        { range: '70-89', label: 'Good', desc: 'Solid schema with most important properties present', color: 'blue' },
+        { range: '50-69', label: 'Fair', desc: 'Basic schema, missing some recommended properties', color: 'yellow' },
+        { range: '0-49', label: 'Needs Work', desc: 'Minimal schema, consider using AI refinement', color: 'red' }
+      ],
+      refinement: {
+        limits: 'You can refine each schema up to 2 times',
+        cost: 'Refinements are FREE (included with your schema generation)',
+        results: 'Average quality score improvement of 15-25 points'
+      },
+      refinementSteps: [
+        'Generate or view a schema from your Library',
+        'Check the quality score in the "Schema Quality" section',
+        'Click "Refine with AI" button (shows remaining refinements)',
+        'Wait 10-20 seconds for the AI to optimize your schema',
+        'Review the changes highlighted in the results',
+        'Check the improved quality score'
+      ],
+      tip: 'Refine schemas with scores below 80, or when you need that extra edge for competitive keywords and AI citations.'
+    }
+  },
+  {
+    id: 'library-management',
+    title: 'Library Management',
+    content: {
+      intro: 'The Library is your central hub for managing all URLs and their schemas. Every URL you discover or generate schema for is automatically saved here.',
+      features: [
+        { name: 'Organize by Domain', desc: 'URLs are automatically grouped by domain' },
+        { name: 'Filter by Schema Status', desc: 'View all URLs, only those with schema, or those needing schema' },
+        { name: 'Search', desc: 'Quickly find URLs by searching paths or domains' },
+        { name: 'Hide/Unhide URLs', desc: 'Keep your library clean by hiding URLs you don\'t need' },
+        { name: 'Bulk Delete', desc: 'Select multiple URLs and delete them at once' },
+        { name: 'Live Editor', desc: 'View and edit schema directly from the Library' }
+      ],
+      workflow: [
+        'Discover URLs or generate schema for individual pages',
+        'Review URLs in your Library (filter by "Needs Schema")',
+        'Click on URLs without schema to quickly generate from the Library',
+        'Edit and refine schemas as needed',
+        'Push to HubSpot or copy code for manual implementation',
+        'Hide or delete URLs you no longer need'
+      ],
+      tip: 'Use the Library filters to track your schema coverage. The "Has Schema" vs "Needs Schema" tabs show exactly which pages still need attention.'
+    }
+  },
+  {
+    id: 'hubspot-integration',
+    title: 'HubSpot Integration',
+    content: {
+      intro: 'Connect your HubSpot account to automatically push schema markup directly to your HubSpot blog posts, pages, and landing pages. No manual copy-paste required.',
+      connectSteps: [
+        'Go to the HubSpot page in SuperSchema',
+        'Click "Connect HubSpot Account"',
+        'Log in to your HubSpot account and authorize SuperSchema',
+        'You\'ll be redirected back to SuperSchema with your portal connected'
+      ],
+      domainSteps: [
+        'Go to the HubSpot page',
+        'Find your connected portal',
+        'In the "Associated Domains" section, click "Add Domain"',
+        'Enter the domain that\'s hosted in this HubSpot portal',
+        'Click "Add"'
+      ],
+      pushSteps: [
+        'Generate schema for a URL (or open it from your Library)',
+        'Click "Push to HubSpot" button',
+        'Select the matching HubSpot content (blog post, page, or landing page)',
+        'Click "Push Schema"',
+        'Schema is automatically added to your page\'s head HTML'
+      ],
+      warning: 'HubSpot integration requires Marketing Hub Professional/Enterprise or CMS Hub Professional/Enterprise.',
+      troubleshooting: [
+        { issue: 'Getting "Domain Not Associated" warning?', solution: 'This means you have multiple HubSpot portals and haven\'t associated domains yet. Follow the Domain Association steps above, or click "Go to HubSpot Settings" in the modal.' },
+        { issue: 'Can\'t find my HubSpot page?', solution: 'Make sure the URL domain matches your HubSpot domain. The content matcher searches by URL, so the domains must match exactly.' },
+        { issue: 'Connection showing as "Inactive"?', solution: 'Click "Validate" to refresh the connection. If it stays inactive, you may need to reconnect your HubSpot account.' }
+      ]
+    }
+  },
+  {
+    id: 'credits-billing',
+    title: 'Credits & Billing',
+    content: {
+      intro: 'SuperSchema uses a credit-based system. Each action that uses AI (like generating schema) costs 1 credit. No subscriptions, no monthly fees—just pay for what you use.',
+      costs: [
+        { action: 'Generating schema for a URL', cost: '1 credit' }
+      ],
+      free: [
+        'URL Discovery (crawling your website)',
+        'Saving URLs to your Library',
+        'Editing schema manually',
+        'Viewing and managing your Library',
+        '2 free AI refinements per schema (improves quality automatically)',
+        'Pushing schema to HubSpot',
+        'Copying schema code'
+      ],
+      freeCredits: 'New users get 2 free credits when they sign up. No credit card required.',
+      purchaseSteps: [
+        'Go to the Credits page',
+        'Click "Purchase Credits"',
+        'Choose a credit pack (larger packs = better value)',
+        'Complete checkout with Stripe',
+        'Credits are added instantly'
+      ],
+      balanceInfo: [
+        'View your credit balance on the Dashboard',
+        'See detailed transaction history on the Credits page',
+        'Get low balance warnings when you have less than 5 credits'
+      ],
+      tip: 'Credits never expire, and you only pay for AI-powered features. Manual editing and organization are completely free.'
+    }
+  },
+  {
+    id: 'implementation',
+    title: 'Schema Implementation',
+    content: {
+      intro: 'Once you\'ve generated schema, you need to add it to your website. SuperSchema generates JSON-LD format, which is the easiest and most recommended method by Google.',
+      platforms: [
+        {
+          name: 'HubSpot (Automatic)',
+          steps: ['Connect your HubSpot account', 'Generate schema', 'Click "Push to HubSpot"', 'Done! Schema is added to your page\'s head']
+        },
+        {
+          name: 'WordPress',
+          steps: ['Copy the schema script tags from SuperSchema', 'Install a plugin like "Insert Headers and Footers" or "Code Snippets"', 'Paste the schema in the "Head" section for that specific page', 'Save and publish']
+        },
+        {
+          name: 'Shopify',
+          steps: ['Copy the schema script tags', 'Go to your Shopify admin → Online Store → Themes', 'Click "Actions" → "Edit code"', 'Find your page template (e.g., product.liquid, article.liquid)', 'Paste the schema before the closing </head> tag', 'Save the file']
+        },
+        {
+          name: 'Webflow',
+          steps: ['Copy the schema script tags', 'In Webflow, go to your page settings', 'Scroll to "Custom Code" section', 'Paste the schema in "Head Code"', 'Save and publish']
+        },
+        {
+          name: 'Custom HTML / Other Platforms',
+          steps: ['Copy the complete schema script tags from SuperSchema', 'Open your HTML file or page template', 'Paste the schema inside the <head> section, before the closing </head> tag', 'Save and deploy your changes']
+        }
+      ],
+      verifySteps: [
+        'Go to Google\'s Rich Results Test: search.google.com/test/rich-results',
+        'Enter your page URL',
+        'Click "Test URL"',
+        'Check for any errors or warnings',
+        'If valid, you\'re all set!'
+      ],
+      tip: 'Always test your schema after adding it to your site. Google\'s Rich Results Test will catch any formatting issues and show you exactly what search engines see.'
+    }
+  }
+]
+
+// FAQ questions for the FAQ section
+const faqs = [
+  {
+    question: 'Why isn\'t my schema showing up in search results?',
+    answer: 'Schema doesn\'t guarantee rich snippets—it just makes them possible. Google needs to: (1) crawl and index your page, (2) validate your schema, and (3) decide your content deserves a rich snippet. This can take days or weeks. Keep your schema valid, content high-quality, and be patient.'
+  },
+  {
+    question: 'Can I edit the schema after generating it?',
+    answer: 'Absolutely! The schema editor lets you manually edit any field. Just be careful not to break the JSON structure. If you mess up, you can always regenerate or use AI refinement.'
+  },
+  {
+    question: 'What if I run out of credits?',
+    answer: 'You can still access all your existing schemas, edit them manually, and manage your Library. You just won\'t be able to generate new schemas or use AI refinement until you purchase more credits.'
+  },
+  {
+    question: 'Do credits expire?',
+    answer: 'Nope! Credits never expire. Buy them whenever you need them, use them whenever you want.'
+  },
+  {
+    question: 'Can I get a refund?',
+    answer: 'Credit purchases are non-refundable, but we\'re confident you\'ll love the results. Start with the 2 free credits to test it out before purchasing.'
+  },
+  {
+    question: 'Is my data secure?',
+    answer: 'Yes. We use industry-standard encryption for all data. Your HubSpot tokens are encrypted at rest, and we never store your payment information (handled by Stripe).'
+  },
+  {
+    question: 'Can I cancel my account?',
+    answer: 'There\'s no subscription to cancel. Just stop using SuperSchema whenever you want. Any unused credits will remain in your account if you decide to come back.'
+  },
+  {
+    question: 'Does SuperSchema work for e-commerce?',
+    answer: 'Yes! SuperSchema automatically detects Product schema for e-commerce pages, including price, availability, reviews, and ratings. Works with Shopify, WooCommerce, and any other platform.'
+  },
+  {
+    question: 'What\'s the difference between SuperSchema and other schema tools?',
+    answer: 'Most schema tools give you generic templates that require manual data entry. SuperSchema actually visits your URL, reads your real content, and generates complete, accurate schema automatically. Plus, we have quality scoring, AI refinement, and HubSpot integration built in.'
+  },
+  {
+    question: 'Can I use SuperSchema for client work?',
+    answer: 'Absolutely! Agencies and freelancers use SuperSchema to quickly generate schema for client sites. Just generate the schema and add it to your client\'s website—no special license needed.'
+  }
+]
+
+const pageTitle = "SuperSchema Documentation - Complete Help Guide"
+const pageDescription = "Learn how to use SuperSchema to generate AI-powered schema markup. Comprehensive documentation covering URL discovery, schema generation, quality scoring, HubSpot integration, and more."
+
+// TechArticle Schema
+const techArticleSchema = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": pageTitle,
+  "description": pageDescription,
+  "url": "https://superschema.ai/docs",
+  "datePublished": "2024-01-01",
+  "dateModified": new Date().toISOString().split('T')[0],
+  "author": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://superschema.ai/logo.png"
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://superschema.ai/docs"
+  },
+  "articleSection": "Documentation",
+  "keywords": ["schema markup", "JSON-LD", "structured data", "SEO", "AEO", "documentation", "help", "tutorial"]
+}
+
+// FAQPage Schema
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+}
+
+// BreadcrumbList Schema
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://superschema.ai"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Documentation",
+      "item": "https://superschema.ai/docs"
+    }
+  ]
+}
+
+// WebPage Schema
+const webPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": pageTitle,
+  "description": pageDescription,
+  "url": "https://superschema.ai/docs",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "breadcrumb": breadcrumbSchema
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="keywords" content="SuperSchema documentation, schema markup help, JSON-LD tutorial, URL discovery, schema generation, HubSpot integration, structured data guide" />
+    <link rel="canonical" href="https://superschema.ai/docs" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://superschema.ai/docs" />
+    <meta property="og:site_name" content="SuperSchema" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+
+    <!-- JSON-LD Schemas -->
+    <script type="application/ld+json" set:html={JSON.stringify(techArticleSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <!-- Navigation -->
+    <PillarPageNavStatic />
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <!-- Page Header -->
+      <div class="mb-8">
+        <nav class="text-sm text-muted-foreground mb-4">
+          <a href="/" class="hover:text-foreground">Home</a>
+          <span class="mx-2">/</span>
+          <span>Documentation</span>
+        </nav>
+        <h1 class="text-4xl font-bold mb-3">Documentation</h1>
+        <p class="text-lg text-muted-foreground">
+          Everything you need to know about using SuperSchema
+        </p>
+      </div>
+
+      <!-- Table of Contents -->
+      <div class="mb-12 p-6 bg-muted/30 rounded-lg border border-border">
+        <h2 class="text-lg font-semibold mb-4">Table of Contents</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {sections.map((section) => (
+            <a href={`#${section.id}`} class="text-primary hover:underline py-1">
+              {section.title}
+            </a>
+          ))}
+          <a href="#faq" class="text-primary hover:underline py-1">
+            Frequently Asked Questions
+          </a>
+        </div>
+      </div>
+
+      <!-- Documentation Sections -->
+      <div class="space-y-12">
+        <!-- Getting Started -->
+        <section id="getting-started" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Getting Started</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">Welcome to SuperSchema</h3>
+              <p class="text-muted-foreground mb-4">
+                SuperSchema is an AI-powered tool that automatically generates schema markup (JSON-LD) for your website.
+                Schema markup helps search engines and AI tools like ChatGPT, Perplexity, and Google AI Overviews better
+                understand your content, leading to better rankings and visibility.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Quick Start Guide</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Sign up for a free account (you'll get 2 free credits to start)</li>
+                <li>Go to the Generate page</li>
+                <li>Paste a URL or use URL Discovery to crawl your website</li>
+                <li>Click "Generate Schema" and watch the AI work its magic</li>
+                <li>Copy the generated JSON-LD code and add it to your website's &lt;head&gt; section</li>
+              </ol>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Pro Tip:</strong> Start with your most important pages (homepage, product pages, blog posts)
+                to see the biggest impact on your search visibility.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- URL Discovery -->
+        <section id="url-discovery" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">URL Discovery</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">What is URL Discovery?</h3>
+              <p class="text-muted-foreground mb-4">
+                URL Discovery is our website crawler that automatically finds all the pages on your website.
+                Instead of manually entering URLs one by one, just drop in your domain and let us do the heavy lifting.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">How to Use URL Discovery</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Go to the Generate page</li>
+                <li>Find the "URL Discovery" section at the top</li>
+                <li>Enter your domain (e.g., example.com)</li>
+                <li>Click "Discover URLs"</li>
+                <li>Wait while our crawler finds all your pages (usually takes 10-30 seconds)</li>
+                <li>All discovered URLs are automatically saved to your Library</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">What Gets Discovered?</h4>
+              <p class="text-muted-foreground mb-2">Our crawler finds:</p>
+              <ul class="list-disc list-inside space-y-1 text-muted-foreground ml-4">
+                <li>All pages linked from your homepage</li>
+                <li>Blog posts and articles</li>
+                <li>Product pages</li>
+                <li>Category and archive pages</li>
+                <li>Static pages (about, contact, etc.)</li>
+              </ul>
+            </div>
+            <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Note:</strong> URL Discovery finds pages that are publicly accessible and linked from other pages.
+                It won't find pages that require login or aren't linked anywhere.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Schema Generation -->
+        <section id="schema-generation" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Schema Generation</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">How Schema Generation Works</h3>
+              <p class="text-muted-foreground mb-4">
+                SuperSchema uses AI to analyze your webpage and automatically generate the correct schema markup.
+                No manual data entry, no Schema.org documentation hunting—just paste a URL and go.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Generating Your First Schema</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Navigate to the Generate page</li>
+                <li>Enter a URL in the "URL to Generate Schema" field</li>
+                <li>Click "Generate Schema"</li>
+                <li>The AI will analyze your page (takes 5-15 seconds)</li>
+                <li>Review the generated schema in the editor</li>
+                <li>Copy the HTML script tags or push directly to HubSpot</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Supported Schema Types</h4>
+              <p class="text-muted-foreground mb-2">SuperSchema automatically detects and generates:</p>
+              <ul class="list-disc list-inside space-y-1 text-muted-foreground ml-4">
+                <li><strong>Article:</strong> Blog posts, news articles, guides</li>
+                <li><strong>BlogPosting:</strong> Blog posts specifically</li>
+                <li><strong>Product:</strong> E-commerce products with prices, reviews</li>
+                <li><strong>LocalBusiness:</strong> Physical businesses with locations</li>
+                <li><strong>Organization:</strong> Company information</li>
+                <li><strong>Person:</strong> Author bios, team member pages</li>
+                <li><strong>Event:</strong> Conferences, webinars, meetups</li>
+                <li><strong>Recipe:</strong> Food recipes with ingredients and instructions</li>
+                <li><strong>FAQPage:</strong> FAQ sections</li>
+                <li><strong>HowTo:</strong> Step-by-step guides</li>
+                <li><strong>WebPage:</strong> Generic web pages</li>
+                <li>...and more!</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">What the AI Extracts</h4>
+              <p class="text-muted-foreground mb-2">SuperSchema automatically pulls:</p>
+              <ul class="list-disc list-inside space-y-1 text-muted-foreground ml-4">
+                <li>Titles, headings, and content</li>
+                <li>Author information</li>
+                <li>Publication dates</li>
+                <li>Images and media</li>
+                <li>Product prices and availability</li>
+                <li>Ratings and reviews</li>
+                <li>Business hours and contact info</li>
+                <li>Event dates and locations</li>
+              </ul>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Accuracy:</strong> Our AI reads your actual page content, so the schema is based on real data—not
+                generic templates or hallucinations like you'd get from ChatGPT.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quality & Refinement -->
+        <section id="quality-refinement" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="6"></circle>
+                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Schema Quality & Refinement</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">Understanding Quality Scores</h3>
+              <p class="text-muted-foreground mb-4">
+                Every schema gets a quality score from 0-100 based on completeness, accuracy, and best practices.
+                Higher scores mean better chances of rich snippets and AI citations.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Quality Score Breakdown</h4>
+              <div class="space-y-3">
+                <div class="flex items-start space-x-3">
+                  <div class="px-3 py-1 bg-green-500/20 text-green-600 rounded font-semibold text-sm">90-100</div>
+                  <div>
+                    <p class="font-medium">Excellent</p>
+                    <p class="text-sm text-muted-foreground">Complete, optimized schema with all recommended properties</p>
+                  </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                  <div class="px-3 py-1 bg-blue-500/20 text-blue-600 rounded font-semibold text-sm">70-89</div>
+                  <div>
+                    <p class="font-medium">Good</p>
+                    <p class="text-sm text-muted-foreground">Solid schema with most important properties present</p>
+                  </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                  <div class="px-3 py-1 bg-yellow-500/20 text-yellow-600 rounded font-semibold text-sm">50-69</div>
+                  <div>
+                    <p class="font-medium">Fair</p>
+                    <p class="text-sm text-muted-foreground">Basic schema, missing some recommended properties</p>
+                  </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                  <div class="px-3 py-1 bg-red-500/20 text-red-600 rounded font-semibold text-sm">0-49</div>
+                  <div>
+                    <p class="font-medium">Needs Work</p>
+                    <p class="text-sm text-muted-foreground">Minimal schema, consider using AI refinement</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">AI Refinement</h4>
+              <p class="text-muted-foreground mb-3">
+                Use AI refinement to automatically improve your schema quality score. The AI analyzes your schema
+                and adds missing properties, fixes issues, and optimizes for search engines.
+              </p>
+              <div class="space-y-2 text-muted-foreground">
+                <p><strong>Refinement Limits:</strong> You can refine each schema up to 2 times</p>
+                <p><strong>Cost:</strong> Refinements are FREE (included with your schema generation)</p>
+                <p><strong>Results:</strong> Average quality score improvement of 15-25 points</p>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">How to Use Refinement</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Generate or view a schema from your Library</li>
+                <li>Check the quality score in the "Schema Quality" section</li>
+                <li>Click "Refine with AI" button (shows remaining refinements)</li>
+                <li>Wait 10-20 seconds for the AI to optimize your schema</li>
+                <li>Review the changes highlighted in the results</li>
+                <li>Check the improved quality score</li>
+              </ol>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>When to Refine:</strong> Refine schemas with scores below 80, or when you need that extra
+                edge for competitive keywords and AI citations.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Library Management -->
+        <section id="library-management" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m16 6 4 14"></path>
+                <path d="M12 6v14"></path>
+                <path d="M8 8v12"></path>
+                <path d="M4 4v16"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Library Management</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">Your Schema Library</h3>
+              <p class="text-muted-foreground mb-4">
+                The Library is your central hub for managing all URLs and their schemas. Every URL you discover
+                or generate schema for is automatically saved here.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Library Features</h4>
+              <ul class="space-y-2 text-muted-foreground">
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Organize by Domain:</strong> URLs are automatically grouped by domain</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Filter by Schema Status:</strong> View all URLs, only those with schema, or those needing schema</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Search:</strong> Quickly find URLs by searching paths or domains</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Hide/Unhide URLs:</strong> Keep your library clean by hiding URLs you don't need</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Bulk Delete:</strong> Select multiple URLs and delete them at once</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <svg class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span><strong>Live Editor:</strong> View and edit schema directly from the Library</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Library Workflow</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Discover URLs or generate schema for individual pages</li>
+                <li>Review URLs in your Library (filter by "Needs Schema")</li>
+                <li>Click on URLs without schema to quickly generate from the Library</li>
+                <li>Edit and refine schemas as needed</li>
+                <li>Push to HubSpot or copy code for manual implementation</li>
+                <li>Hide or delete URLs you no longer need</li>
+              </ol>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Tip:</strong> Use the Library filters to track your schema coverage. The "Has Schema"
+                vs "Needs Schema" tabs show exactly which pages still need attention.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- HubSpot Integration -->
+        <section id="hubspot-integration" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h6v6"></path>
+                <path d="M10 14 21 3"></path>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">HubSpot Integration</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">Push Schema to HubSpot</h3>
+              <p class="text-muted-foreground mb-4">
+                Connect your HubSpot account to automatically push schema markup directly to your HubSpot blog posts,
+                pages, and landing pages. No manual copy-paste required.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Connecting HubSpot</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Go to the HubSpot page in SuperSchema</li>
+                <li>Click "Connect HubSpot Account"</li>
+                <li>Log in to your HubSpot account and authorize SuperSchema</li>
+                <li>You'll be redirected back to SuperSchema with your portal connected</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Domain Association</h4>
+              <p class="text-muted-foreground mb-3">
+                If you have multiple HubSpot portals, associate domains with each portal for automatic selection:
+              </p>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Go to the HubSpot page</li>
+                <li>Find your connected portal</li>
+                <li>In the "Associated Domains" section, click "Add Domain"</li>
+                <li>Enter the domain that's hosted in this HubSpot portal</li>
+                <li>Click "Add"</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Pushing Schema to HubSpot</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Generate schema for a URL (or open it from your Library)</li>
+                <li>Click "Push to HubSpot" button</li>
+                <li>Select the matching HubSpot content (blog post, page, or landing page)</li>
+                <li>Click "Push Schema"</li>
+                <li>Schema is automatically added to your page's head HTML</li>
+              </ol>
+            </div>
+            <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Requirements:</strong> HubSpot integration requires Marketing Hub Professional/Enterprise
+                or CMS Hub Professional/Enterprise.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Troubleshooting</h4>
+              <div class="space-y-3">
+                <div>
+                  <p class="font-medium text-sm">Getting "Domain Not Associated" warning?</p>
+                  <p class="text-sm text-muted-foreground">
+                    This means you have multiple HubSpot portals and haven't associated domains yet. Follow the
+                    Domain Association steps above, or click "Go to HubSpot Settings" in the modal.
+                  </p>
+                </div>
+                <div>
+                  <p class="font-medium text-sm">Can't find my HubSpot page?</p>
+                  <p class="text-sm text-muted-foreground">
+                    Make sure the URL domain matches your HubSpot domain. The content matcher searches by URL,
+                    so the domains must match exactly.
+                  </p>
+                </div>
+                <div>
+                  <p class="font-medium text-sm">Connection showing as "Inactive"?</p>
+                  <p class="text-sm text-muted-foreground">
+                    Click "Validate" to refresh the connection. If it stays inactive, you may need to reconnect
+                    your HubSpot account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Credits & Billing -->
+        <section id="credits-billing" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+                <line x1="2" x2="22" y1="10" y2="10"></line>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Credits & Billing</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">How Credits Work</h3>
+              <p class="text-muted-foreground mb-4">
+                SuperSchema uses a credit-based system. Each action that uses AI (like generating schema)
+                costs 1 credit. No subscriptions, no monthly fees—just pay for what you use.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">What Costs Credits?</h4>
+              <ul class="space-y-2 text-muted-foreground">
+                <li class="flex items-center space-x-2">
+                  <span class="font-mono bg-muted px-2 py-0.5 rounded text-sm">1 credit</span>
+                  <span>Generating schema for a URL</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">What's FREE?</h4>
+              <ul class="space-y-2 text-muted-foreground">
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>URL Discovery (crawling your website)</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Saving URLs to your Library</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Editing schema manually</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Viewing and managing your Library</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>2 free AI refinements per schema (improves quality automatically)</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Pushing schema to HubSpot</span>
+                </li>
+                <li class="flex items-center space-x-2">
+                  <svg class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>Copying schema code</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Free Credits</h4>
+              <p class="text-muted-foreground mb-2">
+                New users get 2 free credits when they sign up. No credit card required.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Purchasing Credits</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Go to the Credits page</li>
+                <li>Click "Purchase Credits"</li>
+                <li>Choose a credit pack (larger packs = better value)</li>
+                <li>Complete checkout with Stripe</li>
+                <li>Credits are added instantly</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Checking Your Balance</h4>
+              <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>View your credit balance on the Dashboard</li>
+                <li>See detailed transaction history on the Credits page</li>
+                <li>Get low balance warnings when you have less than 5 credits</li>
+              </ul>
+            </div>
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Value:</strong> Credits never expire, and you only pay for AI-powered features. Manual
+                editing and organization are completely free.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Schema Implementation -->
+        <section id="implementation" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Schema Implementation</h2>
+          </div>
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-lg font-semibold mb-3">Adding Schema to Your Website</h3>
+              <p class="text-muted-foreground mb-4">
+                Once you've generated schema, you need to add it to your website. SuperSchema generates JSON-LD
+                format, which is the easiest and most recommended method by Google.
+              </p>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">HubSpot (Automatic)</h4>
+              <p class="text-muted-foreground mb-2">
+                If you use HubSpot, use our integration to push schema automatically:
+              </p>
+              <ol class="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
+                <li>Connect your HubSpot account</li>
+                <li>Generate schema</li>
+                <li>Click "Push to HubSpot"</li>
+                <li>Done! Schema is added to your page's head</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">WordPress</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Copy the schema script tags from SuperSchema</li>
+                <li>Install a plugin like "Insert Headers and Footers" or "Code Snippets"</li>
+                <li>Paste the schema in the "Head" section for that specific page</li>
+                <li>Save and publish</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Shopify</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Copy the schema script tags</li>
+                <li>Go to your Shopify admin &rarr; Online Store &rarr; Themes</li>
+                <li>Click "Actions" &rarr; "Edit code"</li>
+                <li>Find your page template (e.g., product.liquid, article.liquid)</li>
+                <li>Paste the schema before the closing &lt;/head&gt; tag</li>
+                <li>Save the file</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Webflow</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Copy the schema script tags</li>
+                <li>In Webflow, go to your page settings</li>
+                <li>Scroll to "Custom Code" section</li>
+                <li>Paste the schema in "Head Code"</li>
+                <li>Save and publish</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Custom HTML / Other Platforms</h4>
+              <ol class="list-decimal list-inside space-y-2 text-muted-foreground">
+                <li>Copy the complete schema script tags from SuperSchema</li>
+                <li>Open your HTML file or page template</li>
+                <li>Paste the schema inside the &lt;head&gt; section, before the closing &lt;/head&gt; tag</li>
+                <li>Save and deploy your changes</li>
+              </ol>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Verify Your Schema</h4>
+              <p class="text-muted-foreground mb-2">After adding schema to your site:</p>
+              <ol class="list-decimal list-inside space-y-1 text-muted-foreground ml-4">
+                <li>Go to Google's Rich Results Test: <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">search.google.com/test/rich-results</a></li>
+                <li>Enter your page URL</li>
+                <li>Click "Test URL"</li>
+                <li>Check for any errors or warnings</li>
+                <li>If valid, you're all set!</li>
+              </ol>
+            </div>
+            <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <p class="text-sm">
+                <strong>Best Practice:</strong> Always test your schema after adding it to your site. Google's
+                Rich Results Test will catch any formatting issues and show you exactly what search engines see.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" class="scroll-mt-24">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="p-2 bg-primary/10 rounded-lg">
+              <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <path d="M12 17h.01"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold">Frequently Asked Questions</h2>
+          </div>
+          <div class="space-y-6">
+            {faqs.map((faq) => (
+              <div class="border-b border-border pb-6 last:border-0">
+                <h4 class="font-semibold mb-2">{faq.question}</h4>
+                <p class="text-sm text-muted-foreground">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <!-- Contact Support -->
+        <div class="mt-12 p-6 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <h3 class="text-lg font-semibold mb-2">Still have questions?</h3>
+          <p class="text-muted-foreground mb-4">
+            Can't find what you're looking for? Our support team is here to help.
+          </p>
+          <a
+            href="/support"
+            class="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+          >
+            Contact Support
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <FooterStatic />
+  </body>
+</html>

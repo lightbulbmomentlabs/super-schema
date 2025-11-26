@@ -1,0 +1,607 @@
+---
+import '../styles/global.css'
+import PillarPageNavStatic from '../components/PillarPageNavStatic.astro'
+import FooterStatic from '../components/FooterStatic.astro'
+import FAQItemAstro from '../components/FAQItemAstro'
+
+const faqs = [
+  {
+    question: 'Do I really need schema markup? My site seems fine without it.',
+    answer: "Your site might *look* fine to humans, but search engines see it differently. Schema markup is like giving Google, ChatGPT, and other AI search engines a cheat sheet about your content. Without it, they're just guessing. With it, you're 434% more likely to rank in featured snippets and show up in AI-generated answers. So yeah, you kinda need it."
+  },
+  {
+    question: "Can't I just write the schema myself?",
+    answer: "Sure! You could also hand-code your entire website in binary. But why? Manual schema markup is tedious, error-prone, and takes forever. One missing comma and the whole thing breaks. SuperSchema generates perfect, validated JSON-LD in seconds. Your time is worth more than wrestling with Schema.org documentation at midnight."
+  },
+  {
+    question: "What's the difference between regular SEO and AEO?",
+    answer: "SEO (Search Engine Optimization) helps you rank in traditional search results. AEO (Answer Engine Optimization) helps you show up in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. Think of it as future-proofing your SEO. Schema markup is crucial for both, but especially for AEO since AI engines rely heavily on structured data to understand and cite your content."
+  },
+  {
+    question: 'How much does it cost?',
+    answer: "We use a simple credit system: 1 credit per URL generates all relevant schema types for that page (Article, BlogPosting, FAQPage, HowTo, etc.). You can add more schema types to the same URL for free, and each schema type includes 2 AI-powered refinements to perfect your markup. You get 2 free credits when you sign up (no credit card required). After that, credits are super affordable—way cheaper than paying a developer to write schema manually or dealing with broken markup that tanks your SEO."
+  },
+  {
+    question: 'Will this work with my [insert platform here]?',
+    answer: "Yep! SuperSchema generates standard JSON-LD schema markup that works with any website: HubSpot, WordPress, Shopify, Webflow, custom HTML, you name it. If your site loads in a browser, our schema will work with it. Just paste the generated code into your page's <head> section and you're golden."
+  },
+  {
+    question: 'Why not just use ChatGPT or another AI tool?',
+    answer: "ChatGPT is great for many things, but schema markup isn't one of them. Here's why: ChatGPT hallucinates, makes up data, and can't actually crawl your website to extract real information. It'll give you generic templates that miss crucial details. SuperSchema actually visits your URL, scrapes your real content, analyzes your page structure, automatically detects the right schema types, validates everything against Schema.org standards, and generates production-ready markup with your actual data. No hallucinations. No guessing. No manual data entry. Just accurate, complete schema that actually works."
+  },
+  {
+    question: "What if I don't know what schema type I need?",
+    answer: "That's the beauty of AI! Just paste your URL and our system automatically detects what type of schema you need: Article, Product, LocalBusiness, Recipe, Event, you name it. No Schema.org PhD required. We analyze your content and structure, then generate the perfect markup for your page."
+  },
+  {
+    question: 'Is the generated schema actually valid?',
+    answer: "100%. Every schema we generate is validated against Schema.org standards and Google's requirements. We run it through multiple validation checks before showing it to you. Plus, our system stays updated with the latest schema standards so you don't have to. No broken markup, no validation errors, no stress."
+  },
+  {
+    question: 'How quickly will I see results?',
+    answer: "Schema generation? Under 30 seconds. SEO results? That depends on Google and other search engines. Typically, search engines re-crawl and re-index your pages within a few days to weeks. You might see rich snippets appear faster, while ranking improvements can take a bit longer. The important thing: you're giving search engines and AI the data they need to understand and promote your content."
+  }
+]
+
+const benefits = [
+  'Boost Answer Engine Optimization (AEO) for AI search',
+  'Enhanced rich snippets and featured results',
+  'Better SEO rankings with structured data',
+  'Automated schema type detection and generation',
+  'Real-time JSON-LD validation and error checking',
+  'User-friendly schema markup editor'
+]
+
+const features = [
+  {
+    title: 'AI-Powered Schema Generation',
+    description: 'Our AI reads your content faster than you can say "structured data" and generates optimal markup for answer engine optimization and SEO. No PhD in Schema.org required.',
+    featured: true
+  },
+  {
+    title: 'HubSpot Integration',
+    description: 'Connect your HubSpot account and push schema markup directly to your blog posts and pages with one click. No copy-paste, no technical headaches.'
+  },
+  {
+    title: 'Discover Your Site in Seconds',
+    description: 'Drop in your domain and watch us crawl, discover, and map every URL. Your entire sitemap, ready for schema superpowers.'
+  },
+  {
+    title: 'Your Schema Arsenal',
+    description: 'Build a library of schema-powered URLs. Organize, search, and manage all your structured data in one slick dashboard.'
+  },
+  {
+    title: 'Quality Score That Actually Matters',
+    description: 'Get instant feedback on your schema quality. We grade your markup and tell you exactly what to fix. No mystery, just results.'
+  },
+  {
+    title: 'Real-Time Validation',
+    description: 'Every schema is validated before it hits your code. Catch errors before search engines do. Sleep better at night.'
+  },
+  {
+    title: 'One-Click Refinement',
+    description: 'AI-powered optimization that boosts your schema quality score instantly with zero effort.',
+    featured: true
+  }
+]
+
+const pageTitle = "SuperSchema - AI-Powered Schema Markup Generator for AEO & SEO"
+const pageDescription = "Generate perfect JSON-LD schema markup automatically with AI. Boost your Answer Engine Optimization (AEO) for ChatGPT, Perplexity, and Google AI while improving your traditional SEO rankings."
+
+// Organization Schema
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "SuperSchema",
+  "alternateName": "SuperSchema.ai",
+  "url": "https://superschema.ai",
+  "logo": "https://superschema.ai/logo.png",
+  "description": "AI-powered schema markup generator for Answer Engine Optimization (AEO) and SEO. Generate perfect JSON-LD structured data automatically.",
+  "foundingDate": "2024",
+  "founders": [
+    {
+      "@type": "Organization",
+      "name": "Lightbulb Moment Labs"
+    }
+  ],
+  "sameAs": [],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "url": "https://superschema.ai/support"
+  }
+}
+
+// WebSite Schema with SearchAction
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "SuperSchema",
+  "alternateName": "SuperSchema.ai",
+  "url": "https://superschema.ai",
+  "description": "AI-powered schema markup generator for Answer Engine Optimization (AEO) and SEO",
+  "publisher": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://superschema.ai/dashboard?url={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+
+// SoftwareApplication Schema
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SuperSchema",
+  "alternateName": "SuperSchema.ai Schema Generator",
+  "description": "AI-powered schema markup generator that automatically creates JSON-LD structured data for Answer Engine Optimization (AEO) and SEO. Supports Article, Product, FAQ, HowTo, and 50+ schema types.",
+  "url": "https://superschema.ai",
+  "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "SEO Tool",
+  "operatingSystem": "Web Browser",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "description": "Free tier with 2 credits, no credit card required"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.9",
+    "ratingCount": "150",
+    "bestRating": "5",
+    "worstRating": "1"
+  },
+  "featureList": [
+    "AI-powered schema generation",
+    "Automatic schema type detection",
+    "Real-time JSON-LD validation",
+    "HubSpot integration",
+    "Quality scoring system",
+    "One-click AI refinement",
+    "50+ schema types supported"
+  ]
+}
+
+// FAQPage Schema
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+}
+
+// WebPage Schema
+const webPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": pageTitle,
+  "description": pageDescription,
+  "url": "https://superschema.ai",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "about": {
+    "@type": "Thing",
+    "name": "Schema Markup",
+    "description": "Structured data vocabulary for search engines and AI"
+  },
+  "mainEntity": {
+    "@type": "SoftwareApplication",
+    "name": "SuperSchema"
+  },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://superschema.ai"
+      }
+    ]
+  }
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="keywords" content="schema markup, JSON-LD, structured data, AEO, Answer Engine Optimization, SEO, AI search, schema generator, rich snippets" />
+    <link rel="canonical" href="https://superschema.ai" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://superschema.ai" />
+    <meta property="og:site_name" content="SuperSchema" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+
+    <!-- JSON-LD Schemas -->
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(softwareSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(webPageSchema)} />
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <!-- Navigation -->
+    <PillarPageNavStatic />
+
+    <!-- Hero Section -->
+    <section class="relative py-32 px-4 overflow-hidden bg-gradient-to-b from-primary/5 to-background">
+      <div class="container mx-auto text-center max-w-5xl relative z-10">
+        <!-- Badge -->
+        <div class="mb-8 flex justify-center">
+          <span class="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium border border-primary/20">
+            Powered by AI
+          </span>
+        </div>
+
+        <!-- Glass Card Container -->
+        <div class="backdrop-blur-xl bg-background/40 border border-border/50 rounded-3xl p-12 shadow-2xl">
+          <h1 class="text-5xl md:text-7xl font-bold tracking-tight mb-6">
+            <span class="block mb-2">AI Search is Here</span>
+            <span class="block bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+              Be the Answer AI Gives
+            </span>
+          </h1>
+
+          <p class="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+            Millions of people now use ChatGPT, Perplexity, and Google AI instead of traditional search. Don't get left out. Our AI tool automatically creates the schema markup you need for answer engine optimization (AEO) and better SEO—no coding required. Because being invisible to AI isn't an option.
+          </p>
+
+          <div class="flex justify-center items-center">
+            <a
+              href="/sign-up"
+              class="group relative inline-flex items-center px-8 py-4 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-lg font-semibold shadow-lg hover:shadow-2xl"
+            >
+              <span class="relative z-10">Get Your Superpowers</span>
+              <svg class="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </a>
+          </div>
+
+          <p class="text-sm text-muted-foreground mt-6 flex items-center justify-center gap-2 flex-wrap">
+            <span class="inline-flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              2 free credits
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              No credit card required
+            </span>
+            <span>•</span>
+            <span class="inline-flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              No schema-induced headaches
+            </span>
+          </p>
+        </div>
+
+        <!-- Social Proof / Stats Bar -->
+        <div class="mt-12 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
+          <div class="flex flex-col items-center">
+            <div class="text-2xl font-bold text-foreground">10,000+</div>
+            <div>Schemas Generated</div>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="text-2xl font-bold text-foreground">99.9%</div>
+            <div>Accuracy Rate</div>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="text-2xl font-bold text-foreground">&lt; 30s</div>
+            <div>Average Generation Time</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-24 px-4 bg-muted/30 relative overflow-hidden">
+      <div class="container mx-auto max-w-7xl relative">
+        <!-- Section Header -->
+        <div class="text-center mb-16">
+          <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Schema Markup Superpowers
+          </h2>
+          <p class="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Everything you need to create professional JSON-LD schema markup that makes Google, AI search engines, and answer engines go "wow, this site gets it."
+          </p>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature, index) => (
+            <div class={`p-6 rounded-2xl border border-border bg-card hover:shadow-lg transition-shadow ${feature.featured ? 'md:col-span-2 lg:col-span-1 ring-2 ring-primary/20' : ''}`}>
+              <h3 class="text-xl font-semibold mb-3">{feature.title}</h3>
+              <p class="text-muted-foreground">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="py-20 px-4">
+      <div class="container mx-auto max-w-4xl">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">
+              Why Use Our AEO Schema Generator?
+            </h2>
+            <div class="space-y-4">
+              {benefits.map((benefit) => (
+                <div class="flex items-center space-x-3">
+                  <svg class="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span class="text-muted-foreground">{benefit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div class="bg-muted/30 p-8 rounded-lg border border-border">
+            <h3 class="text-xl font-semibold mb-4">So Simple, It's Super</h3>
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0">
+                  1
+                </div>
+                <div>
+                  <p class="font-medium">Drop Your URL</p>
+                  <p class="text-sm text-muted-foreground">Like a mic drop, but less dramatic</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0">
+                  2
+                </div>
+                <div>
+                  <p class="font-medium">Watch the Magic</p>
+                  <p class="text-sm text-muted-foreground">AI does the heavy lifting (and the thinking)</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <p class="font-medium">Copy & Conquer</p>
+                  <p class="text-sm text-muted-foreground">Grab your JSON-LD and become an SEO hero</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scoring System Section -->
+    <section class="py-20 px-4 bg-muted/30">
+      <div class="container mx-auto max-w-6xl">
+        <!-- Section Header -->
+        <div class="text-center mb-12">
+          <h2 class="text-3xl md:text-4xl font-bold mb-4">
+            Know Your Schema Score
+          </h2>
+          <p class="text-lg text-muted-foreground max-w-3xl mx-auto">
+            Not all schema markup is created equal. Our intelligent scoring system grades your generated schema on completeness, accuracy, and AEO optimization potential.
+          </p>
+        </div>
+
+        <!-- Score Example Visual -->
+        <div class="flex justify-center mb-12">
+          <div class="bg-card border border-border rounded-2xl p-8 shadow-lg max-w-md w-full">
+            <div class="text-center mb-6">
+              <div class="text-6xl font-bold text-primary mb-2">92</div>
+              <div class="text-lg text-muted-foreground">Quality Score</div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-muted-foreground">Completeness</span>
+                <span class="text-sm font-medium text-green-500">95%</span>
+              </div>
+              <div class="w-full bg-muted rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width: 95%"></div>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-muted-foreground">Accuracy</span>
+                <span class="text-sm font-medium text-green-500">98%</span>
+              </div>
+              <div class="w-full bg-muted rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width: 98%"></div>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-muted-foreground">AEO Optimization</span>
+                <span class="text-sm font-medium text-yellow-500">85%</span>
+              </div>
+              <div class="w-full bg-muted rounded-full h-2">
+                <div class="bg-yellow-500 h-2 rounded-full" style="width: 85%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature Highlights -->
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="text-center">
+            <svg class="h-8 w-8 text-green-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <p class="font-medium mb-2">Real-time Quality Scoring</p>
+            <p class="text-sm text-muted-foreground">See exactly how well your schema performs before you implement it</p>
+          </div>
+          <div class="text-center">
+            <svg class="h-8 w-8 text-green-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <p class="font-medium mb-2">Completeness Metrics</p>
+            <p class="text-sm text-muted-foreground">Understand what's missing and what could be improved</p>
+          </div>
+          <div class="text-center">
+            <svg class="h-8 w-8 text-green-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <p class="font-medium mb-2">AEO Optimization Insights</p>
+            <p class="text-sm text-muted-foreground">Get specific recommendations for better AI search visibility</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Refinement Section -->
+    <section class="py-20 px-4">
+      <div class="container mx-auto max-w-6xl">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">
+              One-Click AI Optimization
+            </h2>
+            <p class="text-lg text-muted-foreground mb-6">
+              Good schema is just the starting point. Our one-click AI refinement automatically optimizes your markup based on SEO and AEO best practices while boosting your schema score. No prompts needed: just click and watch your schema level up.
+            </p>
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p class="font-medium">One-Click Perfection</p>
+                  <p class="text-sm text-muted-foreground">AI automatically applies best practices: no manual tweaking required</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p class="font-medium">Instant Score Boost</p>
+                  <p class="text-sm text-muted-foreground">Watch your schema quality grade improve in real-time</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p class="font-medium">Best Practice Optimization</p>
+                  <p class="text-sm text-muted-foreground">AI applies the latest SEO and AEO standards automatically</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-center">
+            <!-- AI Refinement Demo Placeholder -->
+            <div class="bg-card border border-border rounded-2xl p-8 shadow-lg max-w-sm w-full">
+              <div class="text-center mb-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                  <svg class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h4 class="font-semibold mb-2">AI Refinement</h4>
+                <p class="text-sm text-muted-foreground mb-4">Click to optimize your schema with AI</p>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center justify-between p-2 bg-muted/50 rounded">
+                  <span>Before</span>
+                  <span class="font-medium text-yellow-500">Score: 72</span>
+                </div>
+                <div class="flex justify-center">
+                  <svg class="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-green-500/10 rounded border border-green-500/20">
+                  <span>After</span>
+                  <span class="font-medium text-green-500">Score: 95</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="py-20 px-4 bg-muted/30">
+      <div class="container mx-auto max-w-4xl">
+        <div class="text-center mb-16">
+          <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Questions? We've Got Answers.
+          </h2>
+          <p class="text-xl text-muted-foreground">
+            Everything you wanted to know about schema markup (but were too busy to ask)
+          </p>
+        </div>
+        <div class="space-y-4">
+          {faqs.map((faq, index) => (
+            <FAQItemAstro
+              client:visible
+              question={faq.question}
+              answer={faq.answer}
+              index={index}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 px-4 bg-primary">
+      <div class="container mx-auto text-center max-w-4xl">
+        <h2 class="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          Ready to Be Super?
+        </h2>
+        <p class="text-xl text-primary-foreground/80 mb-8">
+          Join thousands of smart folks using our AEO schema generator to skyrocket their AI search visibility and SEO rankings. No cape required.
+        </p>
+        <a
+          href="/sign-up"
+          class="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-medium"
+        >
+          Activate Superpowers
+          <svg class="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <FooterStatic />
+  </body>
+</html>
