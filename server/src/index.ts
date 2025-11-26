@@ -8,7 +8,7 @@ import morgan from 'morgan'
 import { rateLimit } from 'express-rate-limit'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import cron from 'node-cron'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -128,7 +128,62 @@ const clientDistPath = process.env.NODE_ENV === 'production'
   ? path.join(__dirname, '../client')
   : path.join(__dirname, '../../client/dist')
 
+// Astro static pages output directory
+const astroDistPath = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../astro')
+  : path.join(__dirname, '../../server/dist/astro')
+
+// Serve Astro static assets (CSS, JS, etc.)
+if (existsSync(astroDistPath)) {
+  app.use('/_astro', express.static(path.join(astroDistPath, '_astro')))
+}
+
 app.use(express.static(clientDistPath))
+
+// Route /aeo to Astro static HTML for AI crawler accessibility
+app.get('/aeo', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'aeo', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
+// Route /geo to Astro static HTML for AI crawler accessibility
+app.get('/geo', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'geo', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
+// Route /ai-search-optimization to Astro static HTML for AI crawler accessibility
+app.get('/ai-search-optimization', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'ai-search-optimization', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
+// Route /schema-markup to Astro static HTML for AI crawler accessibility
+app.get('/schema-markup', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'schema-markup', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
+
+// Route /schema-markup/improve-quality-score to Astro static HTML for AI crawler accessibility
+app.get('/schema-markup/improve-quality-score', (req, res, next) => {
+  const astroPath = path.join(astroDistPath, 'schema-markup', 'improve-quality-score', 'index.html')
+  if (existsSync(astroPath)) {
+    return res.sendFile(astroPath)
+  }
+  next() // Fallback to SPA
+})
 
 // Serve index.html for all non-API routes (SPA fallback)
 app.get('*', (req, res) => {

@@ -1,0 +1,33 @@
+---
+const currentYear = new Date().getFullYear()
+---
+
+<footer class="border-t border-border bg-background">
+  <div class="container mx-auto px-4 py-3">
+    <div class="flex items-center justify-between">
+      <p class="text-sm text-muted-foreground">
+        © {currentYear} Lightbulb Moment Labs. All rights reserved.
+      </p>
+      <div class="flex items-center gap-4">
+        <a
+          href="/aeo"
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Resources
+        </a>
+        <a
+          href="/docs"
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Help
+        </a>
+        <a
+          href="mailto:support@superschema.ai"
+          class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Support
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,768 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import PillarPageNavStatic from '../components/PillarPageNavStatic.astro'
+import FooterStatic from '../components/FooterStatic.astro'
+import FAQItemAstro from '../components/FAQItemAstro.tsx'
+
+// Content Data
+const schemaGenerators = [
+  { name: 'FAQ Schema', path: '/faq-schema-generator', description: 'Perfect for Q&A content and AEO' },
+  { name: 'Article Schema', path: '/article-schema-generator', description: 'News articles, blog posts, guides' },
+  { name: 'BlogPosting Schema', path: '/blogposting-schema-generator', description: 'Blog-specific structured data' },
+  { name: 'HowTo Schema', path: '/howto-schema-generator', description: 'Step-by-step instructions' },
+  { name: 'Product Schema', path: '/product-schema-generator', description: 'E-commerce products with reviews' },
+  { name: 'LocalBusiness Schema', path: '/localbusiness-schema-generator', description: 'Physical business locations' },
+  { name: 'Organization Schema', path: '/organization-schema-generator', description: 'Company information' },
+  { name: 'Event Schema', path: '/event-schema-generator', description: 'Conferences, webinars, meetups' },
+  { name: 'Review Schema', path: '/review-schema-generator', description: 'Product and business reviews' },
+  { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator', description: 'Site navigation hierarchy' }
+]
+
+const aeoSteps = [
+  {
+    number: 1,
+    title: 'Identify Answerable Queries',
+    description: 'Find questions people actually ask. Think "how to," "what is," "best," and "why." These are AI search gold mines.',
+    tips: [
+      'Use Google\'s "People Also Ask" boxes',
+      'Check competitor content gaps',
+      'Focus on listicles (32% of AI citations)',
+      'Add current year markers like "2025" to increase citations'
+    ]
+  },
+  {
+    number: 2,
+    title: 'Implement Relevant Schema Types',
+    description: 'Add structured data that makes AI engines say "wow, this page gets it." Schema is how you speak machine.',
+    tips: [
+      'FAQPage schema for Q&A content',
+      'HowTo schema for step-by-step guides',
+      'Article schema for blog posts and news',
+      'Use SuperSchema to auto-detect and generate'
+    ]
+  },
+  {
+    number: 3,
+    title: 'Validate Your Markup',
+    description: 'Broken schema = invisible to AI. Validate everything before it goes live. No excuses.',
+    tips: [
+      'Google Rich Results Test for validation',
+      'SuperSchema quality score (aim for 80+)',
+      'Check for duplicate or conflicting schema',
+      'Monitor after CMS updates (they break things)'
+    ]
+  },
+  {
+    number: 4,
+    title: 'Monitor AI Citations',
+    description: 'Track where your content shows up in AI-generated answers. ChatGPT, Perplexity, Google AI Overviews - be everywhere.',
+    tips: [
+      'Search your brand in ChatGPT and Perplexity',
+      'Monitor Google AI Overviews for your keywords',
+      'Track featured snippet appearances',
+      'Measure zero-click results (traffic won\'t tell the full story)'
+    ]
+  }
+]
+
+const commonMistakes = [
+  {
+    mistake: 'Missing Entities',
+    problem: 'Your schema doesn\'t define key entities like author, organization, or publisher.',
+    fix: 'Add complete entity definitions. AI engines need context to understand and cite your content.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Duplicate Schema',
+    problem: 'Multiple conflicting schema blocks on the same page confuse search engines.',
+    fix: 'Consolidate into one comprehensive schema block. Quality over quantity.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Invalid JSON-LD Syntax',
+    problem: 'One missing comma and the whole thing breaks. Search engines just ignore it.',
+    fix: 'Always validate with Google Rich Results Test. Use SuperSchema to generate error-free markup.',
+    severity: 'critical'
+  },
+  {
+    mistake: 'Keyword Stuffing',
+    problem: 'Old SEO habits die hard. AI engines favor semantic richness over repetitive keywords.',
+    fix: 'Write naturally. Focus on answering questions thoroughly, not hitting keyword density targets.',
+    severity: 'medium'
+  },
+  {
+    mistake: 'Burying the Lede',
+    problem: 'Answer buried in paragraph 3. AI engines want instant, direct answers.',
+    fix: 'Front-load answers in the first 100-200 words. Use clear subheadings.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Schema That Doesn\'t Match Content',
+    problem: 'Your schema says one thing, your visible content says another. That\'s a penalty risk.',
+    fix: 'Schema must reflect what users actually see. Never lie to search engines.',
+    severity: 'critical'
+  },
+  {
+    mistake: 'Ignoring Schema After CMS Updates',
+    problem: 'Template changes, plugin updates, and theme switches silently break schema.',
+    fix: 'Revalidate schema after any CMS changes. Set up automated monitoring.',
+    severity: 'medium'
+  }
+]
+
+const futureTrends = [
+  {
+    trend: 'Multimodal Search Convergence',
+    description: 'Text, voice, and image search are merging. By 2025, 20%+ of searches are voice-based, and models like Gemini Pro support live camera queries.',
+    impact: 'Schema needs to support multiple content types. Image markup, video markup, and audio metadata matter more than ever.'
+  },
+  {
+    trend: 'Conversational AI Replacing Search Bars',
+    description: 'ChatGPT grew from 400M to 700M users in 5 months. "Asking" now makes up 51.6% of all interactions. Traditional search is being replaced by AI conversations.',
+    impact: 'Optimize for natural language queries. Answer engines prefer content that sounds conversational, not keyword-stuffed.'
+  },
+  {
+    trend: 'Google AI Mode with Advanced Reasoning',
+    description: 'Google AI Mode is rolling out with 1B+ users. It uses advanced reasoning to handle complex, multi-step queries - way beyond simple featured snippets.',
+    impact: 'Create comprehensive content that connects multiple concepts. AI engines reward depth and relationships between topics.'
+  },
+  {
+    trend: 'Market Share Disruption',
+    description: 'Google commands 57% of the $300B search ad market, but OpenAI, Perplexity, Amazon, and TikTok are gaining fast. Google\'s share is projected to decline in 2025-2026.',
+    impact: 'Don\'t optimize for just Google. Make your content citation-worthy for all AI platforms.'
+  },
+  {
+    trend: 'Zero-Click Future',
+    description: 'AI-generated answers mean fewer clicks. Users get answers without visiting your site. By 2026, 25% of organic traffic will shift to AI chatbots.',
+    impact: 'Focus on brand visibility in AI answers, not just traffic. Being cited builds authority even without clicks.'
+  },
+  {
+    trend: 'Quality Over Quantity Wins',
+    description: 'Winners in 2025 prioritize conversions over traffic. AI engines favor authoritative, original content with genuine expertise.',
+    impact: 'Stop chasing traffic metrics. Build content that AI engines trust and cite as the definitive source.'
+  }
+]
+
+const faqs = [
+  {
+    question: 'What\'s the difference between AEO and SEO?',
+    answer: 'SEO (Search Engine Optimization) focuses on ranking in traditional search results - think blue links on Google. AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers from ChatGPT, Perplexity, Google AI Overviews, and other AI tools. SEO is about traffic. AEO is about being the answer. Both matter in 2025, but AEO is how you future-proof your visibility.'
+  },
+  {
+    question: 'Do I still need SEO if I\'m doing AEO?',
+    answer: 'Yes. AEO isn\'t a replacement for SEO - it\'s an extension. Strong SEO gets your content indexed and ranked, which helps AI platforms find it. AEO ensures AI can understand, extract, and cite your content. Use both strategies together for maximum visibility across traditional search engines, AI tools, and voice assistants.'
+  },
+  {
+    question: 'How do I know if my AEO strategy is working?',
+    answer: 'Check if your content appears in ChatGPT responses, Perplexity citations, and Google AI Overviews. Monitor featured snippet appearances in Google Search. Track brand mentions in AI-generated answers even if they don\'t link back (zero-click visibility still builds authority). Use tools like SuperSchema to ensure your schema quality score is 80+ for better AI citation chances.'
+  },
+  {
+    question: 'Which schema types matter most for AEO?',
+    answer: 'FAQPage, HowTo, and Article schema are AEO powerhouses. FAQPage directly answers common questions (perfect for AI). HowTo provides step-by-step guidance that AI loves to summarize. Article schema helps AI understand your content structure and authorship. Product, LocalBusiness, and Organization schema matter for specific industries. SuperSchema automatically detects which types you need.'
+  },
+  {
+    question: 'Can schema markup hurt my SEO?',
+    answer: 'Only if it\'s wrong. Invalid schema gets ignored. Schema that doesn\'t match your visible content can trigger penalties. Duplicate or conflicting schema confuses search engines. But properly implemented schema? That\'s pure upside - better rankings, rich snippets, and AI citations. Always validate with Google Rich Results Test or use SuperSchema to generate error-free markup.'
+  },
+  {
+    question: 'How long does it take to see AEO results?',
+    answer: 'Schema implementation is instant, but search engines need time to re-crawl and re-index your pages. Featured snippets can appear in days to weeks. Ranking improvements take longer - typically 2-8 weeks. AI citation in tools like ChatGPT depends on when they refresh their training data or search indexes. The key: implement schema now so you\'re ready when AI platforms next update.'
+  },
+  {
+    question: 'What\'s a good schema quality score?',
+    answer: 'Aim for 80+. Scores of 90-100 mean your schema is complete and optimized with all recommended properties. 70-89 is solid but could be better. 50-69 means you\'re missing important fields. Below 50? Use AI refinement ASAP. SuperSchema shows quality scores and offers one-click optimization to boost your score automatically.'
+  },
+  {
+    question: 'Why are listicles so effective for AEO?',
+    answer: 'Listicles make up 32% of all AI citations - the highest of any content format. Why? They\'re structured, scannable, and answer-focused. AI engines love clear, numbered points that can be easily extracted and summarized. Pair listicles with proper schema (FAQPage or HowTo) and you\'ve got an AEO goldmine.'
+  }
+]
+
+// JSON-LD Schemas
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+}
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Answer Engine Optimization (AEO): The Complete Guide",
+  "description": "Learn how to optimize your content for AI search engines like ChatGPT, Perplexity, and Google AI Overviews. Comprehensive guide to schema markup, AEO best practices, and future trends.",
+  "author": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lightbulb Moment Labs",
+    "url": "https://superschema.ai"
+  },
+  "datePublished": "2025-01-10",
+  "dateModified": "2025-01-10"
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://superschema.ai"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://superschema.ai/aeo"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "AEO Guide",
+      "item": "https://superschema.ai/aeo"
+    }
+  ]
+}
+---
+
+<BaseLayout
+  title="Answer Engine Optimization (AEO): The Complete Guide | SuperSchema"
+  description="Learn how to optimize your content for AI search engines like ChatGPT, Perplexity, and Google AI Overviews. Comprehensive guide to schema markup, AEO best practices, and future trends."
+  canonicalUrl="https://superschema.ai/aeo"
+>
+  <Fragment slot="schemas">
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+  </Fragment>
+
+  <div class="min-h-screen bg-background">
+    <PillarPageNavStatic />
+
+    <!-- Hero Section -->
+    <section class="py-16 px-4 bg-gradient-to-b from-primary/5 to-background">
+      <div class="container mx-auto max-w-4xl">
+        <div class="mb-6">
+          <a href="/" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <svg class="h-4 w-4 rotate-180 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 18 6-6-6-6"/>
+            </svg>
+            Back to Home
+          </a>
+        </div>
+        <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          Answer Engine Optimization (AEO): The Complete Guide
+        </h1>
+        <p class="text-xl md:text-2xl text-muted-foreground mb-8">
+          AI search is eating traditional search alive. 700M+ ChatGPT users aren't clicking blue links - they're getting instant answers. Here's how to make sure your content is the answer they get.
+        </p>
+        <div class="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+              <polyline points="16 7 22 7 22 13"/>
+            </svg>
+            700M+ ChatGPT Users
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            1B+ Google AI Overview Users
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            25% Traffic Shift to AI by 2026
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container mx-auto max-w-4xl px-4 py-16 space-y-20">
+
+      <!-- What Is AEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">What Is Answer Engine Optimization?</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Answer Engine Optimization (AEO) is the practice of optimizing your content so AI search platforms - ChatGPT, Perplexity, Google AI Overviews, Claude, and others - can find, understand, and cite your content as the definitive answer.
+          </p>
+          <p>
+            While traditional SEO focuses on ranking in search results (those blue links you're used to), AEO focuses on being the answer that AI engines deliver directly to users. No click required. No scrolling through results. Just your content, front and center, as the authoritative source.
+          </p>
+
+          <!-- AEO vs SEO Comparison Table -->
+          <div class="my-8 overflow-hidden rounded-lg border border-border">
+            <table class="w-full">
+              <thead class="bg-muted">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Aspect</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Traditional SEO</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">AEO</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr>
+                  <td class="px-6 py-4 font-medium">Goal</td>
+                  <td class="px-6 py-4">Rank in search results</td>
+                  <td class="px-6 py-4">Be the cited answer</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Focus</td>
+                  <td class="px-6 py-4">Keywords, backlinks, page speed</td>
+                  <td class="px-6 py-4">Structured data, natural language, entities</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Content Style</td>
+                  <td class="px-6 py-4">Long-form, keyword-rich</td>
+                  <td class="px-6 py-4">Concise, answer-first, structured</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Platforms</td>
+                  <td class="px-6 py-4">Google, Bing search results</td>
+                  <td class="px-6 py-4">ChatGPT, Perplexity, AI Overviews, voice assistants</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Success Metric</td>
+                  <td class="px-6 py-4">Traffic and rankings</td>
+                  <td class="px-6 py-4">Citations and zero-click visibility</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Schema Importance</td>
+                  <td class="px-6 py-4">Helpful for rich snippets</td>
+                  <td class="px-6 py-4">Absolutely critical</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Here's the brutal truth: search behavior is fundamentally changing. ChatGPT usage grew from 400 million to 700 million users in just 5 months. "Asking" (essentially search) now makes up 51.6% of all ChatGPT interactions. Google AI Overviews serve over 1 billion users. By 2026, experts predict 25% of organic traffic will shift to AI chatbots and virtual agents.
+          </p>
+          <p>
+            Translation? If your content isn't optimized for AI search, you're invisible to a massive - and rapidly growing - segment of your audience.
+          </p>
+        </div>
+      </section>
+
+      <!-- Why Schema Markup Is the Heart of AEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Is the Heart of AEO</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Schema markup is how you speak machine. Think of it as a cheat sheet for AI engines - a way to tell them exactly what your content is about, who wrote it, when it was published, and why it matters.
+          </p>
+          <p>
+            Without schema, AI engines are guessing. With schema, they know. And when AI knows exactly what your content offers, it's 434% more likely to appear in featured snippets and AI-generated answers.
+          </p>
+
+          <div class="bg-primary/10 border border-primary/20 rounded-lg p-6 my-8">
+            <div class="flex items-start space-x-4">
+              <svg class="h-8 w-8 text-primary flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                <path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/>
+                <path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/>
+              </svg>
+              <div>
+                <h4 class="font-semibold mb-2 text-foreground">The Machine Readability Equation</h4>
+                <p class="text-sm">
+                  <strong>Structured Data → Machine Understanding → AI Answer Eligibility → Citations & Visibility</strong>
+                </p>
+                <p class="text-sm mt-2">
+                  Schema markup bridges the gap between human-readable content and machine-extractable data. When you add schema, you're not just optimizing for search engines - you're making your content AI-ready.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p>
+            Here's why schema matters more for AEO than traditional SEO: AI engines don't have time to read your entire article and infer context. They need explicit signals. FAQPage schema tells them "here are questions and answers." HowTo schema says "here's a step-by-step process." Article schema provides authorship, publish dates, and topics.
+          </p>
+          <p>
+            Users who click on rich results (powered by schema) do so 58% of the time compared to 41% for non-rich results. But in the AEO world, clicks aren't the only metric that matters. Being cited in an AI-generated answer - even without a click - builds brand authority and trust.
+          </p>
+
+          <!-- Schema Type Links -->
+          <div class="my-8">
+            <h4 class="font-semibold mb-4 text-foreground text-lg">Essential Schema Types for AEO</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <a href="/faq-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">FAQ Schema</h5>
+                    <p class="text-sm text-muted-foreground">Perfect for Q&A content</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+              <a href="/howto-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">HowTo Schema</h5>
+                    <p class="text-sm text-muted-foreground">Step-by-step guides</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+              <a href="/article-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">Article Schema</h5>
+                    <p class="text-sm text-muted-foreground">Blog posts and articles</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+              <a href="/product-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">Product Schema</h5>
+                    <p class="text-sm text-muted-foreground">E-commerce products</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <p class="font-semibold text-foreground">
+            SuperSchema automatically detects which schema types your content needs, extracts real data from your page, and generates error-free JSON-LD in under 30 seconds. No manual data entry. No Schema.org documentation hunting. Just paste your URL and go.
+          </p>
+        </div>
+      </section>
+
+      <!-- How to Optimize for AEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">How to Optimize for AEO (Step-by-Step)</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-8">
+          <p>
+            AEO isn't rocket science - it's strategic, structured content that AI engines can easily understand and cite. Follow these four steps to dominate AI search results.
+          </p>
+
+          {aeoSteps.map((step) => (
+            <div class="border border-border rounded-lg p-6 bg-card">
+              <div class="flex items-start space-x-4">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold flex-shrink-0">
+                  {step.number}
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-2 text-foreground">{step.title}</h3>
+                  <p class="mb-4">{step.description}</p>
+                  <ul class="space-y-2">
+                    {step.tips.map((tip) => (
+                      <li class="flex items-start space-x-2">
+                        <svg class="h-5 w-5 text-success flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                          <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span class="text-sm">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <!-- CTA -->
+          <div class="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border border-primary/20 rounded-lg p-8 text-center my-8">
+            <svg class="h-12 w-12 mx-auto mb-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/>
+              <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/>
+              <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/>
+              <path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/>
+              <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/>
+              <path d="M3.477 10.896a4 4 0 0 1 .585-.396"/>
+              <path d="M19.938 10.5a4 4 0 0 1 .585.396"/>
+              <path d="M6 18a4 4 0 0 1-1.967-.516"/>
+              <path d="M19.967 17.484A4 4 0 0 1 18 18"/>
+            </svg>
+            <h3 class="text-2xl font-bold mb-2 text-foreground">Use SuperSchema's AI Generator to Automate All Four Steps</h3>
+            <p class="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Paste your URL. Our AI identifies answerable queries, generates optimized schema, validates everything, and gives you a quality score - all in under 30 seconds.
+            </p>
+            <a
+              href="/sign-up"
+              class="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold"
+            >
+              Start Free (2 Credits)
+              <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Common AEO Mistakes -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Common AEO Mistakes (and How to Fix Them)</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Most AEO failures come from old SEO habits. Here are the mistakes killing your AI search visibility - and exactly how to fix them.
+          </p>
+
+          <div class="space-y-4 my-8">
+            {commonMistakes.map((item) => (
+              <div
+                class:list={[
+                  "border rounded-lg p-6",
+                  item.severity === 'critical' && "border-destructive/50 bg-destructive/5",
+                  item.severity === 'high' && "border-warning/50 bg-warning/5",
+                  item.severity === 'medium' && "border-border bg-card"
+                ]}
+              >
+                <div class="flex items-start space-x-4">
+                  <div class:list={[
+                    "p-2 rounded-lg",
+                    item.severity === 'critical' && "bg-destructive/20",
+                    item.severity === 'high' && "bg-warning/20",
+                    item.severity === 'medium' && "bg-muted"
+                  ]}>
+                    <svg class:list={[
+                      "h-6 w-6",
+                      item.severity === 'critical' && "text-destructive",
+                      item.severity === 'high' && "text-warning",
+                      item.severity === 'medium' && "text-muted-foreground"
+                    ]} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                      <path d="M12 9v4"/>
+                      <path d="M12 17h.01"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                      <h4 class="font-bold text-foreground">{item.mistake}</h4>
+                      <span class:list={[
+                        "text-xs px-2 py-1 rounded",
+                        item.severity === 'critical' && "bg-destructive/20 text-destructive",
+                        item.severity === 'high' && "bg-warning/20 text-warning",
+                        item.severity === 'medium' && "bg-muted text-muted-foreground"
+                      ]}>
+                        {item.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <p class="text-sm mb-2"><strong class="text-foreground">Problem:</strong> {item.problem}</p>
+                    <p class="text-sm"><strong class="text-success">Fix:</strong> {item.fix}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-success/10 border border-success/20 rounded-lg p-6 my-8">
+            <div class="flex items-start space-x-4">
+              <svg class="h-8 w-8 text-success flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+              </svg>
+              <div>
+                <h4 class="font-semibold mb-2 text-foreground">Always Validate Before Going Live</h4>
+                <p class="text-sm">
+                  Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards - so you don't have to.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Future of AEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">The Future of AEO and AI Search</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            AI search is moving fast. Really fast. Here's where we're headed - and how to stay ahead.
+          </p>
+
+          <div class="space-y-6 my-8">
+            {futureTrends.map((trend) => (
+              <div class="border border-border rounded-lg p-6 bg-card">
+                <h4 class="font-bold text-lg mb-2 text-foreground">{trend.trend}</h4>
+                <p class="mb-3">{trend.description}</p>
+                <div class="bg-primary/10 border border-primary/20 rounded p-3">
+                  <p class="text-sm"><strong class="text-foreground">Impact:</strong> {trend.impact}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-8 my-8">
+            <h3 class="text-2xl font-bold mb-4 text-foreground">The Bottom Line</h3>
+            <p class="text-lg mb-4">
+              The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong class="text-foreground">conversions over traffic</strong> and <strong class="text-foreground">quality over quantity</strong>.
+            </p>
+            <p>
+              Brands that evolve with this landscape - combining structured data, natural language optimization, and genuine expertise - will thrive. Those that cling to old SEO tactics? They'll be invisible to the next generation of search.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Related Tools -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Related Tools & Resources</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            SuperSchema offers free schema generators for all major content types. Start optimizing for AEO today.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+            {schemaGenerators.map((generator) => (
+              <a
+                href={generator.path}
+                class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">{generator.name}</h5>
+                    <p class="text-sm text-muted-foreground">{generator.description}</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                    <path d="m12 5 7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-4 my-8">
+            <a
+              href="/sign-up"
+              class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
+            >
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              <h5 class="font-semibold mb-2 text-foreground">Generate Schema</h5>
+              <p class="text-sm text-muted-foreground mb-3">AI-powered schema generation for any URL</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                Start Generating
+                <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </div>
+            </a>
+            <a
+              href="/sign-up"
+              class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group"
+            >
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+              </svg>
+              <h5 class="font-semibold mb-2 text-foreground">Schema Library</h5>
+              <p class="text-sm text-muted-foreground mb-3">Manage all your URLs and schema in one place</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                View Library
+                <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deep Dive Guides -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+        <p class="text-lg text-muted-foreground mb-8">
+          Tactical guides to master specific AEO techniques and dominate AI search results.
+        </p>
+        <div class="grid gap-6">
+          <a
+            href="/aeo/how-to-win-featured-snippets"
+            class="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group"
+          >
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="text-xl font-semibold mb-2 text-foreground">How to Win Featured Snippets</h3>
+                <p class="text-muted-foreground mb-3">
+                  Learn tactical strategies for winning featured snippets and dominating Position 0
+                </p>
+              </div>
+              <svg class="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+          {faqs.map((faq, index) => (
+            <FAQItemAstro
+              client:visible
+              question={faq.question}
+              answer={faq.answer}
+              index={index}
+            />
+          ))}
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="bg-primary rounded-lg p-8 md:p-12 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          Ready to Dominate AI Search?
+        </h2>
+        <p class="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+          Join thousands using SuperSchema to optimize for answer engines and future-proof their visibility. Start with 2 free credits - no credit card required.
+        </p>
+        <a
+          href="/sign-up"
+          class="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-semibold"
+        >
+          Get Your Free Credits
+          <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"/>
+            <path d="m12 5 7 7-7 7"/>
+          </svg>
+        </a>
+      </section>
+    </div>
+
+    <FooterStatic />
+  </div>
+</BaseLayout>

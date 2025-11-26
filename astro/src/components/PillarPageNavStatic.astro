@@ -1,0 +1,210 @@
+---
+import SuperSchemaLogoStatic from './SuperSchemaLogoStatic.astro'
+
+const learningResources = [
+  { name: 'AEO Guide', path: '/aeo', description: 'Answer Engine Optimization complete guide' },
+  { name: 'GEO Guide', path: '/geo', description: 'Generative Engine Optimization - be the source AI chooses' },
+  { name: 'AI Search Optimization', path: '/ai-search-optimization', description: 'Get cited by AI engines (SGE, Copilot, Perplexity)' },
+  { name: 'Schema Markup Guide', path: '/schema-markup', description: 'What, why, and how of structured data' },
+  { name: 'Improve Schema Quality Score', path: '/schema-markup/improve-quality-score', description: 'Copy-paste snippets to boost your schema score' }
+]
+
+const schemaGenerators = [
+  { name: 'FAQ', path: '/faq-schema-generator' },
+  { name: 'Article', path: '/article-schema-generator' },
+  { name: 'BlogPosting', path: '/blogposting-schema-generator' },
+  { name: 'HowTo', path: '/howto-schema-generator' },
+  { name: 'Product', path: '/product-schema-generator' },
+  { name: 'LocalBusiness', path: '/localbusiness-schema-generator' },
+  { name: 'Organization', path: '/organization-schema-generator' },
+  { name: 'Event', path: '/event-schema-generator' },
+  { name: 'Review', path: '/review-schema-generator' },
+  { name: 'Breadcrumb', path: '/breadcrumb-schema-generator' }
+]
+---
+
+<header class="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+  <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="flex items-center space-x-2">
+      <SuperSchemaLogoStatic class="h-8 w-8" />
+      <span class="font-bold text-xl">SuperSchema</span>
+    </a>
+
+    <!-- Desktop Navigation -->
+    <div class="hidden md:flex items-center space-x-6">
+      <!-- Resources Dropdown -->
+      <div class="relative group">
+        <button class="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          Resources
+          <svg class="ml-1 h-4 w-4 transition-transform group-hover:rotate-180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown Menu - CSS only hover -->
+        <div class="absolute right-0 mt-2 w-[600px] max-w-[calc(100vw-2rem)] bg-background border border-border rounded-lg shadow-lg z-50 p-6 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <!-- Learning Hub -->
+            <div>
+              <div class="flex items-center space-x-2 mb-3">
+                <svg class="h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                </svg>
+                <h3 class="font-semibold text-sm text-foreground">Learning Hub</h3>
+              </div>
+              <div class="space-y-2">
+                {learningResources.map((resource) => (
+                  <a
+                    href={resource.path}
+                    class="block p-2 rounded hover:bg-accent transition-colors group/link"
+                  >
+                    <div class="font-medium text-sm group-hover/link:text-primary transition-colors">
+                      {resource.name}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      {resource.description}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- Schema Generators -->
+            <div>
+              <div class="flex items-center space-x-2 mb-3">
+                <svg class="h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <h3 class="font-semibold text-sm text-foreground">Free Schema Generators</h3>
+              </div>
+              <div class="grid grid-cols-2 gap-1 max-h-[300px] overflow-y-auto">
+                {schemaGenerators.map((generator) => (
+                  <a
+                    href={generator.path}
+                    class="block p-2 rounded hover:bg-accent transition-colors text-sm hover:text-primary"
+                  >
+                    {generator.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <!-- SuperSchema Tools Section -->
+          <div class="mt-6 pt-6 border-t border-border">
+            <div class="grid grid-cols-2 gap-3">
+              <a href="/generate" class="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group/tool">
+                <svg class="h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <span class="font-medium text-sm group-hover/tool:text-primary transition-colors">Generate Schema</span>
+              </a>
+              <a href="/schema-markup-grader" class="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group/tool">
+                <svg class="h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span class="font-medium text-sm group-hover/tool:text-primary transition-colors">Schema Markup Grader</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Always show logged-out state for crawlers -->
+      <a
+        href="/sign-in"
+        class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Sign In
+      </a>
+      <a
+        href="/sign-up"
+        class="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        Get Started
+        <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"/>
+          <path d="m12 5 7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Mobile Hamburger Button -->
+    <button
+      id="mobile-menu-toggle"
+      class="md:hidden p-2 rounded-md hover:bg-accent transition-colors"
+      aria-label="Toggle menu"
+    >
+      <svg id="menu-icon" class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" x2="20" y1="12" y2="12"/>
+        <line x1="4" x2="20" y1="6" y2="6"/>
+        <line x1="4" x2="20" y1="18" y2="18"/>
+      </svg>
+      <svg id="close-icon" class="h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6 6 18"/>
+        <path d="m6 6 12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-border bg-background">
+    <div class="container mx-auto px-4 py-4 space-y-4">
+      <div class="flex flex-col space-y-3">
+        <a href="/aeo" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          AEO Guide
+        </a>
+        <a href="/geo" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          GEO Guide
+        </a>
+        <a href="/ai-search-optimization" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          AI Search Optimization
+        </a>
+        <a href="/schema-markup" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          Schema Markup Guide
+        </a>
+        <a href="/schema-markup/improve-quality-score" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          Improve Schema Quality Score
+        </a>
+        <a href="/schema-markup-grader" class="text-sm font-medium text-foreground hover:text-primary transition-colors py-2">
+          Schema Markup Grader
+        </a>
+
+        <div class="pt-3 border-t border-border space-y-3">
+          <a
+            href="/sign-in"
+            class="inline-flex items-center justify-center w-full px-4 py-3 rounded-md border border-border hover:bg-accent transition-colors font-medium"
+          >
+            Sign In
+          </a>
+          <a
+            href="/sign-up"
+            class="inline-flex items-center justify-center w-full px-4 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+          >
+            Get Started
+            <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  document.getElementById('mobile-menu-toggle')?.addEventListener('click', function() {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuIcon = document.getElementById('menu-icon');
+    const closeIcon = document.getElementById('close-icon');
+
+    if (mobileMenu && menuIcon && closeIcon) {
+      const isHidden = mobileMenu.classList.contains('hidden');
+      mobileMenu.classList.toggle('hidden');
+      menuIcon.classList.toggle('hidden');
+      closeIcon.classList.toggle('hidden');
+    }
+  });
+</script>

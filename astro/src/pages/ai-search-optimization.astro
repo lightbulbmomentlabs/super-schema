@@ -1,0 +1,665 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import SuperSchemaLogoStatic from '../components/SuperSchemaLogoStatic.astro'
+import PillarPageNavStatic from '../components/PillarPageNavStatic.astro'
+import FooterStatic from '../components/FooterStatic.astro'
+import FAQItemAstro from '../components/FAQItemAstro.tsx'
+
+const title = "AI Search Optimization: Get Cited by AI Engines | SuperSchema"
+const description = "Learn how to optimize your content for AI search engines like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT. Complete guide with schema strategies and platform-specific tactics."
+
+const schemaGenerators = [
+  { name: 'FAQ Schema', path: '/faq-schema-generator', description: 'Perfect for Q&A content and AI citations' },
+  { name: 'Article Schema', path: '/article-schema-generator', description: 'News articles, blog posts, guides' },
+  { name: 'HowTo Schema', path: '/howto-schema-generator', description: 'Step-by-step instructions' },
+  { name: 'Product Schema', path: '/product-schema-generator', description: 'E-commerce products with reviews' },
+  { name: 'Organization Schema', path: '/organization-schema-generator', description: 'Company information and authority' },
+  { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator', description: 'Site navigation hierarchy' }
+]
+
+const optimizationSteps = [
+  {
+    number: 1,
+    title: 'Create Comprehensive, Answer-First Content',
+    description: 'AI engines prioritize content that directly answers queries. Front-load your answers, use clear headings, and provide depth.',
+    tips: [
+      'Answer the query in the first 100-200 words',
+      'Use question-based headings (H2/H3)',
+      'Provide 1,500-3,000+ word comprehensive guides',
+      'Include examples, data, and expert insights'
+    ]
+  },
+  {
+    number: 2,
+    title: 'Implement Essential Schema Markup',
+    description: 'Schema tells AI exactly what your content means. FAQ, Article, and HowTo schema are citation magnets.',
+    tips: [
+      'Add Article schema to all blog posts and guides',
+      'Use FAQ schema for Q&A sections (3-8 questions)',
+      'Implement HowTo schema for tutorials',
+      'Include Organization schema for E-E-A-T signals'
+    ]
+  },
+  {
+    number: 3,
+    title: 'Optimize for E-E-A-T Signals',
+    description: 'Experience, Expertise, Authoritativeness, Trust - AI engines assess these before citing sources.',
+    tips: [
+      'Add author bios with credentials',
+      'Link to authoritative sources',
+      'Display publication and update dates',
+      'Show trust signals (reviews, case studies, credentials)'
+    ]
+  },
+  {
+    number: 4,
+    title: 'Monitor Your AI Citations',
+    description: 'Track where your content appears in AI-generated answers across platforms.',
+    tips: [
+      'Search target queries in ChatGPT, Perplexity, and SGE',
+      'Document when your domain gets cited',
+      'Track patterns in cited content types',
+      'Monitor referral traffic from AI platforms'
+    ]
+  }
+]
+
+const platformStrategies = [
+  {
+    platform: 'Google SGE (Search Generative Experience)',
+    description: "Google's AI-powered search experience synthesizes answers from high-quality, schema-rich sources.",
+    strategies: [
+      'Maintain strong traditional SEO (SGE favors already-ranking content)',
+      'Implement comprehensive FAQ and Article schema',
+      "Focus on E-E-A-T signals (Google's core ranking factor)",
+      'Create in-depth content (1,500+ words for pillar topics)',
+      'Optimize Core Web Vitals and mobile experience'
+    ],
+    tip: 'SGE shows conversational follow-ups. Structure content to answer both primary and related questions.'
+  },
+  {
+    platform: 'Microsoft Copilot',
+    description: 'Powered by GPT-4 with Bing integration. Prefers precision, authority, and recent content.',
+    strategies: [
+      'Optimize for Bing Webmaster Tools (often overlooked)',
+      'Use precise, factual statements (GPT-4 values accuracy)',
+      'Add "last updated" dates prominently',
+      'Implement schema for all structured content',
+      'Submit sitemaps to Bing and verify schema'
+    ],
+    tip: 'Copilot loves numbered lists and step-by-step instructions. Combine HowTo schema with formatted lists.'
+  },
+  {
+    platform: 'Perplexity',
+    description: 'Research-focused AI search that values depth, precision, and expert sources.',
+    strategies: [
+      'Provide comprehensive, research-backed answers',
+      'Cite your own sources (studies, data, experts)',
+      'Use academic-style precision in language',
+      'Include statistics and specific examples',
+      'Implement schema to clarify content structure'
+    ],
+    tip: 'Perplexity shows source previews. Your meta description and opening paragraph appear in those previews.'
+  },
+  {
+    platform: 'ChatGPT (Browsing Mode)',
+    description: 'Browses the web for current information. Prioritizes authoritative, well-structured content.',
+    strategies: [
+      'Target conversational, long-tail queries',
+      'Structure content with clear H2/H3 hierarchy',
+      'Answer comprehensively in opening paragraphs',
+      'Avoid gating key information behind CTAs',
+      'Make content easily crawlable (no paywalls for main info)'
+    ],
+    tip: "ChatGPT cites sources that provide complete answers. Don't force email signups to access core information."
+  }
+]
+
+const commonMistakes = [
+  {
+    mistake: 'Thin, Surface-Level Content',
+    problem: "AI engines favor comprehensive, authoritative answers. 300-word blog posts don't cut it.",
+    fix: 'Create in-depth content (1,500-3,000+ words for pillar topics). Answer the full spectrum of related questions, not just one narrow query.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Missing or Incomplete Schema',
+    problem: 'Without schema, AI has to guess what your content means. That puts you at a disadvantage.',
+    fix: 'Implement at minimum: Article schema (blog posts), FAQ schema (Q&A), and Organization schema (homepage). Use SuperSchema to auto-generate.',
+    severity: 'critical'
+  },
+  {
+    mistake: 'Burying the Answer',
+    problem: "AI engines want instant answers. If your answer is in paragraph 5, you won't get cited.",
+    fix: 'Front-load answers in the first 100-200 words. Use a clear H2 question heading, then provide a direct answer immediately.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Ignoring E-E-A-T Signals',
+    problem: "AI assesses source credibility before citing. No author bio? No credentials? You're less likely to be cited.",
+    fix: 'Add author credentials, publication dates, expert quotes, and links to authoritative sources. Show why AI should trust you.',
+    severity: 'high'
+  },
+  {
+    mistake: 'Keyword Stuffing',
+    problem: 'Old SEO habits. AI engines prioritize semantic richness and natural language over keyword density.',
+    fix: 'Write naturally. Answer questions thoroughly. Use synonyms and related terms. AI understands context better than keyword matchers.',
+    severity: 'medium'
+  },
+  {
+    mistake: 'Gating Content Behind Email Signups',
+    problem: "If AI can't access your core content without signup, it can't cite you.",
+    fix: 'Keep your best informational content open and crawlable. Save gated content for tools, templates, and extras - not core answers.',
+    severity: 'high'
+  }
+]
+
+const futureTrends = [
+  {
+    trend: 'Multimodal AI Search',
+    description: 'Text, voice, image, and video search are converging. Models like Gemini Pro already support live camera queries and visual search.',
+    impact: 'Start adding ImageObject and VideoObject schema. Optimize alt text, captions, and transcripts for AI understanding.'
+  },
+  {
+    trend: 'Zero-Click Dominance',
+    description: 'By 2026, 25% of organic traffic will shift to AI chatbots. Users get answers without clicking.',
+    impact: 'Focus on brand visibility in AI answers, not just traffic. Being cited builds authority even without clicks.'
+  },
+  {
+    trend: 'Real-Time AI Search',
+    description: 'AI engines are moving toward real-time web access. Perplexity, ChatGPT browsing, and SGE all pull current information.',
+    impact: 'Keep content updated. Add "last updated" dates. Fresh content with recent data gets prioritized.'
+  },
+  {
+    trend: 'Platform Diversification',
+    description: "Google's 57% search market share is being challenged. OpenAI, Perplexity, Amazon Alexa, and TikTok are gaining fast.",
+    impact: "Don't optimize only for Google. Make your content citation-worthy across all AI platforms with universal schema standards."
+  },
+  {
+    trend: 'Quality Over Quantity',
+    description: 'Winning brands in 2025 prioritize conversions over traffic. AI engines favor original, expert content with genuine value.',
+    impact: 'Stop chasing traffic metrics. Build content AI engines trust and cite as the definitive source.'
+  }
+]
+
+const faqs = [
+  {
+    question: 'What is AI Search Optimization?',
+    answer: "AI Search Optimization is the process of structuring your content so AI-powered search engines like Google's SGE, Microsoft Copilot, Perplexity, and ChatGPT can understand, cite, and recommend it. Unlike traditional SEO which focuses on ranking web pages, AI search optimization ensures your content becomes a trusted source for AI-generated answers."
+  },
+  {
+    question: 'How is AI search different from traditional Google search?',
+    answer: "Traditional Google search returns a list of blue links ranked by relevance. AI search engines synthesize information from multiple sources to generate a single conversational answer. Instead of competing for position #1, you're competing to be cited as a source within that AI-generated response."
+  },
+  {
+    question: 'Which schema types matter most for AI search?',
+    answer: 'FAQ, Article, and HowTo schema are the most effective for AI search. FAQPage directly answers common questions (perfect for AI). HowTo provides step-by-step guidance that AI loves to summarize. Article schema helps AI understand your content structure and authorship. Product, LocalBusiness, and Organization schema matter for specific industries.'
+  },
+  {
+    question: "How do I get cited by Google's SGE?",
+    answer: "To get cited by Google's Search Generative Experience (SGE), focus on comprehensive answers with proper schema markup, high E-E-A-T signals, and structured content. Use FAQ and Article schema, answer questions directly, include expert credentials, and provide clear, factual information that AI can confidently cite."
+  },
+  {
+    question: "Does schema guarantee I'll be cited by AI?",
+    answer: "No, schema doesn't guarantee citations, but it dramatically increases your chances. Schema provides machine-readable context about your content. Combined with quality content, authoritative sources, and proper formatting, schema helps AI engines understand and trust your information enough to cite it."
+  },
+  {
+    question: 'How can I track AI citations?',
+    answer: 'Monitor AI citations by regularly searching relevant queries in SGE, Copilot, Perplexity, and ChatGPT (with browsing enabled). Document when your domain appears as a cited source. Track patterns in which content types and schema implementations get cited most often. Some enterprise tools like BrightEdge offer SGE tracking.'
+  },
+  {
+    question: "Do I still need traditional SEO if I'm doing AI search optimization?",
+    answer: "Yes. AI search optimization complements traditional SEO - it doesn't replace it. Many AI engines (like SGE and Copilot) rely on traditional search rankings to determine which content to cite. Strong SEO helps your content get indexed and found, while AI optimization ensures it can be understood and cited."
+  },
+  {
+    question: 'How long does it take to see results?',
+    answer: "Schema implementation is instant, but AI engines need time to re-crawl and understand your content. You might see citations appear within days to weeks, depending on how often AI platforms refresh their indexes or browse the web. The key: implement schema now so you're ready when they next update."
+  }
+]
+
+// JSON-LD Schemas
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+}
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "AI Search Optimization: Get Cited by AI Engines (SGE, Copilot, Perplexity)",
+  "description": "Learn how to optimize your content for AI search engines like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT. Complete guide with schema strategies and platform-specific tactics.",
+  "author": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lightbulb Moment Labs",
+    "url": "https://superschema.ai"
+  },
+  "datePublished": "2025-01-10",
+  "dateModified": "2025-01-10"
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://superschema.ai"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://superschema.ai/ai-search-optimization"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "AI Search Optimization",
+      "item": "https://superschema.ai/ai-search-optimization"
+    }
+  ]
+}
+---
+
+<BaseLayout title={title} description={description}>
+  <Fragment slot="schemas">
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema, null, 2)} />
+    <script type="application/ld+json" set:html={JSON.stringify(articleSchema, null, 2)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema, null, 2)} />
+  </Fragment>
+
+  <div class="min-h-screen bg-background">
+    <!-- Header -->
+    <PillarPageNavStatic />
+
+    <!-- Hero Section -->
+    <section class="py-16 px-4 bg-gradient-to-b from-primary/5 to-background">
+      <div class="container mx-auto max-w-4xl">
+        <div class="mb-6">
+          <a href="/" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <svg class="h-4 w-4 rotate-180 mr-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            Back to Home
+          </a>
+        </div>
+        <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          AI Search Optimization: Get Cited by AI Engines
+        </h1>
+        <p class="text-xl md:text-2xl text-muted-foreground mb-8">
+          Google SGE, Microsoft Copilot, Perplexity, and ChatGPT are the new gatekeepers. Here's how to get your content cited as the authoritative source.
+        </p>
+        <div class="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+            4 Major AI Search Platforms
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            Schema-Powered Citations
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            Future-Proof Visibility
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container mx-auto max-w-4xl px-4 py-16 space-y-20">
+
+      <!-- What Is AI Search Optimization -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">What Is AI Search Optimization?</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            AI Search Optimization is the practice of making your content citation-worthy for AI-powered search engines. While traditional SEO focuses on ranking in search results, AI search optimization focuses on being the answer that platforms like Google SGE, Microsoft Copilot, Perplexity, and ChatGPT cite as authoritative sources.
+          </p>
+          <p>
+            The shift is fundamental: users aren't clicking through 10 blue links anymore. They're asking AI engines for answers and trusting the sources AI cites. If your content isn't optimized for AI understanding, you're invisible to this massive and growing audience.
+          </p>
+
+          <!-- Comparison Table -->
+          <div class="my-8 overflow-hidden rounded-lg border border-border">
+            <table class="w-full">
+              <thead class="bg-muted">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Aspect</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Traditional Search</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">AI Search</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr>
+                  <td class="px-6 py-4 font-medium">User Behavior</td>
+                  <td class="px-6 py-4">Click through results</td>
+                  <td class="px-6 py-4">Get instant answers</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Success Metric</td>
+                  <td class="px-6 py-4">Ranking position</td>
+                  <td class="px-6 py-4">Being cited as source</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Content Style</td>
+                  <td class="px-6 py-4">Keyword-focused</td>
+                  <td class="px-6 py-4">Answer-first, comprehensive</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Schema Importance</td>
+                  <td class="px-6 py-4">Helpful for rich snippets</td>
+                  <td class="px-6 py-4">Absolutely critical</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Platforms</td>
+                  <td class="px-6 py-4">Google, Bing results pages</td>
+                  <td class="px-6 py-4">ChatGPT, Perplexity, SGE, Copilot</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-info/10 border border-info/20 rounded-lg p-6 my-8">
+            <h4 class="font-semibold mb-2 text-foreground">The New Search Journey</h4>
+            <p class="text-sm">
+              Users now ask AI engines directly instead of searching Google. They get synthesized answers with cited sources. Your goal: be one of those cited sources. Schema markup is how you tell AI engines exactly what your content offers and why it's authoritative.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- How to Optimize for AI Search -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">How to Optimize for AI Search (Step-by-Step)</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-8">
+          <p>
+            Getting cited by AI search engines requires a different approach than traditional SEO. Follow these four steps to become an AI-citation magnet.
+          </p>
+
+          {optimizationSteps.map((step) => (
+            <div class="border border-border rounded-lg p-6 bg-card">
+              <div class="flex items-start space-x-4">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold flex-shrink-0">
+                  {step.number}
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-2 text-foreground">{step.title}</h3>
+                  <p class="mb-4">{step.description}</p>
+                  <ul class="space-y-2">
+                    {step.tips.map((tip) => (
+                      <li class="flex items-start space-x-2">
+                        <svg class="h-5 w-5 text-success flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span class="text-sm">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <!-- CTA -->
+          <div class="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border border-primary/20 rounded-lg p-8 text-center my-8">
+            <svg class="h-12 w-12 mx-auto mb-4 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+            <h3 class="text-2xl font-bold mb-2 text-foreground">SuperSchema Automates All Four Steps</h3>
+            <p class="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Paste your URL. Our AI analyzes your content, generates optimized schema, validates everything, and gives you a quality score - in under 30 seconds.
+            </p>
+            <a href="/sign-up" class="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold">
+              Start Free (2 Credits)
+              <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Platform-Specific Strategies -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Platform-Specific Optimization Strategies</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            While core principles apply across platforms, each AI search engine has unique preferences. Here's how to optimize for each major player.
+          </p>
+
+          <div class="space-y-6 my-8">
+            {platformStrategies.map((platform) => (
+              <div class="border border-border rounded-lg p-6 bg-card">
+                <div class="flex items-start space-x-4 mb-4">
+                  <div class="p-3 rounded-lg bg-primary/10">
+                    {platform.platform === 'Google SGE (Search Generative Experience)' && (
+                      <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    )}
+                    {platform.platform === 'Microsoft Copilot' && (
+                      <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                    )}
+                    {platform.platform === 'Perplexity' && (
+                      <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+                    )}
+                    {platform.platform === 'ChatGPT (Browsing Mode)' && (
+                      <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                    )}
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-bold text-foreground mb-2">{platform.platform}</h3>
+                    <p class="text-sm">{platform.description}</p>
+                  </div>
+                </div>
+                <ul class="space-y-2 mb-4">
+                  {platform.strategies.map((strategy) => (
+                    <li class="flex items-start space-x-2">
+                      <svg class="h-5 w-5 text-success flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      <span class="text-sm">{strategy}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div class="bg-primary/10 border border-primary/20 rounded p-3">
+                  <p class="text-sm"><strong class="text-foreground">Pro Tip:</strong> {platform.tip}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Common Mistakes -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Common AI Search Optimization Mistakes</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Most AI search failures come from applying old SEO tactics. Here's what kills your citation chances - and how to fix it.
+          </p>
+
+          <div class="space-y-4 my-8">
+            {commonMistakes.map((item) => (
+              <div class={`border rounded-lg p-6 ${
+                item.severity === 'critical'
+                  ? 'border-destructive/50 bg-destructive/5'
+                  : item.severity === 'high'
+                  ? 'border-warning/50 bg-warning/5'
+                  : 'border-border bg-card'
+              }`}>
+                <div class="flex items-start space-x-4">
+                  <div class={`p-2 rounded-lg ${
+                    item.severity === 'critical'
+                      ? 'bg-destructive/20'
+                      : item.severity === 'high'
+                      ? 'bg-warning/20'
+                      : 'bg-muted'
+                  }`}>
+                    <svg class={`h-6 w-6 ${
+                      item.severity === 'critical'
+                        ? 'text-destructive'
+                        : item.severity === 'high'
+                        ? 'text-warning'
+                        : 'text-muted-foreground'
+                    }`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                      <h4 class="font-bold text-foreground">{item.mistake}</h4>
+                      <span class={`text-xs px-2 py-1 rounded ${
+                        item.severity === 'critical'
+                          ? 'bg-destructive/20 text-destructive'
+                          : item.severity === 'high'
+                          ? 'bg-warning/20 text-warning'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {item.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <p class="text-sm mb-2"><strong class="text-foreground">Problem:</strong> {item.problem}</p>
+                    <p class="text-sm"><strong class="text-success">Fix:</strong> {item.fix}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <!-- Future of AI Search -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">The Future of AI Search</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            AI search is evolving fast. Here's where it's headed - and how to stay ahead of the curve.
+          </p>
+
+          <div class="space-y-6 my-8">
+            {futureTrends.map((trend) => (
+              <div class="border border-border rounded-lg p-6 bg-card">
+                <h4 class="font-bold text-lg mb-2 text-foreground">{trend.trend}</h4>
+                <p class="mb-3">{trend.description}</p>
+                <div class="bg-primary/10 border border-primary/20 rounded p-3">
+                  <p class="text-sm"><strong class="text-foreground">Impact:</strong> {trend.impact}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-8 my-8">
+            <h3 class="text-2xl font-bold mb-4 text-foreground">The Bottom Line</h3>
+            <p class="text-lg mb-4">
+              The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong class="text-foreground">quality over quantity</strong> and <strong class="text-foreground">citations over traffic</strong>.
+            </p>
+            <p>
+              Brands that combine structured data, comprehensive content, and genuine expertise will dominate AI search. Those that ignore it? They'll be invisible to the next generation of searchers.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Related Tools -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Essential Schema Types for AI Search</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            SuperSchema offers free schema generators for all major content types. Start optimizing for AI search today.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+            {schemaGenerators.map((generator) => (
+              <a href={generator.path} class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">{generator.name}</h5>
+                    <p class="text-sm text-muted-foreground">{generator.description}</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-4 my-8">
+            <a href="/sign-up" class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group">
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <h5 class="font-semibold mb-2 text-foreground">Generate Schema</h5>
+              <p class="text-sm text-muted-foreground mb-3">AI-powered schema generation for any URL</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                Start Generating <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </a>
+            <a href="/sign-up" class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group">
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h5 class="font-semibold mb-2 text-foreground">Schema Library</h5>
+              <p class="text-sm text-muted-foreground mb-3">Manage all your URLs and schema in one place</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                View Library <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deep Dive Guides -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+        <p class="text-lg text-muted-foreground mb-8">
+          Expert guides to master specific AI search optimization strategies and technical implementation.
+        </p>
+        <div class="grid gap-6">
+          <a href="/ai-search-optimization/how-ai-engines-rank-sources" class="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="text-xl font-semibold mb-2 text-foreground">How AI Search Engines Rank and Cite Sources</h3>
+                <p class="text-muted-foreground mb-3">
+                  Learn the 5 core signals AI engines use to select sources, E-E-A-T factors, and schema strategies to become citation-worthy
+                </p>
+              </div>
+              <svg class="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+          {faqs.map((faq, index) => (
+            <FAQItemAstro
+              client:visible
+              question={faq.question}
+              answer={faq.answer}
+              index={index}
+            />
+          ))}
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="bg-primary rounded-lg p-8 md:p-12 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          Ready to Get Cited by AI Search Engines?
+        </h2>
+        <p class="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+          Join thousands using SuperSchema to optimize for AI search and future-proof their visibility. Start with 2 free credits - no credit card required.
+        </p>
+        <a href="/sign-up" class="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-semibold">
+          Get Your Free Credits
+          <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <FooterStatic />
+  </div>
+</BaseLayout>

@@ -1,0 +1,1286 @@
+---
+import '../../styles/global.css'
+import PillarPageNavStatic from '../../components/PillarPageNavStatic.astro'
+import FooterStatic from '../../components/FooterStatic.astro'
+import FAQItemAstro from '../../components/FAQItemAstro'
+
+const faqData = [
+  {
+    question: 'Where do I paste these snippets?',
+    answer: 'In the schema editor after generating your schema. Add the property inside the main schema object (after existing properties, before the closing }). Make sure to add a comma after the previous property.'
+  },
+  {
+    question: 'Do I need all of these properties?',
+    answer: "No. Focus on \"Recommended Properties\" first (biggest score impact), then add \"Advanced AEO Features\" if you want to reach 90+. Only add properties where you have real data—never make up fake information."
+  },
+  {
+    question: "What if I don't have some of this information?",
+    answer: "Skip properties you don't have. Don't make up fake data—it's worse than leaving it blank. For example, if you don't have ratings, don't add fake aggregateRating data."
+  },
+  {
+    question: 'Can I copy multiple snippets at once?',
+    answer: "Yes! Just make sure to add a comma after each property (except the last one). Proper JSON formatting is important—each property needs to be separated by commas."
+  },
+  {
+    question: 'Will this break my schema?',
+    answer: "These snippets are valid schema.org properties. As long as you maintain proper JSON formatting (commas, brackets, quotes), your schema will remain valid. Use the grader to verify after making changes."
+  },
+  {
+    question: 'How much will my score improve?',
+    answer: "It depends on what you're missing. Adding a structured author can boost your score by 15-25 points. Adding all recommended properties can take you from a C to an A. Check the property impact table to see point values for each property."
+  }
+]
+
+// Code snippets data
+const articleSnippets = {
+  recommended: [
+    {
+      title: 'Author (Structured)',
+      points: '15-25 points',
+      description: 'Structured author with profile links for maximum credibility',
+      code: `"author": {
+  "@type": "Person",
+  "name": "Your Name",
+  "url": "https://yoursite.com/author/yourname",
+  "sameAs": [
+    "https://twitter.com/yourhandle",
+    "https://linkedin.com/in/yourprofile"
+  ]
+}`
+    },
+    {
+      title: 'Publisher (With Logo)',
+      points: '15-25 points',
+      description: 'Organization info with logo for rich results',
+      code: `"publisher": {
+  "@type": "Organization",
+  "name": "Your Company Name",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://yoursite.com/logo.png",
+    "width": 600,
+    "height": 60
+  },
+  "url": "https://yoursite.com"
+}`
+    },
+    {
+      title: 'Dates (Published & Modified)',
+      points: '18 points total',
+      description: 'When the article was published and last updated',
+      code: `"datePublished": "2024-11-06T08:00:00-05:00",
+"dateModified": "2024-11-06T14:30:00-05:00"`
+    },
+    {
+      title: 'Description',
+      points: '15-20 points',
+      description: '100-150 character summary (this becomes your search preview)',
+      code: `"description": "Your 100-150 character summary here that describes the article content clearly and concisely for search results."`
+    },
+    {
+      title: 'Image (Structured)',
+      points: '12-20 points',
+      description: 'Featured image with dimensions for better display',
+      code: `"image": {
+  "@type": "ImageObject",
+  "url": "https://yoursite.com/featured-image.jpg",
+  "width": 1200,
+  "height": 630,
+  "caption": "Descriptive image caption"
+}`
+    },
+    {
+      title: 'URL',
+      points: '10 points',
+      description: 'The canonical URL of this article',
+      code: `"url": "https://yoursite.com/your-article-url"`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Keywords (Array)',
+      points: '5-10 points',
+      description: '3-5 main topics for better topical relevance',
+      code: `"keywords": ["topic 1", "topic 2", "topic 3", "topic 4", "topic 5"]`
+    },
+    {
+      title: 'About',
+      points: 'AEO boost',
+      description: 'The main subject matter of the article',
+      code: `"about": {
+  "@type": "Thing",
+  "name": "Main Topic",
+  "description": "What this article is primarily about"
+}`
+    },
+    {
+      title: 'Article Section',
+      points: 'AEO boost',
+      description: 'The category or section this article belongs to',
+      code: `"articleSection": "Your Category Name"`
+    },
+    {
+      title: 'Word Count',
+      points: 'AEO boost',
+      description: 'Total words in the article',
+      code: `"wordCount": 1500`
+    },
+    {
+      title: 'Language',
+      points: 'AEO boost',
+      description: 'Content language code',
+      code: `"inLanguage": "en-US"`
+    },
+    {
+      title: 'Speakable',
+      points: '5-10 points',
+      description: 'Voice search optimization (which parts can be read aloud)',
+      code: `"speakable": {
+  "@type": "SpeakableSpecification",
+  "cssSelector": [".article-headline", ".article-intro"]
+}`
+    },
+    {
+      title: 'Mentions',
+      points: 'AEO boost',
+      description: 'Related topics or entities mentioned in the article',
+      code: `"mentions": [
+  {
+    "@type": "Thing",
+    "name": "Related Topic 1"
+  },
+  {
+    "@type": "Thing",
+    "name": "Related Topic 2"
+  }
+]`
+    },
+    {
+      title: 'Main Entity',
+      points: 'AEO boost',
+      description: 'The primary entity this page is about',
+      code: `"mainEntityOfPage": {
+  "@type": "WebPage",
+  "@id": "https://yoursite.com/your-article-url"
+}`
+    }
+  ]
+}
+
+const productSnippets = {
+  recommended: [
+    {
+      title: 'Description',
+      points: '15-20 points',
+      description: '100-150 character product description',
+      code: `"description": "Clear product description between 100-150 characters for optimal display in search results."`
+    },
+    {
+      title: 'Image (Multiple)',
+      points: '12-20 points',
+      description: 'Product images (multiple recommended)',
+      code: `"image": [
+  "https://yoursite.com/product-image-1.jpg",
+  "https://yoursite.com/product-image-2.jpg",
+  "https://yoursite.com/product-image-3.jpg"
+]`
+    },
+    {
+      title: 'Brand',
+      points: 'Important',
+      description: 'The brand or manufacturer',
+      code: `"brand": {
+  "@type": "Brand",
+  "name": "Your Brand Name"
+}`
+    },
+    {
+      title: 'SKU & Identifiers',
+      points: 'Important',
+      description: 'Product identifiers for better matching',
+      code: `"sku": "ABC-123",
+"gtin": "00000000000000",
+"mpn": "MANUFACTURER-PART-NUMBER"`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Aggregate Rating',
+      points: '10-15 points',
+      description: 'Overall customer ratings (major AEO boost)',
+      code: `"aggregateRating": {
+  "@type": "AggregateRating",
+  "ratingValue": "4.5",
+  "reviewCount": "89",
+  "bestRating": "5",
+  "worstRating": "1"
+}`
+    },
+    {
+      title: 'Individual Review',
+      points: 'AEO boost',
+      description: 'Sample customer review',
+      code: `"review": {
+  "@type": "Review",
+  "author": {
+    "@type": "Person",
+    "name": "Reviewer Name"
+  },
+  "datePublished": "2024-11-01",
+  "reviewRating": {
+    "@type": "Rating",
+    "ratingValue": "5",
+    "bestRating": "5"
+  },
+  "reviewBody": "Great product! Highly recommend for anyone looking for quality."
+}`
+    },
+    {
+      title: 'Offers',
+      points: 'Required for products',
+      description: 'Price and availability information',
+      code: `"offers": {
+  "@type": "Offer",
+  "url": "https://yoursite.com/product-url",
+  "priceCurrency": "USD",
+  "price": "29.99",
+  "availability": "https://schema.org/InStock",
+  "priceValidUntil": "2025-12-31",
+  "seller": {
+    "@type": "Organization",
+    "name": "Your Store Name"
+  }
+}`
+    }
+  ]
+}
+
+const organizationSnippets = {
+  recommended: [
+    {
+      title: 'Logo',
+      points: 'Important',
+      description: 'Company logo for brand recognition',
+      code: `"logo": "https://yoursite.com/logo.png"`
+    },
+    {
+      title: 'Description',
+      points: '15-20 points',
+      description: 'Company description (100-150 characters)',
+      code: `"description": "Brief description of your organization between 100-150 characters for search results."`
+    },
+    {
+      title: 'URL',
+      points: '10 points',
+      description: 'Company website URL',
+      code: `"url": "https://yoursite.com"`
+    },
+    {
+      title: 'Contact Information',
+      points: 'Important',
+      description: 'How customers can reach you',
+      code: `"contactPoint": {
+  "@type": "ContactPoint",
+  "telephone": "+1-555-555-5555",
+  "contactType": "customer service",
+  "email": "support@yoursite.com",
+  "availableLanguage": ["English", "Spanish"]
+}`
+    },
+    {
+      title: 'Address',
+      points: 'Important',
+      description: 'Physical business address',
+      code: `"address": {
+  "@type": "PostalAddress",
+  "streetAddress": "123 Main Street",
+  "addressLocality": "City Name",
+  "addressRegion": "ST",
+  "postalCode": "12345",
+  "addressCountry": "US"
+}`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Same As (Social Profiles)',
+      points: '5-10 points',
+      description: 'Social media profiles (major AEO boost)',
+      code: `"sameAs": [
+  "https://facebook.com/yourpage",
+  "https://twitter.com/yourhandle",
+  "https://linkedin.com/company/yourcompany",
+  "https://instagram.com/yourhandle",
+  "https://youtube.com/@yourchannel"
+]`
+    },
+    {
+      title: 'Founding Information',
+      points: 'AEO boost',
+      description: 'When the company was founded',
+      code: `"foundingDate": "2020-01-15",
+"founder": {
+  "@type": "Person",
+  "name": "Founder Name"
+}`
+    }
+  ]
+}
+
+const personSnippets = {
+  recommended: [
+    {
+      title: 'Basic Person Information',
+      points: 'Core properties',
+      description: 'Essential person details',
+      code: `"@context": "https://schema.org",
+"@type": "Person",
+"name": "Full Name",
+"url": "https://yoursite.com/about",
+"image": "https://yoursite.com/headshot.jpg",
+"description": "Brief bio between 100-150 characters about this person and their expertise."`
+    },
+    {
+      title: 'Job Title & Company',
+      points: 'Important',
+      description: 'Professional role and organization',
+      code: `"jobTitle": "Job Title",
+"worksFor": {
+  "@type": "Organization",
+  "name": "Company Name",
+  "url": "https://companysite.com"
+}`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Social Profiles',
+      points: '5-10 points',
+      description: 'Professional social media links (major AEO boost)',
+      code: `"sameAs": [
+  "https://twitter.com/username",
+  "https://linkedin.com/in/username",
+  "https://github.com/username",
+  "https://medium.com/@username"
+]`
+    },
+    {
+      title: 'Contact Information',
+      points: 'Optional',
+      description: 'How to reach this person',
+      code: `"email": "email@example.com",
+"telephone": "+1-555-555-5555"`
+    }
+  ]
+}
+
+const recipeSnippets = {
+  recommended: [
+    {
+      title: 'Author',
+      points: '15-25 points',
+      description: 'Recipe creator information',
+      code: `"author": {
+  "@type": "Person",
+  "name": "Chef Name",
+  "url": "https://yoursite.com/author/chef-name"
+}`
+    },
+    {
+      title: 'Dates',
+      points: '18 points',
+      description: 'When recipe was published and updated',
+      code: `"datePublished": "2024-11-06",
+"dateModified": "2024-11-06"`
+    },
+    {
+      title: 'Image (Multiple)',
+      points: '12-20 points',
+      description: 'Recipe photos (multiple recommended)',
+      code: `"image": [
+  "https://yoursite.com/recipe-photo-1.jpg",
+  "https://yoursite.com/recipe-photo-2.jpg",
+  "https://yoursite.com/recipe-photo-3.jpg"
+]`
+    },
+    {
+      title: 'Recipe Details',
+      points: 'Required',
+      description: 'Cook times and serving information',
+      code: `"recipeYield": "4 servings",
+"prepTime": "PT15M",
+"cookTime": "PT30M",
+"totalTime": "PT45M",
+"recipeCategory": "Main Course",
+"recipeCuisine": "Italian"`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Keywords',
+      points: '5-10 points',
+      description: 'Recipe topics for better discovery',
+      code: `"keywords": ["quick dinner", "pasta", "italian food", "weeknight meals", "family friendly"]`
+    },
+    {
+      title: 'Nutrition Information',
+      points: 'AEO boost',
+      description: 'Nutritional facts (highly valued)',
+      code: `"nutrition": {
+  "@type": "NutritionInformation",
+  "calories": "350 calories",
+  "proteinContent": "25g",
+  "fatContent": "10g",
+  "carbohydrateContent": "40g",
+  "fiberContent": "5g",
+  "sugarContent": "8g"
+}`
+    },
+    {
+      title: 'Aggregate Rating',
+      points: '10-15 points',
+      description: 'User ratings for the recipe',
+      code: `"aggregateRating": {
+  "@type": "AggregateRating",
+  "ratingValue": "4.8",
+  "ratingCount": "127",
+  "bestRating": "5",
+  "worstRating": "1"
+}`
+    }
+  ]
+}
+
+const eventSnippets = {
+  recommended: [
+    {
+      title: 'Event Dates & Location',
+      points: 'Required',
+      description: 'When and where the event happens',
+      code: `"startDate": "2024-12-15T19:00:00-05:00",
+"endDate": "2024-12-15T22:00:00-05:00",
+"eventStatus": "https://schema.org/EventScheduled",
+"eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+"location": {
+  "@type": "Place",
+  "name": "Venue Name",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "123 Event Street",
+    "addressLocality": "City Name",
+    "addressRegion": "ST",
+    "postalCode": "12345",
+    "addressCountry": "US"
+  }
+}`
+    },
+    {
+      title: 'Organizer',
+      points: 'Important',
+      description: 'Who is hosting the event',
+      code: `"organizer": {
+  "@type": "Organization",
+  "name": "Event Organizer Name",
+  "url": "https://organizer-site.com"
+}`
+    },
+    {
+      title: 'Image',
+      points: '12-20 points',
+      description: 'Event poster or promotional image',
+      code: `"image": "https://yoursite.com/event-poster.jpg"`
+    },
+    {
+      title: 'Description',
+      points: '15-20 points',
+      description: 'Event description (100-150 characters)',
+      code: `"description": "Brief event description between 100-150 characters highlighting what attendees can expect."`
+    }
+  ],
+  advanced: [
+    {
+      title: 'Offers (Tickets)',
+      points: 'Important',
+      description: 'Ticket pricing and availability',
+      code: `"offers": {
+  "@type": "Offer",
+  "url": "https://yoursite.com/tickets",
+  "price": "25.00",
+  "priceCurrency": "USD",
+  "availability": "https://schema.org/InStock",
+  "validFrom": "2024-11-01T00:00:00"
+}`
+    },
+    {
+      title: 'Performer',
+      points: 'AEO boost',
+      description: 'Featured speakers or performers',
+      code: `"performer": {
+  "@type": "Person",
+  "name": "Performer Name",
+  "url": "https://performersite.com"
+}`
+    }
+  ]
+}
+
+const commonPatterns = [
+  {
+    title: 'Basic Author Pattern',
+    description: 'Use this exact structure for any article, blog post, or recipe',
+    code: `"author": {
+  "@type": "Person",
+  "name": "Your Name Here",
+  "url": "https://yoursite.com/author/yourname",
+  "sameAs": [
+    "https://twitter.com/yourhandle",
+    "https://linkedin.com/in/yourprofile"
+  ]
+}`
+  },
+  {
+    title: 'Basic Publisher Pattern',
+    description: 'Standard publisher format for all content types',
+    code: `"publisher": {
+  "@type": "Organization",
+  "name": "Your Company Name",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://yoursite.com/logo.png",
+    "width": 600,
+    "height": 60
+  },
+  "url": "https://yoursite.com"
+}`
+  },
+  {
+    title: 'Structured Image Pattern',
+    description: 'Better than plain string URLs (higher quality score)',
+    code: `"image": {
+  "@type": "ImageObject",
+  "url": "https://yoursite.com/image.jpg",
+  "width": 1200,
+  "height": 630,
+  "caption": "Descriptive caption for accessibility"
+}`
+  }
+]
+
+const propertyImpactTable = [
+  { property: '@context, @type, name', points: '33 each', effort: 'Auto', priority: 'Critical', bestFor: 'All schemas (auto-included)' },
+  { property: 'author (structured)', points: '15-25', effort: '2 min', priority: 'High', bestFor: 'Articles, recipes' },
+  { property: 'publisher (structured)', points: '15-25', effort: '2 min', priority: 'High', bestFor: 'Articles, news' },
+  { property: 'description (100-150 char)', points: '15-20', effort: '3 min', priority: 'High', bestFor: 'All content types' },
+  { property: 'image (structured)', points: '12-20', effort: '1 min', priority: 'Medium', bestFor: 'All content types' },
+  { property: 'aggregateRating', points: '10-15', effort: '5 min', priority: 'High', bestFor: 'Products, recipes, services' },
+  { property: 'datePublished, dateModified', points: '18 total', effort: '1 min', priority: 'Medium', bestFor: 'Articles, recipes, news' },
+  { property: 'keywords (array)', points: '5-10', effort: '2 min', priority: 'Medium', bestFor: 'Articles, products' },
+  { property: 'speakable', points: '5-10', effort: '3 min', priority: 'Medium', bestFor: 'Articles (voice search)' },
+  { property: 'sameAs (social links)', points: '5-10', effort: '2 min', priority: 'Medium', bestFor: 'Person, Organization' }
+]
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schema Property Reference Guide | SuperSchema</title>
+  <meta name="description" content="Copy-ready code snippets to boost your schema quality score. No fluff—just the exact properties you need to paste into your schema.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://superschema.ai/schema-markup/improve-quality-score">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Schema Property Reference Guide | SuperSchema">
+  <meta property="og:description" content="Copy-ready code snippets to boost your schema quality score. No fluff—just the exact properties you need to paste into your schema.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://superschema.ai/schema-markup/improve-quality-score">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Where do I paste these snippets?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "In the schema editor after generating your schema. Add the property inside the main schema object (after existing properties, before the closing }). Make sure to add a comma after the previous property."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need all of these properties?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Focus on \"Recommended Properties\" first (biggest score impact), then add \"Advanced AEO Features\" if you want to reach 90+. Only add properties where you have real data—never make up fake information."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What if I don't have some of this information?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Skip properties you don't have. Don't make up fake data—it's worse than leaving it blank. For example, if you don't have ratings, don't add fake aggregateRating data."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I copy multiple snippets at once?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! Just make sure to add a comma after each property (except the last one). Proper JSON formatting is important—each property needs to be separated by commas."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Will this break my schema?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "These snippets are valid schema.org properties. As long as you maintain proper JSON formatting (commas, brackets, quotes), your schema will remain valid. Use the grader to verify after making changes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How much will my score improve?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It depends on what you're missing. Adding a structured author can boost your score by 15-25 points. Adding all recommended properties can take you from a C to an A. Check the property impact table to see point values for each property."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Schema Property Reference Guide",
+    "description": "Copy-ready code snippets to boost your schema quality score. No fluff—just the exact properties you need to paste into your schema.",
+    "author": {
+      "@type": "Organization",
+      "name": "SuperSchema",
+      "url": "https://superschema.ai"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "SuperSchema",
+      "url": "https://superschema.ai",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://superschema.ai/logo.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://superschema.ai/schema-markup/improve-quality-score"
+    },
+    "datePublished": "2024-11-06",
+    "dateModified": "2024-11-06"
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://superschema.ai"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Schema Markup",
+        "item": "https://superschema.ai/schema-markup"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Improve Quality Score",
+        "item": "https://superschema.ai/schema-markup/improve-quality-score"
+      }
+    ]
+  }
+  </script>
+</head>
+<body class="min-h-screen bg-background text-foreground">
+  <PillarPageNavStatic />
+
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-b from-primary/5 to-background py-12 md:py-20 px-4">
+    <div class="max-w-4xl mx-auto">
+      <a href="/" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+        <svg class="h-4 w-4 mr-1 rotate-180" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        Back to Home
+      </a>
+
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        Schema Property Reference
+      </h1>
+
+      <p class="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl">
+        Copy-ready code snippets to boost your schema quality score. No fluff—just the exact properties you need to paste into your schema.
+      </p>
+
+      <div class="flex flex-wrap gap-4">
+        <div class="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+          <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Copy & Paste Ready
+        </div>
+        <div class="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+          <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg>
+          Instant Score Boost
+        </div>
+        <div class="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+          <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          No Technical Knowledge Required
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <div class="max-w-4xl mx-auto px-4 py-12 md:py-20 space-y-20">
+
+    <!-- How to Use This Guide -->
+    <section>
+      <h2 class="text-3xl md:text-4xl font-bold mb-6 text-foreground">How to Use This Guide</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="border border-border rounded-lg p-6 bg-card">
+          <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mb-4">
+            1
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Find Your Schema Type</h3>
+          <p class="text-muted-foreground text-sm">
+            Scroll to the section for your content type (Article, Product, Organization, etc.)
+          </p>
+        </div>
+
+        <div class="border border-border rounded-lg p-6 bg-card">
+          <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mb-4">
+            2
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Copy the Snippet</h3>
+          <p class="text-muted-foreground text-sm">
+            Click the copy button on any property you want to add
+          </p>
+        </div>
+
+        <div class="border border-border rounded-lg p-6 bg-card">
+          <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mb-4">
+            3
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Paste & Customize</h3>
+          <p class="text-muted-foreground text-sm">
+            Replace placeholder values with your real content and regenerate
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Navigation -->
+    <section class="border border-border rounded-lg p-6 bg-card">
+      <h3 class="font-semibold text-lg mb-4">Jump to Schema Type:</h3>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <a href="#article" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Article / BlogPosting
+        </a>
+        <a href="#product" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Product
+        </a>
+        <a href="#organization" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Organization
+        </a>
+        <a href="#person" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Person
+        </a>
+        <a href="#recipe" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Recipe
+        </a>
+        <a href="#event" class="text-primary hover:underline flex items-center gap-1">
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          Event
+        </a>
+      </div>
+    </section>
+
+    <!-- Article/BlogPosting Schema -->
+    <section id="article">
+      <div class="mb-8">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Article / BlogPosting Schema</h2>
+        <p class="text-muted-foreground">
+          Perfect for blog posts, news articles, and editorial content. These properties help search engines understand your content and display it in rich results.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties (25% of score)</h3>
+
+      {articleSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features (25% of score)</h3>
+
+      {articleSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Product Schema -->
+    <section id="product">
+      <div class="mb-8 pt-12 border-t border-border">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Product Schema</h2>
+        <p class="text-muted-foreground">
+          Essential for e-commerce pages, product listings, and review sites. These properties enable rich product snippets in search results.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties</h3>
+
+      {productSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features</h3>
+
+      {productSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Organization Schema -->
+    <section id="organization">
+      <div class="mb-8 pt-12 border-t border-border">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Organization Schema</h2>
+        <p class="text-muted-foreground">
+          For company pages, about pages, and business information. Helps establish authority and credibility in search results.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties</h3>
+
+      {organizationSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features</h3>
+
+      {organizationSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Person Schema -->
+    <section id="person">
+      <div class="mb-8 pt-12 border-t border-border">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Person Schema</h2>
+        <p class="text-muted-foreground">
+          For author pages, team member profiles, and personal brands. Establishes credibility for content creators.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties</h3>
+
+      {personSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features</h3>
+
+      {personSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Recipe Schema -->
+    <section id="recipe">
+      <div class="mb-8 pt-12 border-t border-border">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Recipe Schema</h2>
+        <p class="text-muted-foreground">
+          Essential for food blogs and cooking sites. Enables rich recipe cards in search results with ratings, cook time, and more.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties</h3>
+
+      {recipeSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features</h3>
+
+      {recipeSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Event Schema -->
+    <section id="event">
+      <div class="mb-8 pt-12 border-t border-border">
+        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-foreground">Event Schema</h2>
+        <p class="text-muted-foreground">
+          For conferences, webinars, concerts, and any scheduled events. Enables rich event listings in search results.
+        </p>
+      </div>
+
+      <h3 class="text-2xl font-bold mb-6 text-foreground">Recommended Properties</h3>
+
+      {eventSnippets.recommended.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+
+      <h3 class="text-2xl font-bold mb-6 mt-12 text-foreground">Advanced AEO Features</h3>
+
+      {eventSnippets.advanced.map((snippet) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-foreground">{snippet.title}</h4>
+                {snippet.points && (
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {snippet.points}
+                  </span>
+                )}
+              </div>
+              {snippet.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{snippet.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{snippet.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Property Impact Table -->
+    <section class="pt-12 border-t border-border">
+      <h2 class="text-3xl md:text-4xl font-bold mb-6 text-foreground">Property Impact Reference</h2>
+      <p class="text-muted-foreground mb-6">
+        Quick reference for score impact, effort required, and when to add each property.
+      </p>
+
+      <div class="overflow-x-auto">
+        <table class="w-full border border-border rounded-lg">
+          <thead class="bg-muted">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Property</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Points</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Effort</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Priority</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Best For</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            {propertyImpactTable.map((row, index) => (
+              <tr class="bg-card hover:bg-accent/50 transition-colors">
+                <td class="px-4 py-3 text-sm font-mono">{row.property}</td>
+                <td class="px-4 py-3 text-sm">{row.points}</td>
+                <td class="px-4 py-3 text-sm">{row.effort}</td>
+                <td class="px-4 py-3 text-sm">
+                  <span class={`px-2 py-1 rounded-full text-xs font-medium ${
+                    row.priority === 'Critical' ? 'bg-destructive/10 text-destructive' :
+                    row.priority === 'High' ? 'bg-warning/10 text-warning' :
+                    'bg-primary/10 text-primary'
+                  }`}>
+                    {row.priority}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-sm text-muted-foreground">{row.bestFor}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Common Patterns -->
+    <section class="pt-12 border-t border-border">
+      <h2 class="text-3xl md:text-4xl font-bold mb-6 text-foreground">Common Patterns (Reusable Blocks)</h2>
+      <p class="text-muted-foreground mb-6">
+        Copy these patterns once and reuse across all your schemas. Just update the values with your real information.
+      </p>
+
+      {commonPatterns.map((pattern) => (
+        <div class="border border-border rounded-lg overflow-hidden bg-card mb-6">
+          <div class="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
+            <div class="flex-1">
+              <h4 class="font-semibold text-sm text-foreground">{pattern.title}</h4>
+              {pattern.description && (
+                <p class="text-xs text-muted-foreground mt-0.5">{pattern.description}</p>
+              )}
+            </div>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="text-sm text-foreground font-mono"><code>{pattern.code}</code></pre>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="pt-12 border-t border-border">
+      <h2 class="text-3xl md:text-4xl font-bold mb-8 text-foreground">Frequently Asked Questions</h2>
+      <div class="space-y-4">
+        {faqData.map((faq, index) => (
+          <FAQItemAstro
+            client:visible
+            question={faq.question}
+            answer={faq.answer}
+            index={index}
+          />
+        ))}
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="bg-primary text-primary-foreground rounded-2xl p-8 md:p-12 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Boost Your Schema Score?</h2>
+      <p class="text-xl mb-8 text-primary-foreground/90 max-w-2xl mx-auto">
+        Copy the properties you need, paste them into your schema, and watch your score improve. It's that simple.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a
+          href="/grader"
+          class="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg bg-background text-foreground hover:bg-background/90 transition-colors"
+        >
+          Grade Your Schema
+          <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+        <a
+          href="/sign-up"
+          class="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+        >
+          Get Started Free
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <FooterStatic />
+</body>
+</html>

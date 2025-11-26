@@ -62,11 +62,13 @@ COPY package*.json ./
 COPY client/package*.json ./client/
 COPY server/package*.json ./server/
 COPY shared/package*.json ./shared/
+COPY astro/package*.json ./astro/
 
 # Install dependencies
 RUN npm install --workspace=shared
 RUN npm install --workspace=server
 RUN npm install --workspace=client
+RUN npm install --workspace=astro
 
 # Copy source code
 COPY . .
@@ -77,6 +79,10 @@ RUN npm run build
 
 # Build client
 WORKDIR /app/client
+RUN npm run build
+
+# Build Astro static pages
+WORKDIR /app/astro
 RUN npm run build
 
 # Build server
@@ -115,12 +121,14 @@ COPY --from=base /app/package*.json ./
 COPY --from=base /app/server/package*.json ./server/
 COPY --from=base /app/shared/package*.json ./shared/
 COPY --from=base /app/client/package*.json ./client/
+COPY --from=base /app/astro/package*.json ./astro/
 
 # Install all production dependencies using workspace from root
 RUN npm ci --omit=dev --workspaces
 
 # Copy built application from base stage
 # Note: server/dist already contains client/dist from the copy-client build step
+# server/dist/astro contains Astro static pages from the astro build step
 COPY --from=base /app/server/dist ./server/dist
 COPY --from=base /app/shared/dist ./shared/dist
 

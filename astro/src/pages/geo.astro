@@ -1,0 +1,682 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import SuperSchemaLogoStatic from '../components/SuperSchemaLogoStatic.astro'
+import PillarPageNavStatic from '../components/PillarPageNavStatic.astro'
+import FooterStatic from '../components/FooterStatic.astro'
+import FAQItemAstro from '../components/FAQItemAstro.tsx'
+
+const title = "Generative Engine Optimization (GEO): Be the Source AI Chooses | SuperSchema"
+const description = "Learn how to optimize your content to become the training source AI models rely on. Comprehensive guide to GEO, schema markup, entity optimization, and building authority for AI discovery."
+
+const schemaGenerators = [
+  { name: 'Organization Schema', path: '/organization-schema-generator', description: 'Establish entity authority' },
+  { name: 'Article Schema', path: '/article-schema-generator', description: 'Content context for AI' },
+  { name: 'FAQ Schema', path: '/faq-schema-generator', description: 'Direct answer formatting' },
+  { name: 'BlogPosting Schema', path: '/blogposting-schema-generator', description: 'Blog credibility signals' },
+  { name: 'Product Schema', path: '/product-schema-generator', description: 'E-commerce products with reviews' },
+  { name: 'LocalBusiness Schema', path: '/localbusiness-schema-generator', description: 'Physical business locations' },
+  { name: 'HowTo Schema', path: '/howto-schema-generator', description: 'Step-by-step instructions' },
+  { name: 'Event Schema', path: '/event-schema-generator', description: 'Conferences, webinars, meetups' },
+  { name: 'Review Schema', path: '/review-schema-generator', description: 'Product and business reviews' },
+  { name: 'Breadcrumb Schema', path: '/breadcrumb-schema-generator', description: 'Site navigation hierarchy' }
+]
+
+const geoSteps = [
+  {
+    number: 1,
+    title: 'Entity Optimization',
+    description: 'Define your brand as a clear, recognizable entity. AI needs to know who you are before it can cite you as an authority.',
+    tips: [
+      'Consistent NAP (Name, Address, Phone) across the web',
+      'Use precise terminology in your content',
+      'Build entity relationships through mentions and partnerships',
+      'Implement Organization schema to establish authority'
+    ]
+  },
+  {
+    number: 2,
+    title: 'Consistent Structured Data',
+    description: "Schema isn't optional for GEO - it's mandatory. AI can't parse what it can't read. Machine-readable markup is your ticket to AI training datasets.",
+    tips: [
+      'Implement schema sitewide, not just on select pages',
+      'Validate regularly (broken schema = invisibility)',
+      'Include authorship, dates, and publisher info',
+      'Use SuperSchema for error-free, comprehensive implementation'
+    ]
+  },
+  {
+    number: 3,
+    title: 'Credibility Signals',
+    description: "AI models train on authoritative sources. E-E-A-T isn't just for Google anymore - it's how you earn a spot in AI training data.",
+    tips: [
+      'Add citations from authoritative sources',
+      'Include author bios with credentials and expertise',
+      'Display transparent publish and update dates',
+      'Build backlinks from reputable sites in your industry'
+    ]
+  },
+  {
+    number: 4,
+    title: 'Cited References',
+    description: 'AI loves well-sourced content. The more you cite credible references, the more AI trusts your content as training-worthy.',
+    tips: [
+      'Link to reputable sources (research papers, industry reports)',
+      'Include statistics with proper attribution',
+      'Reference authoritative domains (.edu, .gov, industry leaders)',
+      'AI rewards depth - cite multiple sources per claim'
+    ]
+  }
+]
+
+const commonMistakes = [
+  {
+    mistake: 'Missing Entity Definitions',
+    problem: "Your brand isn't clearly defined as an entity. AI doesn't know who you are or why you matter.",
+    fix: 'Implement Organization schema with complete details. Define your brand consistently across all platforms.',
+    severity: 'critical'
+  },
+  {
+    mistake: 'Inconsistent Schema Implementation',
+    problem: 'Schema on some pages, broken on others. Inconsistency confuses AI models during training crawls.',
+    fix: 'Deploy schema sitewide. Use SuperSchema to ensure every page has validated, error-free markup.',
+    severity: 'high'
+  },
+  {
+    mistake: 'No Author Credentials',
+    problem: 'Content without clear authorship gets ignored by AI. Models prioritize content with verified expertise.',
+    fix: "Add author schema with credentials, expertise, and social profiles. Build authority around individuals, not just brands.",
+    severity: 'high'
+  },
+  {
+    mistake: 'Ignoring E-E-A-T Signals',
+    problem: 'Experience, Expertise, Authoritativeness, Trust - AI models evaluate these before including content in training data.',
+    fix: 'Showcase real expertise. Add author bios, credentials, case studies, and industry recognition.',
+    severity: 'high'
+  },
+  {
+    mistake: "Schema Doesn't Match Content",
+    problem: "Your schema says one thing, your visible content says another. That's an instant disqualification for AI training datasets.",
+    fix: 'Schema must accurately reflect what users see. Never lie to search engines or AI models.',
+    severity: 'critical'
+  },
+  {
+    mistake: 'Ignoring Schema After Updates',
+    problem: "CMS updates, template changes, and plugin installations silently break schema. AI can't parse broken markup.",
+    fix: 'Revalidate schema after any site changes. Set up automated monitoring to catch breaks before they hurt you.',
+    severity: 'medium'
+  }
+]
+
+const futureTrends = [
+  {
+    trend: 'LLM Traffic Overtakes Google by 2027',
+    description: "Research from Semrush predicts that LLM-driven traffic will surpass traditional Google search by the end of 2027. We're already seeing an 800% year-over-year increase in referrals from LLMs.",
+    impact: "GEO isn't optional anymore. Brands that ignore generative AI will lose visibility in the primary way people search by 2027."
+  },
+  {
+    trend: 'Entity Authority Becomes Currency',
+    description: 'AI models prioritize entities with clear authority signals. Consistent schema, E-E-A-T compliance, and cited references determine whether your brand is training-worthy.',
+    impact: 'Build entity authority now. Organizations with strong schema implementation will dominate AI-generated answers.'
+  },
+  {
+    trend: 'Multi-Platform AI Discovery',
+    description: 'Users search across ChatGPT, Perplexity, Google AI Mode, Claude, and Gemini. Over 1 billion prompts are sent to ChatGPT daily, and 71% of Americans use AI search to research purchases.',
+    impact: 'Optimize for all AI platforms, not just Google. GEO ensures your content is cited across every generative AI tool.'
+  },
+  {
+    trend: 'Zero-Click AI Answers Dominate',
+    description: 'By 2026, 25% of organic traffic will shift to AI chatbots. Users get answers without ever clicking through to your site.',
+    impact: 'Focus on brand visibility in AI answers, not just traffic. Being cited builds authority even without clicks.'
+  },
+  {
+    trend: 'Ethical AI and Source Attribution',
+    description: 'As AI models face scrutiny over training data, platforms are prioritizing transparent source attribution. Brands with clean, well-structured data get cited more often.',
+    impact: 'Transparency wins. Use schema to signal credibility, accuracy, and ethical content practices.'
+  },
+  {
+    trend: 'GEO as Competitive Differentiator',
+    description: 'Early GEO adopters are already seeing 3-5x higher citation rates in AI-generated answers. By 2026, GEO will be table stakes for B2B brands.',
+    impact: 'The brands building GEO now will dominate AI discovery in 2026. Waiting means playing catch-up.'
+  }
+]
+
+const faqs = [
+  {
+    question: "What's the difference between GEO and AEO?",
+    answer: "AEO (Answer Engine Optimization) focuses on getting your content cited in AI-generated answers - think featured snippets, AI Overviews, and voice assistant responses. GEO (Generative Engine Optimization) goes deeper: it's about becoming the training source AI models rely on. AEO is about being the answer. GEO is about being the source AI can't ignore. Both matter, but GEO builds long-term entity authority that persists across all AI platforms."
+  },
+  {
+    question: 'Do I need GEO if I already do SEO?',
+    answer: "Absolutely. SEO gets you ranked in traditional search results. GEO ensures you're cited in AI-generated answers. By 2027, LLM traffic is projected to overtake traditional Google search. If you're only doing SEO, you're optimizing for yesterday's search behavior. GEO extends your SEO efforts - they synergize, not compete. Strong SEO gets your content indexed. GEO ensures AI can understand, cite, and train on it."
+  },
+  {
+    question: 'How does schema help with GEO?',
+    answer: "Schema is machine-readable credibility. AI models parse structured data to understand entities, relationships, authorship, and context. Without schema, AI has to guess what your content means. With schema, you're telling AI exactly who you are, what you do, and why you're authoritative. Organization, Article, and FAQ schema are critical for GEO. Use SuperSchema to generate error-free markup that AI models trust."
+  },
+  {
+    question: 'Which schema types matter most for GEO?',
+    answer: "Organization schema (establishes entity authority), Article schema (provides content context), FAQ schema (direct answer formatting), and Author schema (builds E-E-A-T signals). These schema types signal to AI that your content is credible, well-structured, and training-worthy. SuperSchema automatically detects which schema types you need based on your content."
+  },
+  {
+    question: 'How do I measure GEO success?',
+    answer: "Check if your brand appears in ChatGPT responses, Perplexity citations, and Google AI Overviews. Monitor your entity's presence across AI platforms. Track brand mentions in AI-generated answers (even without links - visibility builds authority). Use tools like SuperSchema to ensure your schema quality score is 80+ for better AI parsing. GEO success isn't about clicks - it's about becoming the default source AI cites."
+  },
+  {
+    question: 'Is GEO just for big brands?',
+    answer: "No. GEO levels the playing field. Small brands with strong schema, clear entity definitions, and credible content can outrank Fortune 500 companies in AI-generated answers. AI doesn't care about your brand size - it cares about authority signals. If your content is well-structured, cited, and authoritative, AI will use it as a training source regardless of your company size."
+  },
+  {
+    question: 'Can GEO hurt my SEO?',
+    answer: "Only if you do it wrong. Invalid schema gets ignored. Schema that doesn't match visible content can trigger penalties. But properly implemented GEO? Pure upside. It enhances your SEO by making your content more parseable, more authoritative, and more citation-worthy across both traditional search engines and AI platforms. GEO and SEO work together - strong schema benefits both."
+  },
+  {
+    question: 'When will GEO become critical?',
+    answer: "It already is. Over 1 billion prompts are sent to ChatGPT daily. 71% of Americans use AI search to research purchases. By 2027, LLM traffic will overtake traditional Google search. The brands optimizing for GEO now will dominate AI discovery in 2026. Waiting means losing ground to competitors who are already building entity authority. Start implementing GEO today - your future visibility depends on it."
+  }
+]
+
+// JSON-LD Schemas
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+}
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Generative Engine Optimization (GEO): Be the Source AI Chooses",
+  "description": "Learn how to optimize your content to become the training source AI models rely on. Comprehensive guide to GEO, schema markup, entity optimization, and building authority for AI discovery.",
+  "author": {
+    "@type": "Organization",
+    "name": "SuperSchema",
+    "url": "https://superschema.ai"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Lightbulb Moment Labs",
+    "url": "https://superschema.ai"
+  },
+  "datePublished": "2025-01-11",
+  "dateModified": "2025-01-11"
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://superschema.ai"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://superschema.ai/geo"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "GEO Guide",
+      "item": "https://superschema.ai/geo"
+    }
+  ]
+}
+---
+
+<BaseLayout title={title} description={description}>
+  <Fragment slot="schemas">
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema, null, 2)} />
+    <script type="application/ld+json" set:html={JSON.stringify(articleSchema, null, 2)} />
+    <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema, null, 2)} />
+  </Fragment>
+
+  <div class="min-h-screen bg-background">
+    <!-- Header -->
+    <PillarPageNavStatic />
+
+    <!-- Hero Section -->
+    <section class="py-16 px-4 bg-gradient-to-b from-primary/5 to-background">
+      <div class="container mx-auto max-w-4xl">
+        <div class="mb-6">
+          <a href="/" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <svg class="h-4 w-4 rotate-180 mr-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            Back to Home
+          </a>
+        </div>
+        <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+          Generative Engine Optimization (GEO): Be the Source AI Chooses
+        </h1>
+        <p class="text-xl md:text-2xl text-muted-foreground mb-8">
+          SEO gets you ranked. AEO gets you cited. <strong>GEO makes you the training source AI can't ignore.</strong> Welcome to Act II of search.
+        </p>
+        <div class="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            1B+ Daily ChatGPT Prompts
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            71% Americans Use AI Search
+          </span>
+          <span>•</span>
+          <span class="inline-flex items-center">
+            <svg class="h-4 w-4 mr-2 text-success" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            800% YoY LLM Referral Growth
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container mx-auto max-w-4xl px-4 py-16 space-y-20">
+
+      <!-- What Is GEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">What Is Generative Engine Optimization?</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Generative Engine Optimization (GEO) is the practice of optimizing your content to become the training source that AI models - ChatGPT, Perplexity, Google Gemini, Claude, and others - rely on when generating answers.
+          </p>
+          <p>
+            While <a href="/aeo" class="text-primary hover:underline">AEO</a> focuses on getting cited in AI-generated answers, GEO goes deeper - it's about becoming the authoritative source that AI can't write an answer without. Think of it as earning a permanent spot in the AI knowledge base.
+          </p>
+
+          <!-- GEO vs AEO vs SEO Comparison Table -->
+          <div class="my-8 overflow-hidden rounded-lg border border-border">
+            <table class="w-full">
+              <thead class="bg-muted">
+                <tr>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Aspect</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Traditional SEO</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">AEO</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">GEO</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr>
+                  <td class="px-6 py-4 font-medium">Goal</td>
+                  <td class="px-6 py-4">Rank in search results</td>
+                  <td class="px-6 py-4">Get cited in AI answers</td>
+                  <td class="px-6 py-4">Become the training source</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Focus</td>
+                  <td class="px-6 py-4">Keywords, backlinks, page speed</td>
+                  <td class="px-6 py-4">Structured data, direct answers</td>
+                  <td class="px-6 py-4">Entity relationships, credibility signals</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Content Style</td>
+                  <td class="px-6 py-4">Long-form, keyword-rich</td>
+                  <td class="px-6 py-4">Concise, answer-first</td>
+                  <td class="px-6 py-4">Authoritative, well-cited, comprehensive</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Platforms</td>
+                  <td class="px-6 py-4">Google, Bing search results</td>
+                  <td class="px-6 py-4">AI Overviews, voice assistants</td>
+                  <td class="px-6 py-4">ChatGPT, Perplexity, Gemini, LLM training</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Success Metric</td>
+                  <td class="px-6 py-4">Traffic and rankings</td>
+                  <td class="px-6 py-4">Zero-click citations</td>
+                  <td class="px-6 py-4">Entity authority and narrative control</td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 font-medium">Schema Importance</td>
+                  <td class="px-6 py-4">Helpful for rich snippets</td>
+                  <td class="px-6 py-4">Important for featured snippets</td>
+                  <td class="px-6 py-4">Critical for AI parsing</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-info/10 border border-info/20 rounded-lg p-6 my-8">
+            <h4 class="font-semibold mb-2 text-foreground">The Bottom Line</h4>
+            <p class="text-sm text-info-foreground">
+              SEO, AEO, and GEO synergize - they don't compete. Use all three for maximum visibility across traditional search, AI answers, and LLM training datasets. GEO is the future-proof layer that extends your SEO and AEO efforts.
+            </p>
+          </div>
+
+          <p>
+            Here's the reality: over 1 billion prompts are sent to ChatGPT daily. 71% of Americans use AI search to research purchases. By 2027, LLM traffic is projected to overtake traditional Google search. If your content isn't optimized for GEO, you're invisible to the next generation of search.
+          </p>
+        </div>
+      </section>
+
+      <!-- Why Schema Markup Is Essential for GEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Why Schema Markup Is Essential for GEO</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Schema isn't optional for GEO - it's mandatory. Structured data is how AI models understand entities, relationships, authorship, and credibility. Without schema, you're just text on a page. With schema, you're a trusted, parseable source.
+          </p>
+          <p>
+            Think of schema as machine-readable credibility signals. AI models parse Organization schema to understand who you are. Article schema provides content context and authorship. FAQ schema formats direct answers that AI loves to cite.
+          </p>
+
+          <div class="bg-primary/10 border border-primary/20 rounded-lg p-6 my-8">
+            <div class="flex items-start space-x-4">
+              <svg class="h-8 w-8 text-primary flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1h-1z"/></svg>
+              <div>
+                <h4 class="font-semibold mb-2 text-foreground">The GEO Schema Equation</h4>
+                <p class="text-sm">
+                  <strong>Structured Data → Entity Authority → AI Training Eligibility → Narrative Control</strong>
+                </p>
+                <p class="text-sm mt-2">
+                  Schema bridges the gap between human-readable content and machine-parseable authority. When you implement schema, you're signaling to AI: "This content is credible, structured, and training-worthy."
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p>
+            The brands that build strong schema now will dominate AI-generated answers in 2026. Early GEO adopters are already seeing 3-5x higher citation rates across AI platforms. Don't wait for competitors to steal your spot in AI training datasets.
+          </p>
+
+          <!-- Schema Type Links -->
+          <div class="my-8">
+            <h4 class="font-semibold mb-4 text-foreground text-lg">Essential Schema Types for GEO</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <a href="/organization-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">Organization Schema</h5>
+                    <p class="text-sm text-muted-foreground">Establish entity authority</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+              <a href="/article-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">Article Schema</h5>
+                    <p class="text-sm text-muted-foreground">Content context for AI</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+              <a href="/faq-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">FAQ Schema</h5>
+                    <p class="text-sm text-muted-foreground">Direct answer formatting</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+              <a href="/blogposting-schema-generator" class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">BlogPosting Schema</h5>
+                    <p class="text-sm text-muted-foreground">Blog credibility signals</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <p class="font-semibold text-foreground">
+            SuperSchema automatically detects which schema types your content needs, extracts real data from your page, and generates error-free JSON-LD in under 30 seconds. No manual data entry. No Schema.org documentation hunting. Just paste your URL and go.
+          </p>
+        </div>
+      </section>
+
+      <!-- How to Optimize for GEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">How to Optimize for GEO (Step-by-Step)</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-8">
+          <p>
+            GEO isn't rocket science - it's strategic, authoritative content that AI models trust and train on. Follow these four steps to dominate AI discovery.
+          </p>
+
+          {geoSteps.map((step, index) => (
+            <div class="border border-border rounded-lg p-6 bg-card">
+              <div class="flex items-start space-x-4">
+                <div class="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold flex-shrink-0">
+                  {step.number}
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-bold mb-2 text-foreground">{step.title}</h3>
+                  <p class="mb-4">{step.description}</p>
+                  <ul class="space-y-2">
+                    {step.tips.map((tip) => (
+                      <li class="flex items-start space-x-2">
+                        <svg class="h-5 w-5 text-success flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span class="text-sm">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <!-- CTA -->
+          <div class="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border border-primary/20 rounded-lg p-8 text-center my-8">
+            <svg class="h-12 w-12 mx-auto mb-4 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+            <h3 class="text-2xl font-bold mb-2 text-foreground">Use SuperSchema's AI Generator to Build GEO Authority</h3>
+            <p class="text-muted-foreground mb-6 max-w-2xl mx-auto">
+              Paste your URL. Our AI detects your entity, generates comprehensive schema, validates everything, and gives you a quality score - all in under 30 seconds.
+            </p>
+            <a href="/sign-up" class="inline-flex items-center px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold">
+              Start Free (2 Credits)
+              <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Common GEO Mistakes -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Common GEO Mistakes (and How to Fix Them)</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            Even experienced marketers screw up GEO. Here are the mistakes killing your AI training eligibility - and exactly how to fix them.
+          </p>
+
+          <div class="space-y-4 my-8">
+            {commonMistakes.map((item, index) => (
+              <div class={`border rounded-lg p-6 ${
+                item.severity === 'critical'
+                  ? 'border-destructive/50 bg-destructive/5'
+                  : item.severity === 'high'
+                  ? 'border-warning/50 bg-warning/5'
+                  : 'border-border bg-card'
+              }`}>
+                <div class="flex items-start space-x-4">
+                  <div class={`p-2 rounded-lg ${
+                    item.severity === 'critical'
+                      ? 'bg-destructive/20'
+                      : item.severity === 'high'
+                      ? 'bg-warning/20'
+                      : 'bg-muted'
+                  }`}>
+                    <svg class={`h-6 w-6 ${
+                      item.severity === 'critical'
+                        ? 'text-destructive'
+                        : item.severity === 'high'
+                        ? 'text-warning'
+                        : 'text-muted-foreground'
+                    }`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                      <h4 class="font-bold text-foreground">{item.mistake}</h4>
+                      <span class={`text-xs px-2 py-1 rounded ${
+                        item.severity === 'critical'
+                          ? 'bg-destructive/20 text-destructive'
+                          : item.severity === 'high'
+                          ? 'bg-warning/20 text-warning'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {item.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <p class="text-sm mb-2"><strong class="text-foreground">Problem:</strong> {item.problem}</p>
+                    <p class="text-sm"><strong class="text-success">Fix:</strong> {item.fix}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-success/10 border border-success/20 rounded-lg p-6 my-8">
+            <div class="flex items-start space-x-4">
+              <svg class="h-8 w-8 text-success flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <div>
+                <h4 class="font-semibold mb-2 text-foreground">Always Validate Before Going Live</h4>
+                <p class="text-sm">
+                  Use Google's Rich Results Test to catch errors. Better yet, use SuperSchema's built-in validation and quality scoring. We check for invalid syntax, missing entities, duplicate schema, and compliance with Schema.org standards - so you don't have to.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Future of GEO -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">The Future of GEO and AI Discovery</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            GEO isn't a trend - it's the next SEO frontier. Here's where AI discovery is headed, and why early adopters will dominate.
+          </p>
+
+          <div class="space-y-6 my-8">
+            {futureTrends.map((trend, index) => (
+              <div class="border border-border rounded-lg p-6 bg-card">
+                <h4 class="font-bold text-lg mb-2 text-foreground">{trend.trend}</h4>
+                <p class="mb-3">{trend.description}</p>
+                <div class="bg-primary/10 border border-primary/20 rounded p-3">
+                  <p class="text-sm"><strong class="text-foreground">Impact:</strong> {trend.impact}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20 rounded-lg p-8 my-8">
+            <h3 class="text-2xl font-bold mb-4 text-foreground">The Bottom Line</h3>
+            <p class="text-lg mb-4">
+              The future of search is conversational, multimodal, and AI-powered. Winners prioritize <strong class="text-foreground">entity authority over traffic</strong> and <strong class="text-foreground">citations over clicks</strong>.
+            </p>
+            <p>
+              Brands that build GEO now - combining structured data, credibility signals, and genuine expertise - will dominate AI discovery. Those that wait? They'll be invisible to the next generation of search.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Related Tools -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Related Tools & Resources</h2>
+        <div class="prose prose-lg max-w-none text-muted-foreground space-y-6">
+          <p>
+            SuperSchema offers free schema generators for all major content types. Start building GEO authority today.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+            {schemaGenerators.map((generator, index) => (
+              <a href={generator.path} class="p-4 border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h5 class="font-semibold group-hover:text-primary transition-colors">{generator.name}</h5>
+                    <p class="text-sm text-muted-foreground">{generator.description}</p>
+                  </div>
+                  <svg class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-4 my-8">
+            <a href="/sign-up" class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group">
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <h5 class="font-semibold mb-2 text-foreground">Generate Schema</h5>
+              <p class="text-sm text-muted-foreground mb-3">AI-powered schema generation for any URL</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                Start Generating <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </a>
+            <a href="/sign-up" class="flex-1 p-6 border border-primary rounded-lg bg-primary/5 hover:bg-primary/10 transition-all group">
+              <svg class="h-8 w-8 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h5 class="font-semibold mb-2 text-foreground">Schema Library</h5>
+              <p class="text-sm text-muted-foreground mb-3">Manage all your URLs and schema in one place</p>
+              <div class="inline-flex items-center text-primary font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                View Library <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deep Dive Guides -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Deep Dive Guides</h2>
+        <p class="text-lg text-muted-foreground mb-8">
+          Expert guides to master specific GEO strategies and technical implementation.
+        </p>
+        <div class="grid gap-6">
+          <a href="/geo/entity-based-seo-strategies" class="p-6 border border-border rounded-lg bg-card hover:bg-accent transition-all group">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="text-xl font-semibold mb-2 text-foreground">Entity-Based SEO Strategies</h3>
+                <p class="text-muted-foreground mb-3">
+                  Comprehensive guide to implementing entity-based SEO as the foundation for GEO, covering knowledge graphs, schema markup, and entity signals
+                </p>
+              </div>
+              <svg class="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+          {faqs.map((faq, index) => (
+            <FAQItemAstro
+              client:visible
+              question={faq.question}
+              answer={faq.answer}
+              index={index}
+            />
+          ))}
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="bg-primary rounded-lg p-8 md:p-12 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
+          Ready to Dominate AI Discovery?
+        </h2>
+        <p class="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
+          Join thousands using SuperSchema to build GEO authority and future-proof their visibility. Start with 2 free credits - no credit card required.
+        </p>
+        <a href="/sign-up" class="inline-flex items-center px-8 py-3 rounded-md bg-background text-foreground hover:bg-background/90 transition-colors text-lg font-semibold">
+          Get Your Free Credits
+          <svg class="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <FooterStatic />
+  </div>
+</BaseLayout>
