@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 import { validateRefinedSchema } from './schemaValidator.js'
+import { sanitizeSchemaProperties } from './schemaPropertyWhitelist.js'
 
 // Enhanced interfaces for comprehensive AEO metadata
 export interface AuthorInfo {
@@ -173,19 +174,19 @@ export const SCHEMA_PROPERTY_TEMPLATES: Record<string, SchemaPropertyRequirement
   BlogPosting: {
     required: ['@context', '@type', 'headline', 'datePublished', 'dateModified', 'author', 'publisher', 'mainEntityOfPage'],
     recommended: ['description', 'image', 'keywords', 'articleSection', 'inLanguage', 'wordCount', 'timeRequired', 'isPartOf'],
-    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'about', 'mentions'],
+    advanced: ['potentialAction', 'interactionStatistic', 'review', 'about', 'mentions'],
     description: 'Blog post content optimized for AI search engines (ChatGPT quality)'
   },
   Article: {
     required: ['@context', '@type', 'headline', 'datePublished', 'author', 'publisher', 'mainEntityOfPage'],
     recommended: ['description', 'dateModified', 'image', 'keywords', 'articleSection', 'inLanguage', 'articleBody', 'about', 'mentions'],
-    advanced: ['potentialAction', 'interactionStatistic', 'speakable', 'review', 'isPartOf', 'wordCount'],
+    advanced: ['potentialAction', 'interactionStatistic', 'review', 'isPartOf', 'wordCount'],
     description: 'General article content with comprehensive metadata'
   },
   WebPage: {
     required: ['@context', '@type', 'name', 'url'],
     recommended: ['description', 'inLanguage', 'image', 'keywords', 'isPartOf', 'mainEntity', 'breadcrumb', 'publisher', 'dateModified'],
-    advanced: ['potentialAction', 'speakable', 'significantLink', 'relatedLink', 'about', 'mentions'],
+    advanced: ['potentialAction', 'significantLink', 'relatedLink', 'about', 'mentions'],
     description: 'Web page with rich metadata for better discovery'
   },
   Organization: {
@@ -700,6 +701,17 @@ Return JSON with "schemas" array containing 1-4 ChatGPT-quality schemas.`
 - ❌ NEVER mix data types in arrays (all strings or all objects)
 - ✅ OMIT properties rather than guess
 - ✅ Use EXACT values from provided metadata
+
+**PROPERTY-TYPE RESTRICTIONS (CRITICAL - validator.schema.org compliance):**
+These properties are ONLY valid for specific schema types. Using them on wrong types causes validation errors:
+
+- articleSection: ONLY for Article/BlogPosting/NewsArticle - NEVER on WebPage, Organization, LocalBusiness
+- articleBody: ONLY for Article types - NEVER on WebPage
+- wordCount: ONLY for Article/BlogPosting/CreativeWork - NEVER on WebPage, Organization
+- speakable: DO NOT INCLUDE - omit this property entirely (causes CSS selector validation errors)
+- headline: Use for Article types; WebPage should use "name" instead
+
+⚠️ FOR WEBPAGE SCHEMAS: Do NOT include articleSection, articleBody, wordCount, or speakable
 
 **EXAMPLE - ChatGPT Quality BlogPosting:**
 {
@@ -1492,13 +1504,7 @@ RESPONSE FORMAT:
         }]
       }
 
-      // Add speakable for FAQ content
-      if (analysis.metadata?.faqContent?.length && !schema['speakable']) {
-        schema['speakable'] = {
-          '@type': 'SpeakableSpecification',
-          'cssSelector': ['.faq', '.question', '.answer']
-        }
-      }
+      // NOTE: speakable removed - CSS selectors are error-prone and often fail validator.schema.org
     }
 
     // Add comprehensive properties for WebPage (recommended + advanced)
@@ -1600,29 +1606,7 @@ RESPONSE FORMAT:
         }
       }
 
-      // Advanced: speakable - for content-rich pages (improve if minimal)
-      const wordCount = analysis.metadata?.wordCount || 0
-      if (wordCount > 300) {
-        const comprehensiveSelectors = ['h1', 'h2', 'main', '.content', 'article', 'p']
-
-        if (!schema['speakable']) {
-          // Add new speakable
-          schema['speakable'] = {
-            '@type': 'SpeakableSpecification',
-            'cssSelector': comprehensiveSelectors
-          }
-          console.log(`✅ Added speakable to WebPage (wordCount: ${wordCount})`)
-        } else if (schema['speakable']?.cssSelector && Array.isArray(schema['speakable'].cssSelector)) {
-          // Enhance existing speakable if it only has minimal selectors
-          const existing = schema['speakable'].cssSelector
-          if (existing.length <= 2) {
-            schema['speakable'].cssSelector = comprehensiveSelectors
-            console.log(`🔄 Enhanced speakable selectors from ${existing.length} to ${comprehensiveSelectors.length}`)
-          } else {
-            console.log(`⏭️ Speakable already has ${existing.length} selectors`)
-          }
-        }
-      }
+      // NOTE: speakable removed - CSS selectors are error-prone and often fail validator.schema.org
 
       // Advanced: potentialAction - SearchAction for discoverability
       if (!schema['potentialAction']) {
@@ -1883,13 +1867,13 @@ Return a JSON object with:
     const hasH2Sections = pageData?.metadata?.articleSections?.length > 0
     const hasWordCount = pageData?.metadata?.wordCount > 0
 
-    // Scored AEO properties (12 total, each worth ~2.1 overall points)
+    // Scored AEO properties (11 total, each worth ~2.3 overall points)
+    // NOTE: speakable removed - causes validation errors with CSS selectors
     const scoredAeoProperties = [
       { name: 'keywords', safe: true, description: 'Relevant topic keywords as array' },
       { name: 'about', safe: true, description: 'Topics/entities this content is about' },
       { name: 'mentions', safe: true, description: 'Related entities mentioned' },
       { name: 'sameAs', safe: false, description: 'Alternative URLs for same entity' },
-      { name: 'speakable', safe: true, description: 'Voice search optimization' },
       { name: 'inLanguage', safe: true, description: 'Content language (e.g., "en")' },
       { name: 'articleSection', safe: hasH2Sections, description: 'Article section/category (SAFE if H2 data available)' },
       { name: 'wordCount', safe: hasWordCount, description: 'Estimated word count (SAFE if scraped data available)' },
@@ -2213,7 +2197,7 @@ ORIGINAL URL: ${url}${pageDataContext}
 The schema is scored on 4 weighted categories:
 - Required Properties (35%): @context, @type, name/headline
 - Recommended Properties (25%): description, url, image, author, publisher, datePublished, dateModified (7 properties, each worth ~3.6 points)
-- Advanced AEO Features (25%): keywords, about, mentions, sameAs, speakable, inLanguage, articleSection, wordCount, isPartOf, mainEntityOfPage, aggregateRating, review (12 properties, each worth ~2.1 points)
+- Advanced AEO Features (25%): keywords, about, mentions, sameAs, inLanguage, articleSection, wordCount, isPartOf, mainEntityOfPage, aggregateRating, review (11 properties, each worth ~2.3 points)
 - Content Quality (15%): Description length, structured objects, image quality
 
 ⚠️ CRITICAL SCORING MECHANIC:
@@ -2263,6 +2247,16 @@ Follow the "⚡ TOP PRIORITY ACTIONS" list above from the property analysis. The
 ❌ If metadata shows "[NOT FOUND]" for a field, DO NOT ADD that property
 ❌ DO NOT make descriptions longer if they're already 50-160 characters!
 
+🚨 **PROPERTY-TYPE RESTRICTIONS (CRITICAL - validator.schema.org compliance):**
+❌ articleSection: ONLY for Article/BlogPosting/NewsArticle - NEVER add to WebPage
+❌ articleBody: ONLY for Article types - NEVER add to WebPage
+❌ wordCount: ONLY for Article/BlogPosting/CreativeWork types - NEVER add to WebPage
+❌ speakable: DO NOT ADD - causes CSS selector validation errors
+❌ headline: Use for Article types; WebPage should use "name" instead
+
+⚠️ FOR WEBPAGE SCHEMAS: Do NOT add articleSection, articleBody, wordCount, or speakable!
+These properties will FAIL validation at validator.schema.org for WebPage type.
+
 ✅ ALLOWED ENHANCEMENTS:
 ✅ OPTIMIZE description to 50-160 characters (HIGHEST PRIORITY)
 ✅ Add inLanguage: "en" (safe, no verification needed)
@@ -2270,8 +2264,8 @@ Follow the "⚡ TOP PRIORITY ACTIONS" list above from the property analysis. The
 ✅ Convert image strings to ImageObject (structure improvement)
 ✅ Add logo to publisher if publisher exists (structure improvement)
 ✅ Add relevant keywords to keyword/about/mentions arrays
-✅ Add Schema.org structural properties: speakable, breadcrumb, isPartOf, potentialAction
-✅ Add wordCount, articleSection for articles
+✅ Add Schema.org structural properties: breadcrumb, isPartOf, potentialAction
+✅ Add wordCount, articleSection ONLY for Article/BlogPosting types (NOT WebPage!)
 
 IMPORTANT RULES:
 1. Return ONLY valid JSON (no markdown, no explanations)
@@ -2304,7 +2298,12 @@ FORMAT YOUR RESPONSE AS:
 - ONLY add new factual properties if explicitly provided in the original metadata
 - When uncertain about NEW factual data you want to add, don't add it
 - ⚠️ CRITICAL: NEVER remove existing properties - only enhance and add to the schema
-- Focus on enhancing structure and SEO, not inventing facts`
+- Focus on enhancing structure and SEO, not inventing facts
+
+🚨 PROPERTY-TYPE RESTRICTIONS (validator.schema.org compliance):
+- articleSection, articleBody, wordCount: ONLY for Article/BlogPosting types - NEVER for WebPage
+- speakable: NEVER add this property (causes validation errors)
+- For WebPage schemas: use "name" instead of "headline"`
           },
           {
             role: 'user',
@@ -2329,6 +2328,16 @@ FORMAT YOUR RESPONSE AS:
       // Validate and sanitize the refined schema to prevent hallucinations
       const originalSchema = schemas[0]
       refinedSchema = validateRefinedSchema(originalSchema, refinedSchema, originalMetadata, refinementCount)
+
+      // Sanitize for Schema.org compliance (remove invalid properties for schema type)
+      const sanitizationResult = sanitizeSchemaProperties(refinedSchema as JsonLdSchema)
+      if (sanitizationResult.wasModified) {
+        console.log(`🧹 [Refinement] Sanitized schema - removed ${sanitizationResult.removedProperties.length} invalid properties:`)
+        sanitizationResult.removedProperties.forEach(removal => {
+          console.log(`   - ${removal.property}: ${removal.message}`)
+        })
+        refinedSchema = sanitizationResult.schema
+      }
 
       console.log(`✅ AI refinement completed with ${changes.length} improvements`)
       console.log('📝 Changes made:', changes)

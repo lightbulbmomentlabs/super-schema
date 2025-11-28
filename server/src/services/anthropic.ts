@@ -386,7 +386,15 @@ class AnthropicService {
 - ✅ ALWAYS omit properties when real data unavailable
 - ✅ ALWAYS trace each property value back to source data
 - ✅ ALWAYS use semantic types when appropriate: Service (for services), Product (for products), Event (for events)
-- ✅ ALWAYS use only well-established Schema.org types`
+- ✅ ALWAYS use only well-established Schema.org types
+
+**PROPERTY-TYPE RESTRICTIONS (CRITICAL - validator.schema.org compliance):**
+- articleSection: ONLY for Article/BlogPosting/NewsArticle - NEVER on WebPage
+- articleBody: ONLY for Article types - NEVER on WebPage
+- wordCount: ONLY for Article/BlogPosting/CreativeWork - NEVER on WebPage
+- speakable: DO NOT INCLUDE - omit this property entirely (causes CSS selector validation errors)
+- headline: Use for Article types; WebPage should use "name" instead
+⚠️ FOR WEBPAGE SCHEMAS: Do NOT include articleSection, articleBody, wordCount, or speakable`
 
     if (requestedTypes && requestedTypes.length > 0) {
       return `${basePrompt}
@@ -525,10 +533,11 @@ Return ONLY a JSON object with this exact structure:
 📋 **WEBPAGE SCHEMA REQUIREMENTS** (IMPORTANT - Include these when generating WebPage):
 For WebPage schemas, ALWAYS include these recommended properties when data is available:
 - ✅ **Required**: @context, @type, name, url
-- ✅ **Highly Recommended**: description, inLanguage, image, keywords, publisher, datePublished, dateModified, wordCount
+- ✅ **Highly Recommended**: description, inLanguage, image, keywords, publisher, datePublished, dateModified
 - ✅ **Recommended for Quality**: breadcrumb, isPartOf, mainEntity (with semantic type like Service/Product)
-- ✅ **Advanced (boosts score)**: about, mentions, speakable, potentialAction
-- ✅ **Critical for Scoring**: ALWAYS include datePublished (if provided), wordCount (if provided), and semantically correct mainEntity type (Service for /services, Product for /product, etc.)
+- ✅ **Advanced (boosts score)**: about, mentions, potentialAction
+- ✅ **Critical for Scoring**: ALWAYS include datePublished (if provided) and semantically correct mainEntity type (Service for /services, Product for /product, etc.)
+- ⚠️ **NOTE**: wordCount and articleSection are ONLY valid for Article/BlogPosting types, NOT WebPage
 
 **Example WebPage schema structure** (use as reference):
 {
@@ -540,7 +549,6 @@ For WebPage schemas, ALWAYS include these recommended properties when data is av
   "inLanguage": "en",
   "datePublished": "2025-01-10",
   "dateModified": "2025-01-15",
-  "wordCount": 1500,
   "keywords": ["keyword1", "keyword2"],
   "image": "https://example.com/image.jpg",
   "publisher": { "@type": "Organization", "name": "Company", "logo": {...} },
@@ -549,9 +557,9 @@ For WebPage schemas, ALWAYS include these recommended properties when data is av
   "breadcrumb": { "@type": "BreadcrumbList", "itemListElement": [...] },
   "about": ["Topic 1", "Topic 2"],
   "mentions": ["Entity 1", "Entity 2"],
-  "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["h1", "h2", "main", "article", "p"] },
   "potentialAction": { "@type": "SearchAction", ... }
 }
+⚠️ NOTE: Do NOT include speakable, wordCount, or articleSection in WebPage schemas - these are only valid for Article types.
 
 Select appropriate schema type(s) based on URL and content type.
 ${options.requestedSchemaTypes ? `Generate ONLY these types: ${options.requestedSchemaTypes.join(', ')}` : ''}

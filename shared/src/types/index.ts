@@ -82,6 +82,48 @@ export interface ActionItem {
   category: 'required' | 'recommended' | 'advanced' | 'content'
 }
 
+/**
+ * Schema.org Compliance Error
+ */
+export interface SchemaComplianceError {
+  code: string
+  property: string
+  message: string
+}
+
+/**
+ * Schema.org Compliance Warning
+ */
+export interface SchemaComplianceWarning {
+  code: string
+  property: string
+  message: string
+}
+
+/**
+ * Schema.org Compliance Result
+ * Separate from quality score - this indicates validator.schema.org compatibility
+ */
+export interface SchemaOrgCompliance {
+  isCompliant: boolean
+  errors: SchemaComplianceError[]
+  warnings: SchemaComplianceWarning[]
+}
+
+/**
+ * Compliance Impact Tier - graduated bonus/penalty based on validation results
+ */
+export type ComplianceTier = 'perfect' | 'good' | 'acceptable' | 'minor_issues' | 'non_compliant' | 'severely_non_compliant'
+
+/**
+ * Compliance Impact - how schema.org validation affects the quality score
+ */
+export interface ComplianceImpact {
+  tier: ComplianceTier
+  bonusPoints: number
+  explanation: string
+}
+
 export interface SchemaScore {
   overallScore: number
   breakdown: {
@@ -89,6 +131,7 @@ export interface SchemaScore {
     recommendedProperties: number
     advancedAEOFeatures: number
     contentQuality: number
+    complianceBonus?: number  // -10 to +10 based on compliance tier
   }
   suggestions: string[]
   strengths: string[]
@@ -100,6 +143,16 @@ export interface SchemaScore {
     noDateInfo?: boolean
     poorMetadata?: boolean
   }
+  /**
+   * Schema.org Compliance (separate from quality score)
+   * Indicates whether schemas will pass validator.schema.org validation
+   */
+  schemaOrgCompliance?: SchemaOrgCompliance
+  /**
+   * Compliance Impact - how compliance affects the quality score
+   * Contains tier, bonus points, and user-facing explanation
+   */
+  complianceImpact?: ComplianceImpact
 }
 
 export interface SchemaGenerationResult {

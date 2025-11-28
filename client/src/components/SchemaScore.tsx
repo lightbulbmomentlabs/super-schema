@@ -15,10 +15,12 @@ import {
   Zap,
   Clock,
   TrendingDown,
-  RefreshCw
+  RefreshCw,
+  Shield
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { SchemaScore, ActionItem } from '@shared/types'
+import SchemaComplianceBadge from './SchemaComplianceBadge'
 
 interface SchemaScoreProps {
   score: SchemaScore
@@ -177,6 +179,11 @@ export default function SchemaScore({
         </div>
       </div>
 
+      {/* Schema.org Compliance Badge */}
+      <div className="mb-6">
+        <SchemaComplianceBadge compliance={score.schemaOrgCompliance} />
+      </div>
+
       {/* Score Breakdown */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="space-y-3">
@@ -271,6 +278,57 @@ export default function SchemaScore({
           </div>
         </div>
       </div>
+
+      {/* Compliance Impact Section */}
+      {score.complianceImpact && (
+        <div className={cn(
+          'mb-6 p-4 rounded-lg border flex items-center justify-between',
+          score.complianceImpact.bonusPoints > 0
+            ? 'bg-success/10 border-success/30'
+            : score.complianceImpact.bonusPoints < 0
+              ? 'bg-destructive/10 border-destructive/30'
+              : 'bg-muted/20 border-border'
+        )}>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'w-10 h-10 rounded-full flex items-center justify-center',
+              score.complianceImpact.bonusPoints > 0
+                ? 'bg-success/20 text-success-foreground'
+                : score.complianceImpact.bonusPoints < 0
+                  ? 'bg-destructive/20 text-destructive-foreground'
+                  : 'bg-muted text-muted-foreground'
+            )}>
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={cn(
+                'text-sm font-medium',
+                score.complianceImpact.bonusPoints > 0
+                  ? 'text-success-foreground'
+                  : score.complianceImpact.bonusPoints < 0
+                    ? 'text-destructive-foreground'
+                    : 'text-muted-foreground'
+              )}>
+                Schema.org Compliance
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {score.complianceImpact.explanation}
+              </p>
+            </div>
+          </div>
+          <div className={cn(
+            'text-lg font-bold',
+            score.complianceImpact.bonusPoints > 0
+              ? 'text-success-foreground'
+              : score.complianceImpact.bonusPoints < 0
+                ? 'text-destructive-foreground'
+                : 'text-muted-foreground'
+          )}>
+            {score.complianceImpact.bonusPoints > 0 ? '+' : ''}
+            {score.complianceImpact.bonusPoints} pts
+          </div>
+        </div>
+      )}
 
       {/* Refinement Limit Notice - Show when limit reached */}
       {!canRefine && onRefineSchema && (
@@ -520,10 +578,11 @@ export default function SchemaScore({
             <div>
               <h5 className="font-medium mb-2">Weighted Components:</h5>
               <ul className="space-y-1 text-muted-foreground">
-                <li>• Required Properties: 40% weight</li>
-                <li>• Recommended Properties: 30% weight</li>
-                <li>• Advanced AEO Features: 20% weight</li>
-                <li>• Content Quality: 10% weight</li>
+                <li>• Required Properties: 35% weight</li>
+                <li>• Recommended Properties: 25% weight</li>
+                <li>• Advanced AEO Features: 25% weight</li>
+                <li>• Content Quality: 15% weight</li>
+                <li className="text-primary font-medium">• Schema.org Compliance: +10 to -10 bonus</li>
               </ul>
             </div>
             <div>

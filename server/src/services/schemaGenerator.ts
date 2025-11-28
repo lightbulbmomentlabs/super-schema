@@ -1,9 +1,10 @@
 import { scraperService } from './scraper.js'
 import { openaiService, type SchemaGenerationOptions, type ContentAnalysis } from './openai.js'
 import { anthropicService } from './anthropic.js'
-import { validatorService } from './validator.js'
+import { validatorService, type ComplianceResult } from './validator.js'
 import { db } from './database.js'
 import { extractSchemaType } from '../utils/schemaTypeDetector.js'
+import { sanitizeSchemaProperties, type SanitizationResult } from './schemaPropertyWhitelist.js'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
 
 // Content compatibility check result interface
@@ -197,10 +198,27 @@ class SchemaGeneratorService {
         fullOptions: optionsToPass
       })
 
-      const schemas = await aiService.generateSchemas(contentAnalysis, optionsToPass)
+      const rawSchemas = await aiService.generateSchemas(contentAnalysis, optionsToPass)
 
-      if (!schemas || schemas.length === 0) {
+      if (!rawSchemas || rawSchemas.length === 0) {
         throw new Error('No schemas could be generated from the provided content')
+      }
+
+      // 7.5 SANITIZE: Remove invalid properties for schema types (Schema.org compliance)
+      // This ensures generated schemas pass validator.schema.org validation
+      console.log('🧹 Sanitizing schemas for Schema.org compliance...')
+      const sanitizationResults = rawSchemas.map(schema => sanitizeSchemaProperties(schema))
+      const schemas = sanitizationResults.map(result => result.schema)
+
+      // Log any removed properties for debugging
+      const allRemovals = sanitizationResults.flatMap(result => result.removedProperties)
+      if (allRemovals.length > 0) {
+        console.log(`⚠️ Removed ${allRemovals.length} invalid properties for Schema.org compliance:`)
+        allRemovals.forEach(removal => {
+          console.log(`   - ${removal.property}: ${removal.message}`)
+        })
+      } else {
+        console.log('✅ All schemas passed property-type validation')
       }
 
       // 8. Validate generated schemas
@@ -255,7 +273,9 @@ class SchemaGeneratorService {
         console.log('💰 [Atomic Credits] Credits already consumed at start - no additional charge')
       }
 
-      // 10. Schema quality calculation removed for simplified version
+      // 10. Check schema.org compliance for scoring bonus
+      const complianceResults = validatorService.checkMultipleSchemasCompliance(schemasToUse)
+      console.log(`🔍 Compliance check: ${complianceResults.filter(r => r.isCompliant).length}/${complianceResults.length} schemas compliant`)
 
       console.log(`✅ Final schemas being returned: ${schemasToUse.length}`)
       schemasToUse.forEach((schema, index) => {
@@ -265,8 +285,8 @@ class SchemaGeneratorService {
       // 11. Update generation record with success
       const processingTime = Date.now() - startTime
 
-      // Calculate schema quality score
-      const schemaScore = this.calculateBasicScore(schemasToUse)
+      // Calculate schema quality score (with compliance bonus)
+      const schemaScore = this.calculateBasicScore(schemasToUse, complianceResults)
 
       // Detect actual schema type from generated schemas ONLY if request was "Auto"
       // Otherwise use the explicitly requested type
@@ -534,8 +554,11 @@ class SchemaGeneratorService {
         refinementCount
       })
 
-      // Calculate new score
-      const schemaScore = this.calculateBasicScore(refinedSchemas)
+      // Check compliance for scoring bonus
+      const complianceResults = validatorService.checkMultipleSchemasCompliance(refinedSchemas)
+
+      // Calculate new score (with compliance bonus)
+      const schemaScore = this.calculateBasicScore(refinedSchemas, complianceResults)
 
       // Generate HTML script tags
       const htmlScriptTags = this.generateHtmlScriptTags(refinedSchemas)
@@ -688,14 +711,77 @@ class SchemaGeneratorService {
   }
 
   // Public method to calculate schema score
-  calculateSchemaScore(schemas: JsonLdSchema[]): any {
-    return this.calculateBasicScore(schemas)
+  calculateSchemaScore(schemas: JsonLdSchema[], complianceResults?: ComplianceResult[]): any {
+    return this.calculateBasicScore(schemas, complianceResults)
+  }
+
+  /**
+   * Get AEO properties valid for a specific schema type
+   * This prevents penalizing users for properties that were rightfully removed for compliance
+   */
+  private getAEOPropertiesForType(schemaType: string): string[] {
+    // Base properties valid for all types
+    const baseAEO = [
+      'keywords', 'about', 'mentions', 'sameAs',
+      'inLanguage', 'isPartOf', 'mainEntityOfPage',
+      'aggregateRating', 'review'
+    ]
+
+    // Article types can have articleSection and wordCount
+    const articleTypes = [
+      'Article', 'BlogPosting', 'NewsArticle',
+      'ScholarlyArticle', 'TechArticle', 'SocialMediaPosting', 'Report'
+    ]
+    if (articleTypes.includes(schemaType)) {
+      return [...baseAEO, 'articleSection', 'wordCount']
+    }
+
+    // CreativeWork types can have wordCount (but not articleSection)
+    const creativeWorkTypes = ['CreativeWork', 'Book', 'Review']
+    if (creativeWorkTypes.includes(schemaType)) {
+      return [...baseAEO, 'wordCount']
+    }
+
+    // All other types use base properties only
+    return baseAEO
+  }
+
+  /**
+   * Calculate compliance bonus/penalty based on validation results
+   * Graduated tiers: Perfect (+10), Good (+7), Acceptable (+5), Minor (0), Non-Compliant (-5), Severe (-10)
+   */
+  private calculateComplianceBonus(complianceResults?: ComplianceResult[]): { tier: string; bonusPoints: number; explanation: string } {
+    // Default to perfect compliance if no data (sanitization ensures compliance)
+    if (!complianceResults || complianceResults.length === 0) {
+      return { tier: 'perfect', bonusPoints: 10, explanation: 'Schema.org compliant' }
+    }
+
+    // Aggregate errors and warnings across all schemas
+    const totalErrors = complianceResults.reduce((sum, r) => sum + r.errors.length, 0)
+    const totalWarnings = complianceResults.reduce((sum, r) => sum + r.warnings.length, 0)
+
+    if (totalErrors === 0 && totalWarnings === 0) {
+      return { tier: 'perfect', bonusPoints: 10, explanation: 'Fully Schema.org compliant' }
+    }
+    if (totalErrors === 0 && totalWarnings <= 2) {
+      return { tier: 'good', bonusPoints: 7, explanation: `Compliant with ${totalWarnings} minor note${totalWarnings > 1 ? 's' : ''}` }
+    }
+    if (totalErrors === 0) {
+      return { tier: 'acceptable', bonusPoints: 5, explanation: `Compliant with ${totalWarnings} notes` }
+    }
+    if (totalErrors === 1) {
+      return { tier: 'minor_issues', bonusPoints: 0, explanation: '1 compliance issue to address' }
+    }
+    if (totalErrors <= 3) {
+      return { tier: 'non_compliant', bonusPoints: -5, explanation: `${totalErrors} compliance issues` }
+    }
+    return { tier: 'severely_non_compliant', bonusPoints: -10, explanation: `${totalErrors} compliance issues - will fail validation` }
   }
 
   // Calculate a comprehensive score for schemas
-  private calculateBasicScore(schemas: JsonLdSchema[]): any {
+  private calculateBasicScore(schemas: JsonLdSchema[], complianceResults?: ComplianceResult[]): any {
     const schema = schemas[0] // For now, score the first schema
-    const schemaType = schema['@type']
+    const schemaType = schema['@type'] || 'Unknown'
 
     let requiredProps = 0
     let recommendedProps = 0
@@ -719,13 +805,10 @@ class SchemaGeneratorService {
     })
     recommendedProps = Math.round((recommendedCount / recommendedProperties.length) * 100)
 
-    // ADVANCED AEO FEATURES (Max 100 points)
+    // ADVANCED AEO FEATURES (Max 100 points) - Type-aware
+    // NOTE: speakable removed - causes validator.schema.org CSS selector errors
+    const aeoProperties = this.getAEOPropertiesForType(schemaType)
     let aeoCount = 0
-    const aeoProperties = [
-      'keywords', 'about', 'mentions', 'sameAs', 'speakable',
-      'inLanguage', 'articleSection', 'wordCount', 'isPartOf',
-      'mainEntityOfPage', 'aggregateRating', 'review'
-    ]
 
     aeoProperties.forEach(prop => {
       if (schema[prop]) aeoCount++
@@ -775,20 +858,27 @@ class SchemaGeneratorService {
 
     contentQuality = Math.min(qualityScore, 100)
 
-    // Calculate overall score (weighted average)
-    const overallScore = Math.round(
+    // Calculate compliance bonus/penalty
+    const complianceImpact = this.calculateComplianceBonus(complianceResults)
+
+    // Calculate base score (weighted average)
+    const baseScore = Math.round(
       (requiredProps * 0.35) +        // 35% weight on required properties
       (recommendedProps * 0.25) +     // 25% weight on recommended properties
       (advancedAEOFeatures * 0.25) +  // 25% weight on AEO features
       (contentQuality * 0.15)         // 15% weight on content quality
     )
 
+    // Apply compliance bonus/penalty (capped at 0-100)
+    const overallScore = Math.max(0, Math.min(100, baseScore + complianceImpact.bonusPoints))
+
     console.log(`📊 Schema Score Breakdown:`)
     console.log(`   Required: ${requiredProps}/100`)
     console.log(`   Recommended: ${recommendedProps}/100`)
-    console.log(`   Advanced AEO: ${advancedAEOFeatures}/100`)
+    console.log(`   Advanced AEO: ${advancedAEOFeatures}/100 (type-aware for ${schemaType})`)
     console.log(`   Content Quality: ${contentQuality}/100`)
-    console.log(`   Overall: ${overallScore}/100`)
+    console.log(`   Compliance: ${complianceImpact.bonusPoints > 0 ? '+' : ''}${complianceImpact.bonusPoints} (${complianceImpact.tier})`)
+    console.log(`   Base: ${baseScore}/100, Final: ${overallScore}/100`)
 
     return {
       overallScore,
@@ -796,11 +886,13 @@ class SchemaGeneratorService {
         requiredProperties: requiredProps,
         recommendedProperties: recommendedProps,
         advancedAEOFeatures: advancedAEOFeatures,
-        contentQuality: contentQuality
+        contentQuality: contentQuality,
+        complianceBonus: complianceImpact.bonusPoints
       },
       suggestions: [],
       strengths: [],
-      actionItems: []
+      actionItems: [],
+      complianceImpact
     }
   }
 

@@ -1,4 +1,32 @@
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
+import {
+  isPropertyValidForType,
+  isArticleType,
+  isCreativeWorkType,
+  isHeadlineNotValidFor
+} from './schemaPropertyWhitelist.js'
+
+/**
+ * Schema.org Compliance Result
+ * Separate from validation - this checks property-type compatibility
+ */
+export interface ComplianceResult {
+  isCompliant: boolean
+  errors: ComplianceError[]
+  warnings: ComplianceWarning[]
+}
+
+export interface ComplianceError {
+  code: string
+  property: string
+  message: string
+}
+
+export interface ComplianceWarning {
+  code: string
+  property: string
+  message: string
+}
 
 export interface ValidationResult {
   isValid: boolean
@@ -704,6 +732,163 @@ class SchemaValidatorService {
       totalWarnings,
       errorRate: totalSchemas > 0 ? (totalSchemas - validSchemas) / totalSchemas : 0
     }
+  }
+
+  /**
+   * Check Schema.org compliance
+   *
+   * This is SEPARATE from validation - compliance checks property-type compatibility
+   * to ensure schemas will pass validator.schema.org
+   *
+   * Key checks:
+   * - articleSection/articleBody only on Article types
+   * - wordCount only on CreativeWork types
+   * - No speakable property (removed entirely)
+   * - headline vs name usage for different types
+   */
+  checkSchemaOrgCompliance(schema: JsonLdSchema): ComplianceResult {
+    const errors: ComplianceError[] = []
+    const warnings: ComplianceWarning[] = []
+    const schemaType = schema['@type'] as string
+
+    if (!schemaType) {
+      errors.push({
+        code: 'MISSING_TYPE',
+        property: '@type',
+        message: 'Schema must have a @type property'
+      })
+      return { isCompliant: false, errors, warnings }
+    }
+
+    // Check for invalid properties using whitelist service
+    for (const propertyName of Object.keys(schema)) {
+      if (propertyName.startsWith('@')) continue // Skip @context, @type, @id
+      if (!isPropertyValidForType(propertyName, schemaType)) {
+        errors.push({
+          code: 'INVALID_PROPERTY_FOR_TYPE',
+          property: propertyName,
+          message: `"${propertyName}" is not valid for ${schemaType} - will fail validator.schema.org`
+        })
+      }
+    }
+
+    // Check for speakable (should have been removed, but flag if present)
+    if ('speakable' in schema) {
+      errors.push({
+        code: 'SPEAKABLE_NOT_ALLOWED',
+        property: 'speakable',
+        message: 'speakable property causes CSS selector validation errors - should be removed'
+      })
+    }
+
+    // Check headline usage on non-article types
+    if ('headline' in schema && isHeadlineNotValidFor(schemaType)) {
+      warnings.push({
+        code: 'HEADLINE_ON_NON_ARTICLE',
+        property: 'headline',
+        message: `"headline" on ${schemaType} may cause issues - consider using "name" instead`
+      })
+    }
+
+    // Check for article-only properties on WebPage (common mistake)
+    if (!isArticleType(schemaType)) {
+      if ('articleSection' in schema) {
+        errors.push({
+          code: 'ARTICLE_SECTION_ON_NON_ARTICLE',
+          property: 'articleSection',
+          message: `articleSection is only valid for Article types, not ${schemaType}`
+        })
+      }
+      if ('articleBody' in schema) {
+        errors.push({
+          code: 'ARTICLE_BODY_ON_NON_ARTICLE',
+          property: 'articleBody',
+          message: `articleBody is only valid for Article types, not ${schemaType}`
+        })
+      }
+    }
+
+    // Check wordCount on non-CreativeWork types
+    if (!isCreativeWorkType(schemaType) && 'wordCount' in schema) {
+      errors.push({
+        code: 'WORD_COUNT_ON_INVALID_TYPE',
+        property: 'wordCount',
+        message: `wordCount is only valid for CreativeWork types, not ${schemaType}`
+      })
+    }
+
+    // Recursively check nested objects
+    this.checkNestedCompliance(schema, errors, warnings, '')
+
+    return {
+      isCompliant: errors.length === 0,
+      errors,
+      warnings
+    }
+  }
+
+  /**
+   * Recursively check compliance on nested objects
+   */
+  private checkNestedCompliance(
+    obj: any,
+    errors: ComplianceError[],
+    warnings: ComplianceWarning[],
+    path: string
+  ): void {
+    for (const [key, value] of Object.entries(obj)) {
+      if (value && typeof value === 'object' && !Array.isArray(value) && '@type' in value) {
+        const nestedPath = path ? `${path}.${key}` : key
+        const nestedResult = this.checkSchemaOrgCompliance(value as JsonLdSchema)
+
+        // Add errors with path prefix
+        for (const error of nestedResult.errors) {
+          errors.push({
+            ...error,
+            property: `${nestedPath}.${error.property}`
+          })
+        }
+
+        // Add warnings with path prefix
+        for (const warning of nestedResult.warnings) {
+          warnings.push({
+            ...warning,
+            property: `${nestedPath}.${warning.property}`
+          })
+        }
+      }
+
+      // Handle arrays of objects
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => {
+          if (item && typeof item === 'object' && '@type' in item) {
+            const nestedPath = path ? `${path}.${key}[${index}]` : `${key}[${index}]`
+            const nestedResult = this.checkSchemaOrgCompliance(item as JsonLdSchema)
+
+            for (const error of nestedResult.errors) {
+              errors.push({
+                ...error,
+                property: `${nestedPath}.${error.property}`
+              })
+            }
+
+            for (const warning of nestedResult.warnings) {
+              warnings.push({
+                ...warning,
+                property: `${nestedPath}.${warning.property}`
+              })
+            }
+          }
+        })
+      }
+    }
+  }
+
+  /**
+   * Check compliance for multiple schemas
+   */
+  checkMultipleSchemasCompliance(schemas: JsonLdSchema[]): ComplianceResult[] {
+    return schemas.map(schema => this.checkSchemaOrgCompliance(schema))
   }
 }
 
