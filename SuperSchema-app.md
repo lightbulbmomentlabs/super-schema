@@ -1,7 +1,7 @@
 # SuperSchema App - Technical Overview
 
-**Last Updated:** 2025-11-26
-**Version:** 1.2.7
+**Last Updated:** 2025-11-28
+**Version:** 1.2.8
 **Purpose:** Living technical reference for understanding SuperSchema architecture, features, and critical code paths
 
 ---
@@ -285,6 +285,89 @@ if (hasMinimalContent && attempt === 1) {
 - After optimizations: 90% of sites complete in <20s
 - Timeout rate: Reduced from ~15% to ~3%
 - Average processing time: 25-35 seconds total (scraping + AI)
+
+### 3.1.1 Schema Quality Score System ⚠️ UPDATED 2025-11-28
+
+**Location:** `/server/src/services/schemaGenerator.ts`, `/client/src/utils/calculateSchemaScore.ts`, `/client/src/components/SchemaScore.tsx`
+
+**Purpose:** Provide users with actionable feedback on schema quality with a target score of 85+ (B grade) for first-generation compliant schemas.
+
+**Score Formula (Weighted Average + Compliance Bonus):**
+```typescript
+BaseScore = (RequiredProps × 0.35) + (RecommendedProps × 0.25) + (AEOFeatures × 0.25) + (ContentQuality × 0.15)
+FinalScore = Math.min(100, Math.max(0, BaseScore + ComplianceBonus))
+```
+
+**Score Components:**
+
+| Component | Weight | Max Points | What It Measures |
+|-----------|--------|------------|------------------|
+| Required Properties | 35% | 100 | @context, @type, name/headline |
+| Recommended Properties | 25% | 100 | description, url, image, author, publisher, dates |
+| Advanced AEO Features | 25% | 100 | keywords, about, mentions, sameAs, inLanguage, etc. |
+| Content Quality | 15% | 100 | Structured author, publisher with logo, image details |
+| **Compliance Bonus** | N/A | +10 to -10 | Schema.org validator.schema.org compatibility |
+
+**Compliance Bonus Tiers (NEW - 2025-11-28):**
+
+| Tier | Errors | Warnings | Bonus | User Message |
+|------|--------|----------|-------|--------------|
+| Perfect | 0 | 0 | **+10** | "Fully Schema.org compliant" |
+| Good | 0 | 1-2 | **+7** | "Compliant with minor notes" |
+| Acceptable | 0 | 3+ | **+5** | "Compliant with notes" |
+| Minor Issues | 1 | any | **0** | "1 compliance issue to address" |
+| Non-Compliant | 2-3 | any | **-5** | "X compliance issues" |
+| Severely Non-Compliant | 4+ | any | **-10** | "Will fail validation" |
+
+**Type-Aware AEO Scoring (NEW - 2025-11-28):**
+
+The scoring system now uses type-aware AEO property lists to prevent unfair penalties when properties are rightfully removed for compliance:
+
+```typescript
+// Base AEO properties (all types)
+const baseAEO = ['keywords', 'about', 'mentions', 'sameAs', 'inLanguage',
+                 'isPartOf', 'mainEntityOfPage', 'aggregateRating', 'review']
+
+// Article types get additional properties
+const articleTypes = ['Article', 'BlogPosting', 'NewsArticle', 'TechArticle', ...]
+if (articleTypes.includes(schemaType)) {
+  return [...baseAEO, 'articleSection', 'wordCount']
+}
+
+// CreativeWork types get wordCount only
+const creativeWorkTypes = ['CreativeWork', 'Book', 'Review']
+if (creativeWorkTypes.includes(schemaType)) {
+  return [...baseAEO, 'wordCount']
+}
+
+// All other types: base properties only
+// This prevents LocalBusiness from losing points for missing articleSection
+```
+
+**Grade Scale:**
+
+| Score | Grade | Interpretation |
+|-------|-------|----------------|
+| 90-100 | A | Excellent - Fully optimized |
+| 85-89 | B+ | Great - Minor improvements possible |
+| 80-84 | B | Good - Some enhancements recommended |
+| 70-79 | C | Fair - Notable gaps to address |
+| 60-69 | D | Needs Work - Multiple issues |
+| <60 | F | Critical - Major gaps |
+
+**Critical Files:**
+- `/server/src/services/schemaGenerator.ts:calculateBasicScore()` - Server-side scoring with compliance
+- `/server/src/services/validator.ts:checkMultipleSchemasCompliance()` - Compliance checking
+- `/server/src/services/schemaPropertyWhitelist.ts` - Type-safe property validation
+- `/client/src/utils/calculateSchemaScore.ts` - Client-side scoring (mirrors server logic)
+- `/client/src/components/SchemaScore.tsx` - UI display component
+- `/shared/src/types/index.ts:SchemaScore` - Type definitions including ComplianceImpact
+
+**Design Decisions:**
+- **Why compliance bonus instead of just penalty?** Rewards users for generating compliant schemas, creating positive UX
+- **Why type-aware AEO?** Properties like `articleSection` are invalid for non-Article types; users shouldn't lose points for compliance-enforced removals
+- **Why graduated tiers?** Minor issues shouldn't devastate the score; severe issues should be clearly penalized
+- **Target score 85+:** First-generation compliant schemas should score B+ grade, encouraging users while leaving room for improvement
 
 ### 3.2 HubSpot OAuth Integration ⚠️ COMPLEX FLOW
 
