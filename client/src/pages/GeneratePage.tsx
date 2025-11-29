@@ -1,13 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import SchemaGenerator from '@/components/SchemaGenerator'
 import UrlDiscovery from '@/components/UrlDiscovery'
+import OrganizationPromoBanner from '@/components/OrganizationPromoBanner'
+import { apiService } from '@/services/api'
 
 export default function GeneratePage() {
   const [selectedUrl, setSelectedUrl] = useState('')
   const [autoGenerate, setAutoGenerate] = useState(false)
   const schemaGeneratorRef = useRef<any>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Fetch organizations to determine if promo banner should show
+  const { data: orgsData, isLoading: orgsLoading } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => apiService.listOrganizations()
+  })
+
+  const hasOrganizations = orgsData?.data && orgsData.data.length > 0
 
   // Set page title
   useEffect(() => {
@@ -60,6 +71,9 @@ export default function GeneratePage() {
         <div className="space-y-8 p-6">
           {/* URL Discovery */}
           <UrlDiscovery onUrlSelect={handleUrlSelect} />
+
+          {/* Organization Promo Banner - show when user has no organizations */}
+          {!hasOrganizations && !orgsLoading && <OrganizationPromoBanner />}
 
           {/* Schema Generator */}
           <div ref={schemaGeneratorRef}>

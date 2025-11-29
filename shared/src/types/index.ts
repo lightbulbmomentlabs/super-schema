@@ -459,3 +459,118 @@ export interface AppConfig {
   maxSchemaGenerationsPerMinute: number
   maxRequestSizeBytes: number
 }
+
+// =============================================================================
+// ORGANIZATION TYPES
+// =============================================================================
+
+/**
+ * PostalAddress for Organization (schema.org PostalAddress type)
+ */
+export interface OrganizationAddress {
+  streetAddress?: string
+  addressLocality?: string  // city
+  addressRegion?: string    // state/province
+  postalCode?: string
+  addressCountry?: string
+}
+
+/**
+ * Organization profile for schema.org publisher data
+ */
+export interface Organization {
+  id: string
+  teamId: string
+  name: string
+  url?: string
+  logoUrl?: string
+  address?: OrganizationAddress
+  telephone?: string
+  email?: string
+  sameAs?: string[]           // social profile URLs
+  associatedDomains?: string[] // domains for auto-matching
+  isDefault: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Request to create a new organization
+ */
+export interface CreateOrganizationRequest {
+  name: string
+  url?: string
+  logoUrl?: string
+  address?: OrganizationAddress
+  telephone?: string
+  email?: string
+  sameAs?: string[]
+  associatedDomains?: string[]
+  isDefault?: boolean
+}
+
+/**
+ * Request to update an existing organization
+ */
+export interface UpdateOrganizationRequest {
+  name?: string
+  url?: string
+  logoUrl?: string
+  address?: OrganizationAddress
+  telephone?: string
+  email?: string
+  sameAs?: string[]
+  associatedDomains?: string[]
+  isDefault?: boolean
+}
+
+/**
+ * Organization profile completeness score
+ */
+export interface OrganizationCompleteness {
+  score: number           // 0-100
+  missingFields: string[]
+  filledFields: string[]
+}
+
+/**
+ * Response when getting organization with completeness
+ */
+export interface GetOrganizationResponse {
+  organization: Organization
+  completeness: OrganizationCompleteness
+}
+
+/**
+ * Publisher info returned with schema generation results
+ */
+export interface PublisherUsed {
+  id: string
+  name: string
+}
+
+/**
+ * Schema.org Publisher schema object (Fix #21: Add proper type for publisher schema)
+ * Represents the structured data format returned by buildPublisherSchema()
+ */
+export interface PublisherSchema {
+  '@type': 'Organization'
+  name: string
+  url?: string
+  logo?: {
+    '@type': 'ImageObject'
+    url: string
+  }
+  address?: {
+    '@type': 'PostalAddress'
+    streetAddress?: string
+    addressLocality?: string
+    addressRegion?: string
+    postalCode?: string
+    addressCountry?: string
+  }
+  telephone?: string
+  email?: string
+  sameAs?: string[]
+}

@@ -160,6 +160,8 @@ export interface SchemaGenerationOptions {
   includeOrganization?: boolean
   includeLocalBusiness?: boolean
   requestedSchemaTypes?: string[]
+  // Publisher data from user's organization (auto-injected from organization management)
+  publisherData?: Record<string, any>
 }
 
 // Schema property requirements for AEO optimization
@@ -409,7 +411,7 @@ Date Modified: ${analysis.metadata?.modifiedDate || analysis.metadata?.publishDa
 
 === IMAGES ===
 Featured Image: ${analysis.metadata?.imageInfo?.featuredImage || '[NOT FOUND - OMIT image property]'}
-Publisher Logo: ${analysis.metadata?.businessInfo?.logo || '[NOT FOUND - CREATE ImageObject with featured image or site icon]'}
+Publisher Logo: ${options.publisherData?.logo?.url || analysis.metadata?.businessInfo?.logo || '[NOT FOUND - CREATE ImageObject with featured image or site icon]'}
 
 === VIDEOS ===
 ${analysis.metadata?.videos && analysis.metadata.videos.length > 0
@@ -419,9 +421,13 @@ Video URLs: ${JSON.stringify(analysis.metadata.videos)}
   : 'No embedded videos detected on this page.'}
 
 === PUBLISHER/ORGANIZATION ===
-Organization Name: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}
+${options.publisherData ? `⚠️ **USE EXACTLY THIS PUBLISHER DATA** (from user's organization settings):
+${JSON.stringify(options.publisherData, null, 2)}
+
+IMPORTANT: Use this publisher object EXACTLY as provided. Do not modify, remove, or add properties to it.
+This includes address, contact info, and social profiles which MUST be preserved.` : `Organization Name: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}
 Organization URL: ${new URL(analysis.url).origin}
-Logo URL: ${analysis.metadata?.businessInfo?.logo || analysis.metadata?.imageInfo?.featuredImage || `${new URL(analysis.url).origin}/favicon.ico`}
+Logo URL: ${analysis.metadata?.businessInfo?.logo || analysis.metadata?.imageInfo?.featuredImage || `${new URL(analysis.url).origin}/favicon.ico`}`}
 
 === KEYWORDS & TAXONOMY ===
 Extracted Keywords (from meta tags): ${analysis.metadata?.keywords?.length ? JSON.stringify(analysis.metadata.keywords.slice(0, 10)) : '[]'}

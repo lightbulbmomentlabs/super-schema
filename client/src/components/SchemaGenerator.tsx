@@ -11,7 +11,8 @@ import {
   Settings,
   ExternalLink,
   Loader2,
-  Plus
+  Plus,
+  Building2
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import LightningBoltIcon from './icons/LightningBoltIcon'
@@ -86,6 +87,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
   const [isAddingSchemaType, setIsAddingSchemaType] = useState(false)
   const [pendingSchemaType, setPendingSchemaType] = useState<string | null>(null)
   const [highlightedChanges, setHighlightedChanges] = useState<string[]>([])
+  const [publisherUsed, setPublisherUsed] = useState<{ id: string; name: string } | null>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
 
   // Multi-schema state
@@ -416,6 +418,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
         setGenerationMetadata(response.data.metadata)
 
         setSchemaScore(response.data.schemaScore || null)
+        setPublisherUsed(response.data.publisherUsed || null)
         setRefinementCount(0) // Reset refinement count for new schema
 
         // Refresh credit balance
@@ -724,6 +727,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
       setPreviousScore(undefined)
       setRefinementCount(0)
       setHighlightedChanges([])
+      setPublisherUsed(null)
     }
   }
 
@@ -1499,7 +1503,7 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                   <CheckCircle className="h-5 w-5 text-success-foreground mt-0.5" />
                   <div>
                     <p className="font-medium">Schema Generated Successfully</p>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         {generationMetadata.processingTimeMs}ms
@@ -1508,6 +1512,12 @@ export default function SchemaGenerator({ selectedUrl, autoGenerate = false }: S
                         <CreditCard className="h-3 w-3 mr-1" />
                         {generationMetadata.creditsUsed} credit used
                       </span>
+                      {publisherUsed && (
+                        <span className="flex items-center text-primary" title="Publisher data from your organization settings">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          Publisher: {publisherUsed.name}
+                        </span>
+                      )}
                       <a
                         href={generationMetadata.url}
                         target="_blank"

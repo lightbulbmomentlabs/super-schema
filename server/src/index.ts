@@ -40,6 +40,7 @@ import ga4Routes from './routes/ga4.js'
 import releaseNotesRoutes from './routes/releaseNotes.js'
 import teamRoutes from './routes/team.js'
 import featureRoutes from './routes/features.js'
+import organizationRoutes from './routes/organization.js'
 
 const app = express()
 const PORT = process.env.PORT || 8080
@@ -119,6 +120,7 @@ app.use('/api/hubspot', hubspotRoutes) // HubSpot routes include their own auth 
 app.use('/api/ga4', ga4Routes) // GA4 routes include their own auth middleware
 app.use('/api/release-notes', releaseNotesRoutes) // Release notes routes include their own auth middleware
 app.use('/api/team', teamRoutes) // Team routes include their own auth middleware
+app.use('/api/organizations', organizationRoutes) // Organization routes include their own auth middleware
 app.use('/api/features', featureRoutes) // Feature routes include their own auth middleware
 app.use('/api/notifications', featureRoutes) // Notification routes (shared with features)
 

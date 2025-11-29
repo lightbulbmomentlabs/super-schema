@@ -21,7 +21,12 @@ import type {
   TeamInviteDetails,
   TeamInviteValidation,
   CurrentTeamResponse,
-  ListTeamsResponse
+  ListTeamsResponse,
+  Organization,
+  CreateOrganizationRequest,
+  UpdateOrganizationRequest,
+  OrganizationCompleteness,
+  GetOrganizationResponse
 } from '@shared/types'
 
 // In production, API is served from same origin as the client (supports both superschema.ai and www.superschema.ai)
@@ -174,6 +179,7 @@ class ApiService {
     htmlScriptTags?: string
     schemaScore?: any
     urlId?: string
+    publisherUsed?: { id: string; name: string }
   }>> {
     // Extract schemaType from options.requestedSchemaTypes for backend
     const schemaType = options?.requestedSchemaTypes?.[0] || 'Auto'
@@ -794,6 +800,49 @@ class ApiService {
 
   async deleteTeamInvite(inviteId: string): Promise<ApiResponse<{ message: string }>> {
     const response = await api.delete(`/team/invite/${inviteId}`)
+    return response.data
+  }
+
+  // Organization endpoints
+  async listOrganizations(): Promise<ApiResponse<Array<Organization & { completeness: OrganizationCompleteness }>>> {
+    const response = await api.get('/organizations')
+    return response.data
+  }
+
+  async getOrganization(orgId: string): Promise<ApiResponse<GetOrganizationResponse>> {
+    const response = await api.get(`/organizations/${orgId}`)
+    return response.data
+  }
+
+  async createOrganization(data: CreateOrganizationRequest): Promise<ApiResponse<GetOrganizationResponse & { message: string }>> {
+    const response = await api.post('/organizations', data)
+    return response.data
+  }
+
+  async updateOrganization(orgId: string, data: UpdateOrganizationRequest): Promise<ApiResponse<GetOrganizationResponse & { message: string }>> {
+    const response = await api.put(`/organizations/${orgId}`, data)
+    return response.data
+  }
+
+  async deleteOrganization(orgId: string): Promise<ApiResponse<{ message: string }>> {
+    const response = await api.delete(`/organizations/${orgId}`)
+    return response.data
+  }
+
+  async setDefaultOrganization(orgId: string): Promise<ApiResponse<{ data: Organization; message: string }>> {
+    const response = await api.post(`/organizations/${orgId}/default`)
+    return response.data
+  }
+
+  async getOrganizationForDomain(domain: string): Promise<ApiResponse<{
+    organization: Organization | null
+    completeness?: OrganizationCompleteness
+    publisherData?: Record<string, any>
+    message?: string
+  }>> {
+    const response = await api.get('/organizations/for-domain', {
+      params: { domain }
+    })
     return response.data
   }
 

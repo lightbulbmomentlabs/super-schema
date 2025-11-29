@@ -6,6 +6,13 @@ import { db } from './database.js'
 import { extractSchemaType } from '../utils/schemaTypeDetector.js'
 import { sanitizeSchemaProperties, type SanitizationResult } from './schemaPropertyWhitelist.js'
 import type { JsonLdSchema } from 'aeo-schema-generator-shared/types'
+import { getUserActiveTeam } from './teamService.js'
+import {
+  findOrganizationForDomain,
+  buildPublisherSchema,
+  hasCompletePublisherData
+} from './organizationService.js'
+import type { Organization } from '../../../shared/src/types/index.js'
 
 // Content compatibility check result interface
 interface CompatibilityResult {
@@ -29,6 +36,10 @@ export interface SchemaGenerationResult {
   validationResults: any[]
   scrapedMetadata?: any  // Original scraped metadata for refinement verification
   schemaScore?: any  // Schema quality score
+  publisherUsed?: {  // Organization used for publisher data
+    id: string
+    name: string
+  }
   metadata: {
     schemaId?: string  // Schema generation record ID for linking
     url: string
@@ -38,6 +49,9 @@ export interface SchemaGenerationResult {
     errorCode?: string  // Error code for frontend handling (e.g., 'CONTENT_MISMATCH')
     suggestedAlternatives?: string[]  // Alternative schema types when content mismatch
     requestedType?: string  // The schema type that was requested
+    schemaType?: string  // Final schema type (explicitly requested or auto-detected)
+    contentQualitySuggestions?: string[]  // Content quality suggestions from analysis
+    message?: string  // Success/info message for certain operations
     contentAnalysis?: {
       isValid: boolean
       suggestions: string[]
@@ -128,9 +142,8 @@ class SchemaGeneratorService {
         userAgent: request.userAgent
       })
 
-      // 6. Skip content validation for now (it's too strict and blocking valid content)
-      // TODO: Re-implement content validation with better logic
-      console.log('⚠️ Skipping content validation to allow schema generation')
+      // 6. Content validation disabled - previous implementation was too strict
+      // and was blocking valid content from schema generation
 
       // 6.5 PRE-VALIDATION: Check if requested schema type is compatible with page content
       // This prevents wasted AI calls and provides better user experience
@@ -184,18 +197,51 @@ class SchemaGeneratorService {
         }
       }
 
-      // 7. Generate schemas using AI with requested schema type
-      const optionsToPass = {
-        ...request.options,
-        // Only pass requestedSchemaTypes if user explicitly requested a specific type (not Auto)
-        requestedSchemaTypes: schemaType !== 'Auto' ? [schemaType] : undefined
+      // 6.6 ORGANIZATION LOOKUP: Fetch publisher data from organization for domain
+      let publisherOrganization: Organization | null = null
+      let publisherData: Record<string, any> | null = null
+
+      try {
+        // Get user's active team
+        const teamId = await getUserActiveTeam(request.userId)
+        if (teamId) {
+          // Extract domain from URL
+          const urlDomain = new URL(request.url).hostname.replace(/^www\./, '')
+
+          // Find organization for this domain
+          publisherOrganization = await findOrganizationForDomain(teamId, urlDomain)
+
+          if (publisherOrganization) {
+            publisherData = buildPublisherSchema(publisherOrganization)
+            const hasComplete = hasCompletePublisherData(publisherOrganization)
+            console.log(`📋 [Publisher] Using organization "${publisherOrganization.name}" for domain "${urlDomain}"`)
+            console.log(`   Complete publisher data: ${hasComplete ? '✅ Yes' : '⚠️ Missing address/contact'}`)
+          } else {
+            console.log(`📋 [Publisher] No organization found for domain "${urlDomain}" - using scraped metadata`)
+          }
+        } else {
+          console.log(`📋 [Publisher] User has no active team - using scraped metadata`)
+        }
+      } catch (orgError) {
+        // Non-fatal: continue without organization data
+        console.warn(`⚠️ [Publisher] Failed to fetch organization:`, orgError)
       }
 
-      console.log('🎯 Calling OpenAI with options:', {
+      // 7. Generate schemas using AI with requested schema type
+      const optionsToPass: SchemaGenerationOptions = {
+        ...request.options,
+        // Only pass requestedSchemaTypes if user explicitly requested a specific type (not Auto)
+        requestedSchemaTypes: schemaType !== 'Auto' ? [schemaType] : undefined,
+        // Pass publisher data if organization was found
+        publisherData: publisherData || undefined
+      }
+
+      console.log('🎯 Calling AI with options:', {
         schemaType,
         isAutoMode: schemaType === 'Auto',
         requestedSchemaTypes: optionsToPass.requestedSchemaTypes,
-        fullOptions: optionsToPass
+        hasPublisherData: !!publisherData,
+        publisherName: publisherData?.name || 'from scraped data'
       })
 
       const rawSchemas = await aiService.generateSchemas(contentAnalysis, optionsToPass)
@@ -313,6 +359,10 @@ class SchemaGeneratorService {
         schemaScore, // Add schema quality score
         validationResults,
         scrapedMetadata: contentAnalysis, // Include for refinement verification
+        publisherUsed: publisherOrganization ? {
+          id: publisherOrganization.id,
+          name: publisherOrganization.name
+        } : undefined,
         metadata: {
           schemaId: generationId, // Include schema ID for linking to library
           url: request.url,

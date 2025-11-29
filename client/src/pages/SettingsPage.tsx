@@ -8,15 +8,42 @@ import {
   TrendingUp,
   Settings as SettingsIcon,
   ExternalLink,
-  AlertTriangle,
   Link2,
   Edit,
   Check,
-  X
+  X,
+  Building2,
+  Plus,
+  Loader2
 } from 'lucide-react'
+import { AxiosError } from 'axios'
 import { apiService } from '@/services/api'
 import { hubspotApi } from '@/services/hubspot'
 import { toast } from 'react-hot-toast'
+import type { Organization, CreateOrganizationRequest } from '@shared/types'
+import OrganizationCard from '@/components/OrganizationCard'
+import OrganizationForm from '@/components/OrganizationForm'
+import ConfirmModal from '@/components/ConfirmModal'
+
+// =============================================================================
+// Typed error handler for API errors
+// =============================================================================
+
+interface ApiErrorResponse {
+  error?: string
+  message?: string
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError && error.response?.data) {
+    const data = error.response.data as ApiErrorResponse
+    return data.error || data.message || fallback
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return fallback
+}
 
 export default function SettingsPage() {
   const { user } = useUser()
@@ -24,7 +51,26 @@ export default function SettingsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [isEditingOrg, setIsEditingOrg] = useState(false)
+  // =============================================================================
+  // Fix #33 & #34: Consolidated modal state management
+  // Single state object for all organization-related modals and forms
+  // =============================================================================
+  interface OrgModalState {
+    formOpen: boolean
+    editingOrg: Organization | null
+    deleteConfirmOpen: boolean
+    deleteTarget: Organization | null
+  }
+
+  const [orgModalState, setOrgModalState] = useState<OrgModalState>({
+    formOpen: false,
+    editingOrg: null,
+    deleteConfirmOpen: false,
+    deleteTarget: null
+  })
+
+  // Legacy org name editing (for user profile, separate from organizations feature)
+  const [isEditingOrgName, setIsEditingOrgName] = useState(false)
   const [orgName, setOrgName] = useState('')
 
   // Set page title
@@ -78,6 +124,122 @@ export default function SettingsPage() {
     enabled: isLoaded  // Prevents race condition with Clerk auth
   })
 
+  // Get current team info
+  const { data: currentTeamData } = useQuery({
+    queryKey: ['current-team'],
+    queryFn: () => apiService.getCurrentTeam(),
+    enabled: isLoaded
+  })
+
+  const isTeamOwner = currentTeamData?.data?.isOwner ?? false
+  const hasTeamContext = !!currentTeamData?.data?.team
+
+  // Get organizations for current team
+  const { data: organizationsData, isLoading: isLoadingOrgs } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => apiService.listOrganizations(),
+    enabled: isLoaded && hasTeamContext
+  })
+
+  const organizations = organizationsData?.data || []
+
+  // =============================================================================
+  // Fix #24: Optimistic updates with query cache
+  // =============================================================================
+
+  // Create organization mutation with optimistic update
+  const createOrgMutation = useMutation({
+    mutationFn: (data: CreateOrganizationRequest) => apiService.createOrganization(data),
+    onSuccess: (response) => {
+      // Optimistic update: add new org to cache immediately
+      queryClient.setQueryData(['organizations'], (old: { data: Organization[] } | undefined) => {
+        if (!old) return old
+        const newOrg = response?.data
+        if (newOrg) {
+          return { ...old, data: [...old.data, newOrg] }
+        }
+        return old
+      })
+      // Still invalidate to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      toast.success('Organization created successfully')
+      setOrgModalState(prev => ({ ...prev, formOpen: false, editingOrg: null }))
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Failed to create organization'))
+    }
+  })
+
+  // Update organization mutation with optimistic update
+  const updateOrgMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CreateOrganizationRequest }) =>
+      apiService.updateOrganization(id, data),
+    onSuccess: (response, variables) => {
+      // Optimistic update: update org in cache immediately
+      queryClient.setQueryData(['organizations'], (old: { data: Organization[] } | undefined) => {
+        if (!old) return old
+        const updatedOrg = response?.data
+        if (updatedOrg) {
+          return {
+            ...old,
+            data: old.data.map(org => org.id === variables.id ? updatedOrg : org)
+          }
+        }
+        return old
+      })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      toast.success('Organization updated successfully')
+      setOrgModalState(prev => ({ ...prev, formOpen: false, editingOrg: null }))
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Failed to update organization'))
+    }
+  })
+
+  // Delete organization mutation with optimistic update
+  const deleteOrgMutation = useMutation({
+    mutationFn: (id: string) => apiService.deleteOrganization(id),
+    onSuccess: () => {
+      // Optimistic update: remove org from cache immediately
+      const deleteTarget = orgModalState.deleteTarget
+      if (deleteTarget) {
+        queryClient.setQueryData(['organizations'], (old: { data: Organization[] } | undefined) => {
+          if (!old) return old
+          return { ...old, data: old.data.filter(org => org.id !== deleteTarget.id) }
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      toast.success('Organization deleted successfully')
+      setOrgModalState(prev => ({ ...prev, deleteConfirmOpen: false, deleteTarget: null }))
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Failed to delete organization'))
+    }
+  })
+
+  // Set default organization mutation with optimistic update
+  const setDefaultOrgMutation = useMutation({
+    mutationFn: (id: string) => apiService.setDefaultOrganization(id),
+    onSuccess: (_response, newDefaultId) => {
+      // Optimistic update: update isDefault flags in cache
+      queryClient.setQueryData(['organizations'], (old: { data: Organization[] } | undefined) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map(org => ({
+            ...org,
+            isDefault: org.id === newDefaultId
+          }))
+        }
+      })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
+      toast.success('Default organization updated')
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Failed to set default organization'))
+    }
+  })
+
   const stats = statsData?.data || {}
   const creditBalance = creditsData?.data?.creditBalance || 0
   const libraryUrls = libraryUrlsData?.data || []
@@ -88,33 +250,33 @@ export default function SettingsPage() {
   const schemaCoverage = totalUrls > 0 ? Math.round((urlsWithSchema / totalUrls) * 100) : 0
   const hasHubSpotConnection = hubspotConnections.length > 0
 
-  // Mutation for updating organization name
-  const updateOrgMutation = useMutation({
+  // Mutation for updating organization name in user profile (legacy field)
+  const updateOrgNameMutation = useMutation({
     mutationFn: (organizationName: string) =>
       apiService.updateProfile({ organizationName }),
     onSuccess: async (response) => {
       // Manually update the cache with the response data
       queryClient.setQueryData(['user-profile'], response)
       toast.success('Organization name updated successfully')
-      setIsEditingOrg(false)
+      setIsEditingOrgName(false)
     },
     onError: () => {
       toast.error('Failed to update organization name')
     }
   })
 
-  const handleSaveOrg = async () => {
+  const handleSaveOrgName = async () => {
     try {
       const nameToSave = orgName.trim()
-      await updateOrgMutation.mutateAsync(nameToSave)
-    } catch (error) {
-      console.error('Error saving organization name:', error)
+      await updateOrgNameMutation.mutateAsync(nameToSave)
+    } catch {
+      // Error handled by mutation onError
     }
   }
 
-  const handleCancelEditOrg = () => {
+  const handleCancelEditOrgName = () => {
     setOrgName(userProfile?.organizationName || '')
-    setIsEditingOrg(false)
+    setIsEditingOrgName(false)
   }
 
   const formatDate = (date: number | string | Date) => {
@@ -139,6 +301,48 @@ export default function SettingsPage() {
     }
     // TODO: Implement account deletion with Clerk
     alert('Account deletion feature coming soon!')
+  }
+
+  // =============================================================================
+  // Organization handlers (using consolidated state)
+  // =============================================================================
+
+  const handleAddOrganization = () => {
+    setOrgModalState(prev => ({ ...prev, formOpen: true, editingOrg: null }))
+  }
+
+  const handleEditOrganization = (org: Organization) => {
+    setOrgModalState(prev => ({ ...prev, formOpen: true, editingOrg: org }))
+  }
+
+  const handleDeleteOrganization = (org: Organization) => {
+    setOrgModalState(prev => ({ ...prev, deleteConfirmOpen: true, deleteTarget: org }))
+  }
+
+  const confirmDeleteOrganization = () => {
+    if (orgModalState.deleteTarget) {
+      deleteOrgMutation.mutate(orgModalState.deleteTarget.id)
+    }
+  }
+
+  const handleCloseDeleteModal = () => {
+    setOrgModalState(prev => ({ ...prev, deleteConfirmOpen: false, deleteTarget: null }))
+  }
+
+  const handleCloseOrgForm = () => {
+    setOrgModalState(prev => ({ ...prev, formOpen: false, editingOrg: null }))
+  }
+
+  const handleSetDefaultOrganization = (org: Organization) => {
+    setDefaultOrgMutation.mutate(org.id)
+  }
+
+  const handleOrgFormSubmit = async (data: CreateOrganizationRequest) => {
+    if (orgModalState.editingOrg) {
+      await updateOrgMutation.mutateAsync({ id: orgModalState.editingOrg.id, data })
+    } else {
+      await createOrgMutation.mutateAsync(data)
+    }
   }
 
   return (
@@ -185,9 +389,9 @@ export default function SettingsPage() {
             <div className="pt-2 border-t border-border">
               <label className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                 <span>Organization / Company Name (Optional)</span>
-                {!isEditingOrg && (
+                {!isEditingOrgName && (
                   <button
-                    onClick={() => setIsEditingOrg(true)}
+                    onClick={() => setIsEditingOrgName(true)}
                     className="text-primary hover:text-primary/80 transition-colors"
                   >
                     <Edit className="h-3 w-3" />
@@ -195,7 +399,7 @@ export default function SettingsPage() {
                 )}
               </label>
 
-              {isEditingOrg ? (
+              {isEditingOrgName ? (
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     type="text"
@@ -203,7 +407,7 @@ export default function SettingsPage() {
                     onChange={(e) => setOrgName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        handleSaveOrg()
+                        handleSaveOrgName()
                       }
                     }}
                     placeholder="Enter your organization or company name"
@@ -211,15 +415,15 @@ export default function SettingsPage() {
                     maxLength={100}
                   />
                   <button
-                    onClick={handleSaveOrg}
-                    disabled={updateOrgMutation.isPending}
+                    onClick={handleSaveOrgName}
+                    disabled={updateOrgNameMutation.isPending}
                     className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 rounded-md transition-colors disabled:opacity-50"
                   >
                     <Check className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={handleCancelEditOrg}
-                    disabled={updateOrgMutation.isPending}
+                    onClick={handleCancelEditOrgName}
+                    disabled={updateOrgNameMutation.isPending}
                     className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-md transition-colors disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
@@ -342,19 +546,85 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {/* Beta Notice */}
-            <div className="flex items-start gap-2 p-3 bg-info/10 border border-info/20 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-info mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-medium text-foreground">Beta</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  This feature is in beta. Contact support if you run into any issues.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
+
+      {/* Organizations Section */}
+      {hasTeamContext && (
+        <div className="border border-border rounded-lg bg-card">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="text-lg font-semibold">Organizations</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Manage publisher data for your generated schemas
+                  </p>
+                </div>
+              </div>
+              {isTeamOwner && (
+                <button
+                  onClick={handleAddOrganization}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Organization
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="p-4">
+            {isLoadingOrgs ? (
+              <div className="flex items-center justify-center py-8 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Loading organizations...</span>
+              </div>
+            ) : organizations.length === 0 ? (
+              <div className="text-center py-8">
+                <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm font-medium mb-1">No organizations yet</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Add an organization to auto-fill publisher information in your schemas.
+                </p>
+                {isTeamOwner && (
+                  <button
+                    onClick={handleAddOrganization}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Your First Organization
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {organizations.map((org) => (
+                  <OrganizationCard
+                    key={org.id}
+                    organization={org}
+                    isOwner={isTeamOwner}
+                    onEdit={handleEditOrganization}
+                    onDelete={handleDeleteOrganization}
+                    onSetDefault={handleSetDefaultOrganization}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Info box about organization auto-fill */}
+            {organizations.length > 0 && (
+              <div className="mt-4 p-3 bg-muted/50 border border-border rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">Tip:</strong> When generating schemas, the publisher information is automatically filled from the matching organization based on domain.
+                  Add associated domains to your organizations to enable automatic matching.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Preferences - Compact */}
       <div className="border border-border rounded-lg bg-card max-w-2xl">
@@ -434,6 +704,27 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Organization Form Modal */}
+      <OrganizationForm
+        isOpen={orgModalState.formOpen}
+        onClose={handleCloseOrgForm}
+        onSubmit={handleOrgFormSubmit}
+        organization={orgModalState.editingOrg}
+        isLoading={createOrgMutation.isPending || updateOrgMutation.isPending}
+      />
+
+      {/* Delete Organization Confirmation Modal */}
+      <ConfirmModal
+        isOpen={orgModalState.deleteConfirmOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={confirmDeleteOrganization}
+        title="Delete Organization"
+        message={`Are you sure you want to delete "${orgModalState.deleteTarget?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }

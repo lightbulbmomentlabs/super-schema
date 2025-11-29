@@ -434,6 +434,13 @@ Do NOT generate any additional types unless explicitly requested.`
     console.log(`   Keywords: ${analysis.metadata?.keywords?.length || 0}`)
     console.log(`   Article Sections: ${analysis.metadata?.articleSections?.length || 0}`)
     console.log(`   Word Count: ${wordCount}`)
+    console.log(`📋 PUBLISHER:`)
+    console.log(`   Has injected publisher data: ${!!options.publisherData}`)
+    if (options.publisherData) {
+      console.log(`   Publisher name: ${options.publisherData.name}`)
+      console.log(`   Has address: ${!!options.publisherData.address}`)
+      console.log(`   Has contact: ${!!(options.publisherData.telephone || options.publisherData.email)}`)
+    }
     console.log(`🚀 ==============================================\n`)
 
     return `Extract schema.org JSON-LD from this web page data.
@@ -458,11 +465,15 @@ Date Modified: ${analysis.metadata?.modifiedDate || '[NOT FOUND]'}
 
 === IMAGES ===
 Featured Image: ${analysis.metadata?.imageInfo?.featuredImage || '[NOT FOUND]'}
-Publisher Logo: ${analysis.metadata?.businessInfo?.logo || '[NOT FOUND]'}
+Publisher Logo: ${options.publisherData?.logo?.url || analysis.metadata?.businessInfo?.logo || '[NOT FOUND]'}
 
 === PUBLISHER ===
-Organization: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}
-Organization URL: ${new URL(analysis.url).origin}
+${options.publisherData ? `⚠️ **USE EXACTLY THIS PUBLISHER DATA** (from user's organization settings):
+${JSON.stringify(options.publisherData, null, 2)}
+
+IMPORTANT: Use this publisher object EXACTLY as provided. Do not modify, remove, or add properties to it.
+This includes address, contact info, and social profiles which MUST be preserved.` : `Organization: ${analysis.metadata?.businessInfo?.name || new URL(analysis.url).hostname.replace('www.', '')}
+Organization URL: ${new URL(analysis.url).origin}`}
 
 === CONTENT STRUCTURE ===
 Extracted Keywords (from meta tags): ${analysis.metadata?.keywords?.length ? JSON.stringify(analysis.metadata.keywords.slice(0, 10)) : '[]'}
