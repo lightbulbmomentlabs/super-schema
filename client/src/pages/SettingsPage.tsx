@@ -550,7 +550,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Organizations Section - Always show, falls back gracefully if no team context */}
+      {/* Organizations Section */}
       {(hasTeamContext || !currentTeamData) && (
         <div className="border border-border rounded-lg bg-card">
           <div className="p-4 border-b border-border">
