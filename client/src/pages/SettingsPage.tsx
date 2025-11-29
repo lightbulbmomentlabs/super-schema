@@ -131,7 +131,7 @@ export default function SettingsPage() {
     enabled: isLoaded
   })
 
-  const isTeamOwner = currentTeamData?.data?.isOwner ?? false
+  const isTeamOwner = currentTeamData?.data?.isOwner ?? true // Default to true so users without team context can still add orgs
   const hasTeamContext = !!currentTeamData?.data?.team
 
   // Get organizations for current team
